@@ -68,7 +68,7 @@ export default function ExploreScreen() {
   return (
     <SafeAreaView style={styles.container}>
       {/* 顶部标题栏 */}
-      <View style={[styles.header, { paddingTop: top }]}>
+      <View style={styles.header}>
         <View style={styles.headerLeft}>
           <TouchableOpacity onPress={navigateToHome}>
             <Text style={styles.headerTitle}>记录</Text>
@@ -76,14 +76,16 @@ export default function ExploreScreen() {
           <Text style={[styles.headerTitle, styles.activeTab]}>洞察</Text>
         </View>
         <View style={styles.headerRight}>
-          {messages.length > 0 && (
-            <TouchableOpacity 
-              style={styles.clearButton}
-              onPress={handleClearChat}
-            >
-              <Text style={styles.clearButtonText}>清空</Text>
-            </TouchableOpacity>
-          )}
+          <View style={styles.clearButtonContainer}>
+            {messages.length > 0 && (
+              <TouchableOpacity 
+                style={styles.clearButton}
+                onPress={handleClearChat}
+              >
+                <Text style={styles.clearButtonText}>清空</Text>
+              </TouchableOpacity>
+            )}
+          </View>
           <TouchableOpacity style={styles.avatarButton}>
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>👤</Text>
@@ -108,7 +110,7 @@ export default function ExploreScreen() {
             styles.messagesContentContainer,
             {
               paddingTop: 24,
-              paddingBottom: 120, // 为输入框留出空间
+              paddingBottom: 40, // 进一步减少到40，让消息更贴近输入框
               flex: messages.length === 0 ? 1 : undefined,
             },
           ]}
@@ -168,6 +170,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
+    paddingTop: 8, // 减少顶部padding
     paddingBottom: 8,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
@@ -193,6 +196,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    minHeight: 40, // 确保头部右侧有最小高度
+  },
+  clearButtonContainer: {
+    minWidth: 60, // 给清空按钮预留固定空间，避免布局跳动
+    alignItems: 'flex-end',
   },
   clearButton: {
     paddingHorizontal: 12,

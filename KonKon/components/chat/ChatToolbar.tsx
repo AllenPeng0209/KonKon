@@ -34,24 +34,16 @@ export function ChatToolbar({ onSendMessage, disabled = false }: ChatToolbarProp
   const translateStyle = useAnimatedStyle(
     () => ({
       transform: [{ translateY: -keyboard.height.value }],
+      marginBottom: keyboard.height.value > 0 ? 0 : -bottom, // 键盘关闭时用负margin抵消安全区域
     }),
     [bottom]
   );
 
   const blurStyle = useAnimatedStyle(() => {
-    const assumedKeyboardHeight = 100;
-    const inverse = Math.max(
-      0,
-      Math.min(
-        1,
-        (assumedKeyboardHeight - keyboard.height.value) / assumedKeyboardHeight
-      )
-    );
-
     return {
-      paddingBottom: 8 + bottom * inverse,
+      paddingBottom: 0, // 完全移除底部padding，不考虑安全区域
     };
-  }, [bottom]);
+  }, []);
 
   const onSubmitMessage = useCallback(
     (value: string) => {
@@ -138,10 +130,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   blurContainer: {
-    paddingTop: 8,
-    paddingBottom: 8,
+    paddingTop: 4,
+    paddingBottom: 0,
     paddingHorizontal: 16,
     alignItems: 'stretch',
+    marginBottom: 0, // 确保没有额外的底部margin
   },
   inputContainer: {
     flexDirection: 'row',
