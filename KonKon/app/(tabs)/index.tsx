@@ -14,6 +14,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useRouter } from 'expo-router';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import RecordButton from '@/components/ui/RecordButton';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -35,6 +36,15 @@ export default function HomeScreen() {
     } catch (error) {
       Alert.alert('错误', '退出登录失败');
     }
+  };
+
+  const navigateToProfile = () => {
+    router.push('/profile');
+  };
+
+  // 跳转到洞察页面
+  const navigateToExplore = () => {
+    router.push('/explore');
   };
 
   if (loading) {
@@ -105,14 +115,16 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Text style={[styles.headerTitle, styles.activeTab]}>记录</Text>
-          <Text style={styles.headerTitle}>洞察</Text>
+          <TouchableOpacity onPress={navigateToExplore}>
+            <Text style={styles.headerTitle}>洞察</Text>
+          </TouchableOpacity>
         </View>
         <View style={styles.headerRight}>
           <TouchableOpacity style={styles.filterButton}>
             <Text style={styles.filterText}>全部</Text>
             <Text style={styles.filterIcon}>▼</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.avatarButton} onPress={handleSignOut}>
+          <TouchableOpacity style={styles.avatarButton} onPress={navigateToProfile}>
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>👤</Text>
             </View>
@@ -183,15 +195,10 @@ export default function HomeScreen() {
       </ScrollView>
 
       {/* 底部快速记录按钮 */}
-      <View style={styles.bottomBar}>
-        <TouchableOpacity style={styles.recordButton}>
-          <Text style={styles.recordButtonIcon}>+</Text>
-          <Text style={styles.recordButtonText}>长按说话，快速记录</Text>
-          <TouchableOpacity style={styles.moreButton}>
-            <Text style={styles.moreButtonText}>⋯</Text>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </View>
+      <RecordButton 
+        onPress={() => console.log('Record pressed')}
+        onMorePress={() => console.log('More pressed')}
+      />
     </SafeAreaView>
   );
 }
@@ -422,45 +429,5 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
   },
-  bottomBar: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
-  },
-  recordButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#007AFF',
-    borderRadius: 24,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    position: 'relative',
-  },
-  recordButtonIcon: {
-    fontSize: 18,
-    color: '#fff',
-    marginRight: 8,
-  },
-  recordButtonText: {
-    fontSize: 16,
-    color: '#fff',
-    fontWeight: '500',
-  },
-  moreButton: {
-    position: 'absolute',
-    right: 16,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  moreButtonText: {
-    fontSize: 16,
-    color: '#fff',
-  },
+
 });
