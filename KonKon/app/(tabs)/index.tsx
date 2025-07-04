@@ -5,38 +5,35 @@ import {
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
-  Alert,
   ActivityIndicator,
   ScrollView,
   Dimensions,
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRouter } from 'expo-router';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
 import RecordButton from '@/components/ui/RecordButton';
 
 const { width: screenWidth } = Dimensions.get('window');
 
 export default function HomeScreen() {
-  const { user, signOut, loading } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [showFilterMenu, setShowFilterMenu] = useState(false);
+  const [selectedFilter, setSelectedFilter] = useState('全部');
+
+  // 过滤选项
+  const filterOptions = [
+    { label: '全部', icon: '📊', color: '#8E8E93', bgColor: '#F2F2F7' },
+    { label: '日曆', icon: '🔔', color: '#FF9500', bgColor: '#FFF3E0' },
+    { label: '想法', icon: '💡', color: '#9C27B0', bgColor: '#F3E5F5' },
+    { label: '心情', icon: '❤️', color: '#E91E63', bgColor: '#FCE4EC' },
+  ];
 
   useEffect(() => {
     if (!loading && !user) {
       router.replace('/login');
     }
   }, [user, loading, router]);
-
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      router.replace('/login');
-    } catch (error) {
-      Alert.alert('错误', '退出登录失败');
-    }
-  };
 
   const navigateToProfile = () => {
     router.push('/profile');
@@ -45,6 +42,16 @@ export default function HomeScreen() {
   // 跳转到洞察页面
   const navigateToExplore = () => {
     router.push('/explore');
+  };
+
+  // 处理过滤菜单
+  const handleFilterSelect = (filter: string) => {
+    setSelectedFilter(filter);
+    setShowFilterMenu(false);
+  };
+
+  const toggleFilterMenu = () => {
+    setShowFilterMenu(!showFilterMenu);
   };
 
   if (loading) {
@@ -94,7 +101,7 @@ export default function HomeScreen() {
           isToday && styles.todayContainer,
           isEmpty && styles.emptyDay,
         ]}
-        onPress={() => day && setSelectedDate(new Date(year, month - 1, day))}
+        onPress={() => day && console.log('Selected date:', new Date(year, month - 1, day))}
         disabled={isEmpty}
       >
         {!isEmpty && (
@@ -120,8 +127,8 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
         <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.filterButton}>
-            <Text style={styles.filterText}>全部</Text>
+          <TouchableOpacity style={styles.filterButton} onPress={toggleFilterMenu}>
+            <Text style={styles.filterText}>{selectedFilter}</Text>
             <Text style={styles.filterIcon}>▼</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.avatarButton} onPress={navigateToProfile}>
@@ -137,7 +144,7 @@ export default function HomeScreen() {
         <View style={styles.calendarContainer}>
           <View style={styles.calendarHeader}>
             <Text style={styles.monthYear}>{year}年{month}月</Text>
-            <Text style={styles.calendarNote}>记点什么好呢</Text>
+            <Text style={styles.calendarNote}>记录家庭美好时光</Text>
           </View>
           
           {/* 星期标题 */}
@@ -165,30 +172,30 @@ export default function HomeScreen() {
               <Text style={styles.aiEmoji}>🦝</Text>
             </View>
             <View style={styles.aiContent}>
-              <Text style={styles.aiGreeting}>胖咔咔哈都能记:</Text>
-              <Text style={styles.aiSuggestion}>"今天午饭30元，用的支付宝"</Text>
-              <Text style={styles.aiSuggestion}>"明天下午6点开会，提前5分钟提醒我"</Text>
-              <Text style={styles.aiSuggestion}>"抢到演唱会票了，激动到转圈圈！"</Text>
+              <Text style={styles.aiGreeting}>家庭小助手提醒您:</Text>
+              <Text style={styles.aiSuggestion}>&ldquo;下午4点去接小孩放学&rdquo;</Text>
+              <Text style={styles.aiSuggestion}>&ldquo;明天是老公生日，准备礼物&rdquo;</Text>
+              <Text style={styles.aiSuggestion}>&ldquo;周末带孩子去公园玩，天气不错！&rdquo;</Text>
             </View>
           </View>
           
           <TouchableOpacity style={styles.autoRecordButton}>
-            <Text style={styles.autoRecordText}>自动记录也超方便 点我去体验 〉</Text>
+            <Text style={styles.autoRecordText}>智能提醒家庭安排 点我设置 〉</Text>
           </TouchableOpacity>
           
           {/* 快捷功能 */}
           <View style={styles.quickActions}>
             <TouchableOpacity style={styles.quickAction}>
-              <Text style={styles.quickActionIcon}>👋</Text>
-              <Text style={styles.quickActionText}>敲一敲背面截屏</Text>
+              <Text style={styles.quickActionIcon}>👶</Text>
+              <Text style={styles.quickActionText}>孩子日程</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.quickAction}>
-              <Text style={styles.quickActionIcon}>👍</Text>
-              <Text style={styles.quickActionText}>小白点载屏</Text>
+              <Text style={styles.quickActionIcon}>🏠</Text>
+              <Text style={styles.quickActionText}>家务安排</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.quickAction}>
-              <Text style={styles.quickActionIcon}>✨</Text>
-              <Text style={styles.quickActionText}>iPhone快捷按键</Text>
+              <Text style={styles.quickActionIcon}>🎂</Text>
+              <Text style={styles.quickActionText}>纪念日提醒</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -199,6 +206,42 @@ export default function HomeScreen() {
         onPress={() => console.log('Record pressed')}
         onMorePress={() => console.log('More pressed')}
       />
+
+      {/* 过滤菜单 */}
+      {showFilterMenu && (
+        <View style={styles.filterMenuContainer}>
+          <TouchableOpacity 
+            style={styles.filterMenuOverlay} 
+            onPress={() => setShowFilterMenu(false)}
+          />
+          <View style={styles.filterMenu}>
+            {filterOptions.map((option, index) => (
+              <TouchableOpacity
+                key={index}
+                style={[
+                  styles.filterOption,
+                  selectedFilter === option.label && styles.selectedFilterOption
+                ]}
+                onPress={() => handleFilterSelect(option.label)}
+              >
+                                 <View style={styles.filterOptionContent}>
+                   <View style={[styles.filterOptionIconContainer, { backgroundColor: option.bgColor }]}>
+                     <Text style={[styles.filterOptionIcon, { color: option.color }]}>
+                       {option.icon}
+                     </Text>
+                   </View>
+                   <Text style={[
+                     styles.filterOptionText,
+                     selectedFilter === option.label && styles.selectedFilterOptionText
+                   ]}>
+                     {option.label}
+                   </Text>
+                 </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -428,6 +471,71 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     textAlign: 'center',
+  },
+  
+  // 过滤菜单样式
+  filterMenuContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 1000,
+  },
+  filterMenuOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  filterMenu: {
+    position: 'absolute',
+    top: 105, // 往下调整更多，避免遮挡按钮
+    right: 16,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingVertical: 12,
+    minWidth: 140,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  filterOption: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  selectedFilterOption: {
+    backgroundColor: '#f0f8ff',
+  },
+  filterOptionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  filterOptionIconContainer: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  filterOptionIcon: {
+    fontSize: 14,
+  },
+  filterOptionText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  selectedFilterOptionText: {
+    color: '#007AFF',
+    fontWeight: '600',
   },
 
 });
