@@ -1,21 +1,35 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRouter } from 'expo-router';
-import RecordButton from '@/components/ui/RecordButton';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+// 聊天组件
+import { ChatContainer } from '../../components/chat/ChatContainer';
+import { KeyboardFriendlyScrollView } from '../../components/chat/KeyboardFriendlyScrollView';
+import { ChatToolbar } from '../../components/chat/ChatToolbar';
+import { FirstSuggestions } from '../../components/chat/FirstSuggestions';
+import { UserMessage } from '../../components/chat/UserMessage';
+import { AssistantMessage } from '../../components/chat/AssistantMessage';
+import { AnimatedLogo } from '../../components/chat/AnimatedLogo';
+import { BailianConfig } from '../../components/chat/BailianConfig';
+
+// 自定义 Hook
+import { useChat } from '../../hooks/useChat';
 
 export default function ExploreScreen() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const { top } = useSafeAreaInsets();
+  
+  // 聊天功能
+  const { messages, isLoading, sendMessage, clearMessages } = useChat();
 
   useEffect(() => {
     if (!loading && !user) {
@@ -23,9 +37,20 @@ export default function ExploreScreen() {
     }
   }, [user, loading, router]);
 
-  // 返回记录页面
+  const handleSendMessage = async (message: string) => {
+    await sendMessage(message);
+  };
+
+  const handleSuggestionPress = (suggestion: string) => {
+    handleSendMessage(suggestion);
+  };
+
   const navigateToHome = () => {
     router.back();
+  };
+
+  const handleClearChat = () => {
+    clearMessages();
   };
 
   if (loading) {
@@ -43,7 +68,7 @@ export default function ExploreScreen() {
   return (
     <SafeAreaView style={styles.container}>
       {/* 顶部标题栏 */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: top }]}>
         <View style={styles.headerLeft}>
           <TouchableOpacity onPress={navigateToHome}>
             <Text style={styles.headerTitle}>记录</Text>
@@ -51,6 +76,14 @@ export default function ExploreScreen() {
           <Text style={[styles.headerTitle, styles.activeTab]}>洞察</Text>
         </View>
         <View style={styles.headerRight}>
+          {messages.length > 0 && (
+            <TouchableOpacity 
+              style={styles.clearButton}
+              onPress={handleClearChat}
+            >
+              <Text style={styles.clearButtonText}>清空</Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity style={styles.avatarButton}>
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>👤</Text>
@@ -59,66 +92,58 @@ export default function ExploreScreen() {
         </View>
       </View>
 
-      <KeyboardAvoidingView 
-        style={styles.content} 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-        <ScrollView style={styles.chatContainer} showsVerticalScrollIndicator={false}>
-          {/* 用户消息 */}
-          <View style={styles.userMessageContainer}>
-            <View style={styles.userMessage}>
-              <Text style={styles.userMessageText}>
-                帮我分析一下上周/本周的账单情况
-              </Text>
-            </View>
-          </View>
+      {/* 配置检查 */}
+      <BailianConfig />
 
-          {/* AI回复 */}
-          <View style={styles.aiMessageContainer}>
-            <Text style={styles.aiMessageText}>
-              未找到相关记账记录，可以试着告诉我更多细节，我会尽力帮你的！
-            </Text>
-            
-            {/* 操作按钮 */}
-            <View style={styles.actionButtons}>
-              <TouchableOpacity style={styles.actionButton}>
-                <Text style={styles.actionButtonIcon}>💭</Text>
-                <Text style={styles.actionButtonText}>刷新</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.actionButton}>
-                <Text style={styles.actionButtonIcon}>🔄</Text>
-                <Text style={styles.actionButtonText}>重新生成</Text>
-              </TouchableOpacity>
+      {/* 聊天界面 */}
+      <ChatContainer>
+        {/* 消息滚动区域 */}
+        <KeyboardFriendlyScrollView
+          style={styles.messagesContainer}
+          contentInsetAdjustmentBehavior="automatic"
+          keyboardDismissMode="interactive"
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[
+            styles.messagesContentContainer,
+            {
+              paddingTop: 24,
+              paddingBottom: 120, // 为输入框留出空间
+              flex: messages.length === 0 ? 1 : undefined,
+            },
+          ]}
+        >
+          {/* 消息列表 */}
+          {messages.map((message) => (
+            <View key={message.id} style={styles.messageWrapper}>
+              {message.type === 'user' ? (
+                <UserMessage>{message.content}</UserMessage>
+              ) : (
+                <AssistantMessage isLoading={message.isLoading}>
+                  {message.content}
+                </AssistantMessage>
+              )}
             </View>
-          </View>
+          ))}
+        </KeyboardFriendlyScrollView>
 
-          {/* 功能推荐按钮 */}
-          <View style={styles.recommendedActions}>
-            <TouchableOpacity style={styles.recommendedButton}>
-              <Text style={styles.recommendedIcon}>🧠</Text>
-              <Text style={styles.recommendedText}>MBTI分析</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.recommendedButton}>
-              <Text style={styles.recommendedIcon}>📊</Text>
-              <Text style={styles.recommendedText}>消费性格测试</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.recommendedButton}>
-              <Text style={styles.recommendedIcon}>📈</Text>
-              <Text style={styles.recommendedText}>本月账单分析</Text>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
+        {/* 空状态 - 显示动画 Logo */}
+        {messages.length === 0 && <AnimatedLogo />}
 
         {/* 底部输入区域 */}
-        <RecordButton 
-          onPress={() => console.log('Record pressed')}
-          onMorePress={() => console.log('More pressed')}
-          text="有什么想问我的吗？"
-          icon="🎤"
-        />
-      </KeyboardAvoidingView>
+        <View style={styles.toolbarContainer}>
+          {/* 首次建议（仅在没有消息时显示） */}
+          {messages.length === 0 && (
+            <FirstSuggestions onSuggestionPress={handleSuggestionPress} />
+          )}
+          
+          {/* 输入工具栏 */}
+          <ChatToolbar 
+            onSendMessage={handleSendMessage}
+            disabled={isLoading}
+          />
+        </View>
+      </ChatContainer>
     </SafeAreaView>
   );
 }
@@ -143,9 +168,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingTop: 12,
     paddingBottom: 8,
     backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
   },
   headerLeft: {
     flexDirection: 'row',
@@ -166,6 +192,17 @@ const styles = StyleSheet.create({
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 12,
+  },
+  clearButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    backgroundColor: '#f0f0f0',
+  },
+  clearButtonText: {
+    fontSize: 14,
+    color: '#666',
   },
   avatarButton: {
     padding: 2,
@@ -181,86 +218,16 @@ const styles = StyleSheet.create({
   avatarText: {
     fontSize: 16,
   },
-  content: {
+  messagesContainer: {
     flex: 1,
   },
-  chatContainer: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 20,
+  messagesContentContainer: {
+    gap: 16,
   },
-  userMessageContainer: {
-    alignItems: 'flex-end',
-    marginBottom: 20,
+  messageWrapper: {
+    // 消息包装器样式
   },
-  userMessage: {
-    backgroundColor: '#007AFF',
-    borderRadius: 18,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    maxWidth: '80%',
+  toolbarContainer: {
+    // 工具栏容器样式
   },
-  userMessageText: {
-    color: '#fff',
-    fontSize: 16,
-    lineHeight: 22,
-  },
-  aiMessageContainer: {
-    alignItems: 'flex-start',
-    marginBottom: 30,
-  },
-  aiMessageText: {
-    backgroundColor: '#fff',
-    borderRadius: 18,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    maxWidth: '80%',
-    fontSize: 16,
-    lineHeight: 22,
-    color: '#333',
-    marginBottom: 12,
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f0f0f0',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  actionButtonIcon: {
-    fontSize: 14,
-    marginRight: 6,
-  },
-  actionButtonText: {
-    fontSize: 12,
-    color: '#666',
-  },
-  recommendedActions: {
-    gap: 12,
-    marginBottom: 20,
-  },
-  recommendedButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: '#f0f0f0',
-  },
-  recommendedIcon: {
-    fontSize: 18,
-    marginRight: 12,
-  },
-  recommendedText: {
-    fontSize: 16,
-    color: '#333',
-  },
-
 });
