@@ -2,9 +2,15 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { LogBox } from 'react-native';
 import 'react-native-reanimated';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { AuthProvider } from '../contexts/AuthContext';
+
+// 抑制 Reanimated 警告
+LogBox.ignoreLogs([
+  'It looks like you might be using shared value\'s .value inside reanimated inline style',
+]);
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();

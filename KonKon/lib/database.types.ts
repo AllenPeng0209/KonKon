@@ -48,6 +48,52 @@ export type Database = {
           },
         ]
       }
+      event_shares: {
+        Row: {
+          created_at: string
+          event_id: string
+          family_id: string
+          id: string
+          shared_by: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          family_id: string
+          id?: string
+          shared_by: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          family_id?: string
+          id?: string
+          shared_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_shares_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_shares_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_shares_shared_by_fkey"
+            columns: ["shared_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_tags: {
         Row: {
           event_id: string
@@ -88,7 +134,7 @@ export type Database = {
           creator_id: string
           description: string | null
           end_ts: number
-          family_id: string
+          family_id: string | null
           id: string
           location: string | null
           recurrence_rule: string | null
@@ -103,7 +149,7 @@ export type Database = {
           creator_id: string
           description?: string | null
           end_ts: number
-          family_id: string
+          family_id?: string | null
           id?: string
           location?: string | null
           recurrence_rule?: string | null
@@ -118,7 +164,7 @@ export type Database = {
           creator_id?: string
           description?: string | null
           end_ts?: number
-          family_id?: string
+          family_id?: string | null
           id?: string
           location?: string | null
           recurrence_rule?: string | null

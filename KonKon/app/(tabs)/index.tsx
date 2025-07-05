@@ -8,10 +8,14 @@ import {
   ActivityIndicator,
   ScrollView,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRouter } from 'expo-router';
 import SmartButton from '@/components/ui/SmartButton';
+import AddEventModal from '@/components/AddEventModal';
+import EventListModal from '@/components/EventListModal';
+import { useEvents } from '@/hooks/useEvents';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -20,6 +24,24 @@ export default function HomeScreen() {
   const router = useRouter();
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState('全部');
+  const [showAddEventModal, setShowAddEventModal] = useState(false);
+  const [showEventListModal, setShowEventListModal] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [editingEvent, setEditingEvent] = useState<any>(null);
+  
+  // 事件管理
+  const { 
+    events, 
+    loading: eventsLoading, 
+    error: eventsError,
+    userFamilyDetails,
+    createEvent,
+    updateEvent,
+    deleteEvent,
+    getEventsByDate,
+    getMonthEvents,
+    fetchEvents
+  } = useEvents();
 
   // 过滤选项
   const filterOptions = [
@@ -52,6 +74,97 @@ export default function HomeScreen() {
 
   const toggleFilterMenu = () => {
     setShowFilterMenu(!showFilterMenu);
+  };
+
+  // 处理手动添加事件
+  const handleManualAdd = () => {
+    setSelectedDate(new Date());
+    setEditingEvent(null); // 清空编辑状态
+    setShowAddEventModal(true);
+  };
+
+  // 处理事件创建
+  const handleCreateEvent = async (eventData: any) => {
+    try {
+      const result = await createEvent(eventData);
+      
+      if (result) {
+        Alert.alert('成功', '事件创建成功');
+        // 重新获取当月事件
+        const currentDate = new Date();
+        fetchEvents(currentDate.getFullYear(), currentDate.getMonth() + 1);
+      } else {
+        // 显示 eventsError 中的具体错误信息
+        const errorMessage = eventsError || '创建事件失败，请检查网络连接和权限';
+        Alert.alert('错误', errorMessage);
+      }
+    } catch (error) {
+      console.error('创建事件异常:', error);
+      const errorMessage = error instanceof Error ? error.message : '创建事件失败';
+      Alert.alert('错误', errorMessage);
+    }
+  };
+
+  // 处理事件更新
+  const handleUpdateEvent = async (eventId: string, eventData: any) => {
+    try {
+      const result = await updateEvent(eventId, eventData);
+      
+      if (result) {
+        Alert.alert('成功', '事件更新成功');
+        // 重新获取当月事件
+        const currentDate = new Date();
+        fetchEvents(currentDate.getFullYear(), currentDate.getMonth() + 1);
+      } else {
+        // 显示 eventsError 中的具体错误信息
+        const errorMessage = eventsError || '更新事件失败，请检查网络连接和权限';
+        Alert.alert('错误', errorMessage);
+      }
+    } catch (error) {
+      console.error('更新事件异常:', error);
+      const errorMessage = error instanceof Error ? error.message : '更新事件失败';
+      Alert.alert('错误', errorMessage);
+    }
+  };
+
+  // 处理打开编辑事件
+  const handleEditEvent = (event: any) => {
+    setEditingEvent(event);
+    setShowAddEventModal(true);
+  };
+
+  // 处理关闭编辑事件
+  const handleCloseEditEvent = () => {
+    setEditingEvent(null);
+    setShowAddEventModal(false);
+  };
+
+  // 处理日期点击
+  const handleDatePress = (day: number) => {
+    const clickedDate = new Date(year, month - 1, day);
+    setSelectedDate(clickedDate);
+    
+    // 显示该日期的事件
+    const dayEvents = getEventsByDate(clickedDate);
+    if (dayEvents.length > 0) {
+      setShowEventListModal(true);
+    } else {
+      // 如果没有事件，询问是否要添加新事件
+      Alert.alert(
+        '这天没有事件',
+        '是否要为这天添加新事件？',
+        [
+          { text: '取消', style: 'cancel' },
+          {
+            text: '添加事件',
+            onPress: () => {
+              setEditingEvent(null); // 清空编辑状态
+              setShowAddEventModal(true);
+            },
+          },
+        ]
+      );
+    }
   };
 
   if (loading) {
@@ -93,6 +206,9 @@ export default function HomeScreen() {
     const isToday = day === today;
     const isEmpty = day === null;
     
+    // 检查该日期是否有事件
+    const hasEvents = day ? getEventsByDate(new Date(year, month - 1, day)).length > 0 : false;
+    
     return (
       <TouchableOpacity
         key={index}
@@ -101,16 +217,21 @@ export default function HomeScreen() {
           isToday && styles.todayContainer,
           isEmpty && styles.emptyDay,
         ]}
-        onPress={() => day && console.log('Selected date:', new Date(year, month - 1, day))}
+        onPress={() => day && handleDatePress(day)}
         disabled={isEmpty}
       >
         {!isEmpty && (
-          <Text style={[
-            styles.calendarDayText,
-            isToday && styles.todayText,
-          ]}>
-            {day}
-          </Text>
+          <>
+            <Text style={[
+              styles.calendarDayText,
+              isToday && styles.todayText,
+            ]}>
+              {day}
+            </Text>
+            {hasEvents && (
+              <View style={styles.eventDot} />
+            )}
+          </>
         )}
       </TouchableOpacity>
     );
@@ -164,20 +285,55 @@ export default function HomeScreen() {
         <View style={styles.todaySection}>
           <View style={styles.todayHeader}>
             <Text style={styles.todayIcon}>📅</Text>
-            <Text style={styles.todayTitle}>今天 {month}月{today}日(周二)</Text>
+            <Text style={styles.todayTitle}>今天 {month}月{today}日</Text>
           </View>
           
-          <View style={styles.aiAssistant}>
-            <View style={styles.aiAvatar}>
-              <Text style={styles.aiEmoji}>🦝</Text>
-            </View>
-            <View style={styles.aiContent}>
-              <Text style={styles.aiGreeting}>家庭小助手提醒您:</Text>
-              <Text style={styles.aiSuggestion}>&ldquo;下午4点去接小孩放学&rdquo;</Text>
-              <Text style={styles.aiSuggestion}>&ldquo;明天是老公生日，准备礼物&rdquo;</Text>
-              <Text style={styles.aiSuggestion}>&ldquo;周末带孩子去公园玩，天气不错！&rdquo;</Text>
-            </View>
-          </View>
+          {/* 显示今天的事件 */}
+          {(() => {
+            const todayEvents = getEventsByDate(new Date(year, month - 1, today));
+            if (todayEvents.length > 0) {
+              return (
+                <View style={styles.eventsContainer}>
+                  <Text style={styles.eventsTitle}>今日事件</Text>
+                  {todayEvents.map((event) => (
+                    <TouchableOpacity 
+                      key={event.id} 
+                      style={styles.eventItem}
+                      onPress={() => handleEditEvent(event)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={[styles.eventColor, { backgroundColor: event.color || '#007AFF' }]} />
+                      <View style={styles.eventContent}>
+                        <Text style={styles.eventTitle}>{event.title}</Text>
+                        {event.description && (
+                          <Text style={styles.eventDescription}>{event.description}</Text>
+                        )}
+                        <Text style={styles.eventTime}>
+                          {new Date(event.start_ts * 1000).toLocaleTimeString('zh-CN', { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                          })}
+                          {event.location && ` · ${event.location}`}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              );
+            } else {
+              return (
+                <View style={styles.aiAssistant}>
+                  <View style={styles.aiAvatar}>
+                    <Text style={styles.aiEmoji}>🦝</Text>
+                  </View>
+                  <View style={styles.aiContent}>
+                    <Text style={styles.aiGreeting}>今天还没有安排事件</Text>
+                    <Text style={styles.aiSuggestion}>点击下方"手动添加"来创建新事件</Text>
+                  </View>
+                </View>
+              );
+            }
+          })()}
           
           <TouchableOpacity style={styles.autoRecordButton}>
             <Text style={styles.autoRecordText}>智能提醒家庭安排 点我设置 〉</Text>
@@ -205,6 +361,7 @@ export default function HomeScreen() {
       <SmartButton 
         onPress={() => console.log('Record pressed')}
         onMorePress={() => console.log('More pressed')}
+        onManualAddPress={handleManualAdd}
       />
 
       {/* 过滤菜单 */}
@@ -242,6 +399,34 @@ export default function HomeScreen() {
           </View>
         </View>
       )}
+      
+      {/* 添加事件模态框 */}
+      <AddEventModal
+        visible={showAddEventModal}
+        onClose={handleCloseEditEvent}
+        onSave={handleCreateEvent}
+        onUpdate={handleUpdateEvent}
+        initialDate={selectedDate || new Date()}
+        userFamilies={userFamilyDetails}
+        editingEvent={editingEvent}
+      />
+      
+      {/* 事件列表模态框 */}
+      <EventListModal
+        visible={showEventListModal}
+        onClose={() => setShowEventListModal(false)}
+        events={selectedDate ? getEventsByDate(selectedDate) : []}
+        date={selectedDate || new Date()}
+        onDeleteEvent={async (eventId: string) => {
+          const success = await deleteEvent(eventId);
+          if (success) {
+            Alert.alert('成功', '事件已删除');
+            // 重新获取当月事件
+            const currentDate = new Date();
+            fetchEvents(currentDate.getFullYear(), currentDate.getMonth() + 1);
+          }
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -385,6 +570,15 @@ const styles = StyleSheet.create({
     color: '#007AFF',
     fontWeight: 'bold',
   },
+  eventDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#007AFF',
+    position: 'absolute',
+    bottom: 4,
+    alignSelf: 'center',
+  },
   todaySection: {
     backgroundColor: '#fff',
     margin: 16,
@@ -471,6 +665,50 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     textAlign: 'center',
+  },
+  
+  // 事件相关样式
+  eventsContainer: {
+    marginBottom: 16,
+  },
+  eventsTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 12,
+  },
+  eventItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+  },
+  eventColor: {
+    width: 4,
+    height: 40,
+    borderRadius: 2,
+    marginRight: 12,
+  },
+  eventContent: {
+    flex: 1,
+  },
+  eventTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 4,
+  },
+  eventDescription: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
+    lineHeight: 20,
+  },
+  eventTime: {
+    fontSize: 12,
+    color: '#999',
   },
   
   // 过滤菜单样式
