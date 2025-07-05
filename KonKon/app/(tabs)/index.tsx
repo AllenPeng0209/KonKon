@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRouter } from 'expo-router';
-import RecordButton from '@/components/ui/RecordButton';
+import SmartButton from '@/components/ui/SmartButton';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -202,7 +202,7 @@ export default function HomeScreen() {
       </ScrollView>
 
       {/* 底部快速记录按钮 */}
-      <RecordButton 
+      <SmartButton 
         onPress={() => console.log('Record pressed')}
         onMorePress={() => console.log('More pressed')}
       />

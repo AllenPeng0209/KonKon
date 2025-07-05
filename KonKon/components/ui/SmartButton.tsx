@@ -8,7 +8,7 @@ import {
   TextInput,
 } from 'react-native';
 
-interface RecordButtonProps {
+interface SmartButtonProps {
   onPress?: () => void;
   onMorePress?: () => void;
   onSendText?: (text: string) => void;
@@ -17,14 +17,14 @@ interface RecordButtonProps {
   disabled?: boolean;
 }
 
-export default function RecordButton({
+export default function SmartButton({
   onPress,
   onMorePress,
   onSendText,
   text = '长按说话，快速记录',
   icon = '+',
   disabled = false,
-}: RecordButtonProps) {
+}: SmartButtonProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isTextMode, setIsTextMode] = useState(false);
   const [inputText, setInputText] = useState('');
@@ -177,11 +177,11 @@ export default function RecordButton({
         
         {/* 中间录音按钮 */}
         <TouchableOpacity 
-          style={[styles.recordButton, disabled && styles.recordButtonDisabled]}
+          style={[styles.smartButton, disabled && styles.smartButtonDisabled]}
           onPress={onPress}
           disabled={disabled}
         >
-          <Text style={styles.recordButtonText}>{text}</Text>
+          <Text style={styles.smartButtonText}>{text}</Text>
         </TouchableOpacity>
         
         {/* 右侧更多按钮 */}
@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
   },
-  recordButton: {
+  smartButton: {
     flex: 1,
     backgroundColor: '#007AFF',
     borderRadius: 20,
@@ -251,10 +251,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  recordButtonDisabled: {
+  smartButtonDisabled: {
     backgroundColor: '#999',
   },
-  recordButtonText: {
+  smartButtonText: {
     fontSize: 16,
     color: '#fff',
     fontWeight: '500',
