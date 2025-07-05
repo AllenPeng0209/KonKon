@@ -12,6 +12,9 @@ interface SmartButtonProps {
   onPress?: () => void;
   onMorePress?: () => void;
   onSendText?: (text: string) => void;
+  onPhotoPress?: () => void;
+  onAlbumPress?: () => void;
+  onManualAddPress?: () => void;
   text?: string;
   icon?: string;
   disabled?: boolean;
@@ -21,6 +24,9 @@ export default function SmartButton({
   onPress,
   onMorePress,
   onSendText,
+  onPhotoPress,
+  onAlbumPress,
+  onManualAddPress,
   text = '长按说话，快速记录',
   icon = '+',
   disabled = false,
@@ -42,7 +48,9 @@ export default function SmartButton({
   };
 
   const handlePhotoPress = () => {
-    console.log('拍照');
+    if (onPhotoPress) {
+      onPhotoPress();
+    }
     setIsExpanded(false);
     Animated.timing(rotateAnim, {
       toValue: 0,
@@ -52,7 +60,21 @@ export default function SmartButton({
   };
 
   const handleAlbumPress = () => {
-    console.log('相簿');
+    if (onAlbumPress) {
+      onAlbumPress();
+    }
+    setIsExpanded(false);
+    Animated.timing(rotateAnim, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handleManualAddPress = () => {
+    if (onManualAddPress) {
+      onManualAddPress();
+    }
     setIsExpanded(false);
     Animated.timing(rotateAnim, {
       toValue: 0,
@@ -160,6 +182,14 @@ export default function SmartButton({
             <Text style={styles.functionIcon}>🖼️</Text>
             <Text style={styles.functionText}>相簿</Text>
           </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.functionButton}
+            onPress={handleManualAddPress}
+          >
+            <Text style={styles.functionIcon}>✍️</Text>
+            <Text style={styles.functionText}>手动添加</Text>
+          </TouchableOpacity>
         </View>
       )}
       
@@ -205,15 +235,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     marginBottom: 12,
-    paddingHorizontal: 40,
+    paddingHorizontal: 20,
   },
   functionButton: {
     alignItems: 'center',
     paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     backgroundColor: '#f8f9fa',
     borderRadius: 16,
-    minWidth: 80,
+    minWidth: 70,
+    flex: 1,
+    marginHorizontal: 4,
   },
   functionIcon: {
     fontSize: 24,
