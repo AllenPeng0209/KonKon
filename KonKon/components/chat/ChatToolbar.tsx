@@ -34,7 +34,7 @@ export function ChatToolbar({ onSendMessage, disabled = false }: ChatToolbarProp
   const translateStyle = useAnimatedStyle(
     () => ({
       transform: [{ translateY: -keyboard.height.value }],
-      marginBottom: keyboard.height.value > 0 ? 0 : -bottom, // 键盘关闭时用负margin抵消安全区域
+      marginBottom: keyboard.height.value > 0 ? 0 : 0, // 键盘关闭时用负margin抵消安全区域
     }),
     [bottom]
   );
