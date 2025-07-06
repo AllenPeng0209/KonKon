@@ -33,6 +33,13 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
+      ],
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "KonKon 需要访问您的日历来同步和管理事件",
+          "remindersPermission": "KonKon 需要访问您的提醒来创建提醒通知"
+        }
       ]
     ],
     "experiments": {

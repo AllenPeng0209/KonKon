@@ -10,12 +10,14 @@ import {
   Dimensions,
   Alert,
 } from 'react-native';
+import { Calendar, DateData } from 'react-native-calendars';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRouter } from 'expo-router';
 import SmartButton from '@/components/ui/SmartButton';
 import AddEventModal from '@/components/AddEventModal';
 import EventListModal from '@/components/EventListModal';
 import { useEvents } from '@/hooks/useEvents';
+import CalendarService from '@/lib/calendarService';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -28,6 +30,8 @@ export default function HomeScreen() {
   const [showEventListModal, setShowEventListModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [editingEvent, setEditingEvent] = useState<any>(null);
+  const [hasCalendarPermission, setHasCalendarPermission] = useState(false);
+  const [currentMonth, setCurrentMonth] = useState(new Date().toISOString().slice(0, 7));
   
   // 事件管理
   const { 
@@ -56,6 +60,41 @@ export default function HomeScreen() {
       router.replace('/login');
     }
   }, [user, loading, router]);
+
+  // 初始化日历权限
+  useEffect(() => {
+    initializeCalendarPermissions();
+  }, []);
+
+  const initializeCalendarPermissions = async () => {
+    try {
+      const hasPermission = await CalendarService.checkPermissions();
+      setHasCalendarPermission(hasPermission);
+      
+      if (!hasPermission) {
+        // 显示权限说明对话框
+        Alert.alert(
+          '日历权限',
+          'KonKon 可以与您的系统日历同步，让您的事件在所有应用中保持一致。',
+          [
+            { text: '暂不开启', style: 'cancel' },
+            {
+              text: '开启权限',
+              onPress: async () => {
+                const granted = await CalendarService.requestPermissions();
+                setHasCalendarPermission(granted);
+                if (granted) {
+                  Alert.alert('成功', '日历权限已开启，现在可以与系统日历同步了！');
+                }
+              },
+            },
+          ]
+        );
+      }
+    } catch (error) {
+      console.error('初始化日历权限失败:', error);
+    }
+  };
 
   const navigateToProfile = () => {
     router.push('/profile');
@@ -89,6 +128,37 @@ export default function HomeScreen() {
       const result = await createEvent(eventData);
       
       if (result) {
+        // 如果有日历权限，同步到系统日历
+        if (hasCalendarPermission) {
+          try {
+            const startDate = new Date(eventData.date);
+            let endDate = new Date(eventData.date);
+            
+            if (!eventData.allDay && eventData.startTime && eventData.endTime) {
+              // 解析时间
+              const [startHour, startMinute] = eventData.startTime.split(':').map(Number);
+              const [endHour, endMinute] = eventData.endTime.split(':').map(Number);
+              
+              startDate.setHours(startHour, startMinute, 0, 0);
+              endDate.setHours(endHour, endMinute, 0, 0);
+            } else {
+              endDate.setDate(endDate.getDate() + 1);
+            }
+            
+            await CalendarService.createSystemEvent({
+              title: eventData.title,
+              description: eventData.description,
+              startDate,
+              endDate,
+              location: eventData.location,
+              allDay: eventData.allDay,
+            });
+          } catch (calendarError) {
+            console.log('系统日历同步失败:', calendarError);
+            // 不影响主要功能，只记录错误
+          }
+        }
+        
         Alert.alert('成功', '事件创建成功');
         // 重新获取当月事件
         const currentDate = new Date();
@@ -140,8 +210,8 @@ export default function HomeScreen() {
   };
 
   // 处理日期点击
-  const handleDatePress = (day: number) => {
-    const clickedDate = new Date(year, month - 1, day);
+  const handleDatePress = (dateData: DateData) => {
+    const clickedDate = new Date(dateData.dateString);
     setSelectedDate(clickedDate);
     
     // 显示该日期的事件
@@ -182,59 +252,44 @@ export default function HomeScreen() {
 
   // 获取当前日期信息
   const currentDate = new Date();
-  const year = currentDate.getFullYear();
-  const month = currentDate.getMonth() + 1;
-  const today = currentDate.getDate();
-  const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
-  
-  // 获取当前月份的天数
-  const daysInMonth = new Date(year, month, 0).getDate();
-  const firstDayOfMonth = new Date(year, month - 1, 1).getDay();
-  
-  // 生成日历数据
-  const calendarDays = [];
-  // 前面的空白日期
-  for (let i = 0; i < firstDayOfMonth; i++) {
-    calendarDays.push(null);
-  }
-  // 当月的日期
-  for (let day = 1; day <= daysInMonth; day++) {
-    calendarDays.push(day);
-  }
+  const today = currentDate.toISOString().split('T')[0];
 
-  const renderCalendarDay = (day: number | null, index: number) => {
-    const isToday = day === today;
-    const isEmpty = day === null;
+  // 生成日历标记数据
+  const getCalendarMarkedDates = () => {
+    const markedDates: { [key: string]: any } = {};
     
-    // 检查该日期是否有事件
-    const hasEvents = day ? getEventsByDate(new Date(year, month - 1, day)).length > 0 : false;
+    // 标记今天
+    markedDates[today] = {
+      selected: true,
+      selectedColor: '#3b82f6',
+      selectedTextColor: '#ffffff',
+    };
     
-    return (
-      <TouchableOpacity
-        key={index}
-        style={[
-          styles.calendarDay,
-          isToday && styles.todayContainer,
-          isEmpty && styles.emptyDay,
-        ]}
-        onPress={() => day && handleDatePress(day)}
-        disabled={isEmpty}
-      >
-        {!isEmpty && (
-          <>
-            <Text style={[
-              styles.calendarDayText,
-              isToday && styles.todayText,
-            ]}>
-              {day}
-            </Text>
-            {hasEvents && (
-              <View style={styles.eventDot} />
-            )}
-          </>
-        )}
-      </TouchableOpacity>
-    );
+    // 标记有事件的日期
+    events.forEach(event => {
+      const eventDate = new Date(event.start_ts * 1000).toISOString().split('T')[0];
+      if (markedDates[eventDate]) {
+        markedDates[eventDate] = {
+          ...markedDates[eventDate],
+          marked: true,
+          dotColor: event.color || '#ff6b6b',
+        };
+      } else {
+        markedDates[eventDate] = {
+          marked: true,
+          dotColor: event.color || '#ff6b6b',
+        };
+      }
+    });
+    
+    return markedDates;
+  };
+
+  // 处理月份变化
+  const handleMonthChange = (month: DateData) => {
+    setCurrentMonth(month.dateString.slice(0, 7));
+    const [year, monthNum] = month.dateString.slice(0, 7).split('-').map(Number);
+    fetchEvents(year, monthNum);
   };
 
   return (
@@ -264,33 +319,64 @@ export default function HomeScreen() {
         {/* 日历部分 */}
         <View style={styles.calendarContainer}>
           <View style={styles.calendarHeader}>
-            <Text style={styles.monthYear}>{year}年{month}月</Text>
-            <Text style={styles.calendarNote}>记录家庭美好时光</Text>
+            <Text style={styles.monthYear}>家庭日历</Text>
+            <Text style={styles.calendarNote}>记录家庭美好时光 {hasCalendarPermission && '📱 已连接系统日历'}</Text>
           </View>
           
-          {/* 星期标题 */}
-          <View style={styles.weekHeader}>
-            {weekDays.map((day, index) => (
-              <Text key={index} style={styles.weekDayText}>{day}</Text>
-            ))}
-          </View>
-          
-          {/* 日历网格 */}
-          <View style={styles.calendarGrid}>
-            {calendarDays.map(renderCalendarDay)}
-          </View>
+          <Calendar
+            key={currentMonth}
+            current={currentMonth}
+            markedDates={getCalendarMarkedDates()}
+            onDayPress={handleDatePress}
+            onMonthChange={handleMonthChange}
+            enableSwipeMonths={true}
+            theme={{
+              backgroundColor: '#ffffff',
+              calendarBackground: '#ffffff',
+              textSectionTitleColor: '#2c3e50',
+              selectedDayBackgroundColor: '#3b82f6',
+              selectedDayTextColor: '#ffffff',
+              todayTextColor: '#3b82f6',
+              dayTextColor: '#2c3e50',
+              textDisabledColor: '#d1d5db',
+              dotColor: '#ff6b6b',
+              selectedDotColor: '#ffffff',
+              arrowColor: '#3b82f6',
+              disabledArrowColor: '#d1d5db',
+              monthTextColor: '#1f2937',
+              indicatorColor: '#3b82f6',
+              textDayFontFamily: 'System',
+              textMonthFontFamily: 'System',
+              textDayHeaderFontFamily: 'System',
+              textDayFontWeight: '600',
+              textMonthFontWeight: '700',
+              textDayHeaderFontWeight: '600',
+              textDayFontSize: 16,
+              textMonthFontSize: 18,
+              textDayHeaderFontSize: 14,
+            }}
+            style={styles.calendar}
+            hideExtraDays={true}
+            firstDay={1}
+            showWeekNumbers={false}
+            disableMonthChange={false}
+            hideDayNames={false}
+            showSixWeeks={false}
+            disabledByDefault={false}
+            markingType={'dot'}
+          />
         </View>
 
         {/* 今天日程 */}
         <View style={styles.todaySection}>
           <View style={styles.todayHeader}>
             <Text style={styles.todayIcon}>📅</Text>
-            <Text style={styles.todayTitle}>今天 {month}月{today}日</Text>
+            <Text style={styles.todayTitle}>今天 {new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric' })}</Text>
           </View>
           
           {/* 显示今天的事件 */}
           {(() => {
-            const todayEvents = getEventsByDate(new Date(year, month - 1, today));
+            const todayEvents = getEventsByDate(new Date());
             if (todayEvents.length > 0) {
               return (
                 <View style={styles.eventsContainer}>
@@ -544,6 +630,17 @@ const styles = StyleSheet.create({
     marginTop: 6,
     fontWeight: '500',
     letterSpacing: 0.2,
+  },
+  calendar: {
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
   },
   weekHeader: {
     flexDirection: 'row',
