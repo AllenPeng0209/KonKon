@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { ScrollView, Text, TouchableOpacity, StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 interface FirstSuggestionsProps {
@@ -16,7 +16,11 @@ export function FirstSuggestions({ onSuggestionPress }: FirstSuggestionsProps) {
   ];
 
   return (
-    <View style={styles.container}>
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.container}
+    >
       {suggestions.map((suggestion, index) => (
         <Animated.View
           entering={FadeInDown.delay((suggestions.length - index) * 100)}
@@ -31,19 +35,20 @@ export function FirstSuggestions({ onSuggestionPress }: FirstSuggestionsProps) {
           </TouchableOpacity>
         </Animated.View>
       ))}
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-    gap: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
     paddingHorizontal: 16,
-    paddingBottom: 16,
+    paddingBottom: 50,
   },
   suggestionButton: {
+    minWidth: 140,
     borderRadius: 16,
     borderBottomLeftRadius: 4,
     padding: 12,
@@ -52,6 +57,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    marginRight: 8,
   },
   suggestionText: {
     color: '#333',

@@ -134,7 +134,11 @@ export default function ExploreScreen() {
         </KeyboardFriendlyScrollView>
 
         {/* 空状态 - 显示动画 Logo */}
-        {messages.length === 0 && <AnimatedLogo />}
+        {messages.length === 0 && (
+          <View style={{ flex: 4, justifyContent: 'center', alignItems: 'center' }}>
+            <AnimatedLogo />
+          </View>
+        )}
 
         {/* 底部输入区域 */}
         <View style={styles.toolbarContainer}>

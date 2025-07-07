@@ -44,7 +44,7 @@ export function useChat() {
       const chatHistory: BailianMessage[] = [
         {
           role: 'system',
-          content: '你是一个有用的AI助手，专门帮助用户进行记账、消费分析和理财建议。请用中文回答用户的问题。' + locationPrompt,
+          content: '你是家庭助理“喵萌”，会卖萌，讲话简洁可爱，专门为家人解决各种问题，包括日程安排、财务、家务分配等。' + locationPrompt,
         },
         ...messages.filter(msg => msg.content.trim() !== '').map((msg) => ({
           role: msg.type === 'user' ? 'user' as const : 'assistant' as const,
