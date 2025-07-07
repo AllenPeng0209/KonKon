@@ -11,19 +11,26 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
+import { useFamily } from '../contexts/FamilyContext';
 
 const { width: screenWidth } = Dimensions.get('window');
 
 export default function ProfileScreen() {
   const router = useRouter();
   const { user } = useAuth();
+  const { userFamily, loading } = useFamily();
 
   const handleBack = () => {
     router.push('/(tabs)');
   };
 
   const handleVIPBenefits = () => {
-    // Handle family management
+    // 根据用户是否有家庭来决定跳转页面
+    if (userFamily) {
+      router.push('/family-management');
+    } else {
+      router.push('/create-family');
+    }
   };
 
   const handleSetting = (setting: string) => {
@@ -78,10 +85,14 @@ export default function ProfileScreen() {
           <View style={styles.vipCard}>
             <View style={styles.vipCardContent}>
               <Text style={styles.vipIcon}>🏡</Text>
-              <Text style={styles.vipMessage}>欢迎使用家庭管理中心</Text>
+              <Text style={styles.vipMessage}>
+                {userFamily ? `家族: ${userFamily.name}` : '家族を作成または参加'}
+              </Text>
             </View>
             <TouchableOpacity style={styles.vipButton} onPress={handleVIPBenefits}>
-              <Text style={styles.vipButtonText}>管理家庭</Text>
+              <Text style={styles.vipButtonText}>
+                {loading ? '読み込み中...' : userFamily ? '家族管理' : '家族作成'}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
