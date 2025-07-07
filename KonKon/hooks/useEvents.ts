@@ -17,6 +17,7 @@ export interface CreateEventData {
   location?: string;
   color?: string;
   shareToFamilies?: string[]; // 要分享给的家庭群组ID数组
+  type?: string;
 }
 
 // 事件分享数据结构使用数据库类型
@@ -249,6 +250,7 @@ export const useEvents = () => {
         creator_id: user.id,
         location: eventData.location || null,
         color: eventData.color || '#007AFF',
+        type: eventData.type || 'calendar',
         source: 'manual',
       };
 
@@ -370,6 +372,7 @@ export const useEvents = () => {
         end_ts: Math.floor(endDateTime.getTime() / 1000),
         location: eventData.location,
         color: eventData.color || '#007AFF',
+        type: eventData.type,
         updated_at: new Date().toISOString(),
       };
 

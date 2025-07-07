@@ -14,14 +14,21 @@ import {
 } from 'react-native';
 import { CreateEventData } from '@/hooks/useEvents';
 
+// 定义事件类型
+const eventTypes = [
+  { label: '日曆', value: 'calendar', icon: '🔔' },
+  { label: '想法', value: 'idea', icon: '💡' },
+  { label: '心情', value: 'mood', icon: '❤️' },
+];
+
 interface AddEventModalProps {
   visible: boolean;
   onClose: () => void;
   onSave: (eventData: CreateEventData) => Promise<void>;
   initialDate?: Date;
-  userFamilies?: Array<{id: string, name: string}>; // 用户所在的群组列表
-  editingEvent?: any; // 正在编辑的事件数据
-  onUpdate?: (eventId: string, eventData: CreateEventData) => Promise<void>; // 更新事件的回调
+  userFamilies?: Array<{id: string, name: string}>;
+  editingEvent?: any;
+  onUpdate?: (eventId: string, eventData: CreateEventData) => Promise<void>;
 }
 
 export default function AddEventModal({ 
@@ -35,13 +42,14 @@ export default function AddEventModal({
 }: AddEventModalProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [date, setDate] = useState(initialDate || new Date());
+  const [date, setDate] = useState(new Date());
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [location, setLocation] = useState('');
   const [allDay, setAllDay] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [selectedCalendar, setSelectedCalendar] = useState<string>('personal'); // 'personal' 或 family_id
+  const [selectedCalendar, setSelectedCalendar] = useState<string>('personal');
+  const [type, setType] = useState('calendar');
 
   const colorOptions = [
     { name: '蓝色', value: '#007AFF' },
@@ -53,44 +61,35 @@ export default function AddEventModal({
   ];
   const [selectedColor, setSelectedColor] = useState(colorOptions[0].value);
 
-  // 编辑模式时预填充表单
   useEffect(() => {
-    if (editingEvent) {
-      setTitle(editingEvent.title || '');
-      setDescription(editingEvent.description || '');
-      setLocation(editingEvent.location || '');
-      setSelectedColor(editingEvent.color || colorOptions[0].value);
-      
-      // 设置日期
-      const eventDate = new Date(editingEvent.start_ts * 1000);
-      setDate(eventDate);
-      
-      // 设置时间
-      const startDate = new Date(editingEvent.start_ts * 1000);
-      const endDate = new Date(editingEvent.end_ts * 1000);
-      
-      const formatTime = (date: Date) => {
-        const hours = date.getHours().toString().padStart(2, '0');
-        const minutes = date.getMinutes().toString().padStart(2, '0');
-        return `${hours}:${minutes}`;
-      };
-      
-      setStartTime(formatTime(startDate));
-      setEndTime(formatTime(endDate));
-      
-      // 检查是否是全天事件
-      const isAllDay = startDate.getHours() === 0 && startDate.getMinutes() === 0 && 
-                      endDate.getHours() === 23 && endDate.getMinutes() === 59;
-      setAllDay(isAllDay);
-      
-      // 设置日历选择（个人或家庭）
-      if (editingEvent.shared_families && editingEvent.shared_families.length > 0) {
-        setSelectedCalendar(editingEvent.shared_families[0]);
+    if (visible) {
+      if (editingEvent) {
+        // 编辑模式
+        setTitle(editingEvent.title || '');
+        setDescription(editingEvent.description || '');
+        setLocation(editingEvent.location || '');
+        setSelectedColor(editingEvent.color || colorOptions[0].value);
+        setType(editingEvent.type || 'calendar');
+        
+        const eventDate = new Date(editingEvent.start_ts * 1000);
+        setDate(eventDate);
+        
+        const formatTime = (d: Date) => `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+        setStartTime(formatTime(new Date(editingEvent.start_ts * 1000)));
+        setEndTime(formatTime(new Date(editingEvent.end_ts * 1000)));
+        
+        // 其他字段...
+        if (editingEvent.shared_families && editingEvent.shared_families.length > 0) {
+          setSelectedCalendar(editingEvent.shared_families[0]);
+        } else {
+          setSelectedCalendar('personal');
+        }
       } else {
-        setSelectedCalendar('personal');
+        // 新建模式
+        resetForm();
       }
     }
-  }, [editingEvent]);
+  }, [visible, editingEvent]);
 
   const resetForm = () => {
     setTitle('');
@@ -101,9 +100,10 @@ export default function AddEventModal({
     setLocation('');
     setAllDay(false);
     setSelectedColor(colorOptions[0].value);
+    setType('calendar');
+    setSelectedCalendar('personal');
   };
 
-  // 格式化时间输入
   const formatTimeInput = (text: string): string => {
     // 移除所有非数字字符
     const numbers = text.replace(/[^\d]/g, '');
@@ -133,7 +133,6 @@ export default function AddEventModal({
   };
 
   const handleSave = async () => {
-    // 验证必填字段
     if (!title.trim()) {
       Alert.alert('错误', '请输入事件标题');
       return;
@@ -165,23 +164,22 @@ export default function AddEventModal({
       const eventData: CreateEventData = {
         title: title.trim(),
         description: description.trim() || undefined,
-        date,
+        date: date,
         startTime: allDay ? undefined : startTime || undefined,
         endTime: allDay ? undefined : endTime || undefined,
         location: location.trim() || undefined,
         color: selectedColor,
         shareToFamilies: selectedCalendar === 'personal' ? undefined : [selectedCalendar],
+        type,
       };
 
-      // 根据是否是编辑模式调用不同的方法
       if (editingEvent && onUpdate) {
         await onUpdate(editingEvent.id, eventData);
       } else {
         await onSave(eventData);
       }
       
-      resetForm();
-      onClose();
+      handleClose();
     } catch (error) {
       console.error('保存事件失败:', error);
       const errorMessage = error instanceof Error ? error.message : editingEvent ? '更新事件失败' : '创建事件失败';
@@ -250,6 +248,30 @@ export default function AddEventModal({
         </View>
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          {/* 事件类型选择 */}
+          <View style={styles.typeSelectorContainer}>
+            {eventTypes.map((item) => (
+              <TouchableOpacity
+                key={item.value}
+                style={[
+                  styles.typeButton,
+                  type === item.value && styles.selectedTypeButton,
+                ]}
+                onPress={() => setType(item.value)}
+              >
+                <Text style={styles.typeButtonIcon}>{item.icon}</Text>
+                <Text
+                  style={[
+                    styles.typeButtonText,
+                    type === item.value && styles.selectedTypeButtonText,
+                  ]}
+                >
+                  {item.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
           {/* 事件标题 */}
           <View style={styles.section}>
             <View style={styles.labelContainer}>
@@ -875,5 +897,42 @@ const styles = StyleSheet.create({
     color: '#3b82f6',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  // 新增样式
+  typeSelectorContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 20,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 12,
+    padding: 6,
+  },
+  typeButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  selectedTypeButton: {
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  typeButtonIcon: {
+    fontSize: 16,
+    marginRight: 6,
+  },
+  typeButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#666',
+  },
+  selectedTypeButtonText: {
+    color: '#007AFF',
   },
 }); 

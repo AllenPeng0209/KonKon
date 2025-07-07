@@ -28,7 +28,7 @@ export default function HomeScreen() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [showFilterMenu, setShowFilterMenu] = useState(false);
-  const [selectedFilter, setSelectedFilter] = useState('全部');
+  const [selectedFilter, setSelectedFilter] = useState('all'); // 默认值为 'all'
   const [showAddEventModal, setShowAddEventModal] = useState(false);
   const [showEventListModal, setShowEventListModal] = useState(false);
   const [showVoiceToCalendar, setShowVoiceToCalendar] = useState(false);
@@ -62,12 +62,12 @@ export default function HomeScreen() {
     audioFormat: 'wav',
   });
 
-  // 过滤选项
+  // 过滤选项，增加 value 字段
   const filterOptions = [
-    { label: '全部', icon: '📊', color: '#8E8E93', bgColor: '#F2F2F7' },
-    { label: '日曆', icon: '🔔', color: '#FF9500', bgColor: '#FFF3E0' },
-    { label: '想法', icon: '💡', color: '#9C27B0', bgColor: '#F3E5F5' },
-    { label: '心情', icon: '❤️', color: '#E91E63', bgColor: '#FCE4EC' },
+    { label: '全部', value: 'all', icon: '📊', color: '#8E8E93', bgColor: '#F2F2F7' },
+    { label: '日曆', value: 'calendar', icon: '🔔', color: '#FF9500', bgColor: '#FFF3E0' },
+    { label: '想法', value: 'idea', icon: '💡', color: '#9C27B0', bgColor: '#F3E5F5' },
+    { label: '心情', value: 'mood', icon: '❤️', color: '#E91E63', bgColor: '#FCE4EC' },
   ];
 
   useEffect(() => {
@@ -120,9 +120,9 @@ export default function HomeScreen() {
     router.push('/explore');
   };
 
-  // 处理过滤菜单
-  const handleFilterSelect = (filter: string) => {
-    setSelectedFilter(filter);
+  // 处理过滤菜单，使用 value
+  const handleFilterSelect = (filterValue: string) => {
+    setSelectedFilter(filterValue);
     setShowFilterMenu(false);
   };
 
@@ -461,7 +461,8 @@ export default function HomeScreen() {
         </View>
         <View style={styles.headerRight}>
           <TouchableOpacity style={styles.filterButton} onPress={toggleFilterMenu}>
-            <Text style={styles.filterText}>{selectedFilter}</Text>
+            {/* 显示当前选中的过滤项的标签 */}
+            <Text style={styles.filterText}>{filterOptions.find(opt => opt.value === selectedFilter)?.label}</Text>
             <Text style={styles.filterIcon}>▼</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.avatarButton} onPress={navigateToProfile}>
@@ -531,30 +532,25 @@ export default function HomeScreen() {
             <Text style={styles.todayTitle}>今天 {new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric' })}</Text>
           </View>
           
-          {/* 显示今天的事件 */}
+          {/* 显示今天的事件，并应用过滤 */}
           {(() => {
             const todayEvents = getEventsByDate(new Date());
-            console.log('📅 今日事件检查:', { 
-              today: new Date().toISOString(),
-              totalEvents: events.length,
-              todayEvents: todayEvents.length,
-              allEvents: events.map(e => ({ 
-                id: e.id, 
-                title: e.title, 
-                start_ts: e.start_ts,
-                date: new Date(e.start_ts * 1000).toISOString()
-              }))
-            });
-            if (todayEvents.length > 0) {
+            
+            // 根据 selectedFilter 过滤事件
+            const filteredEvents = selectedFilter === 'all'
+              ? todayEvents
+              : todayEvents.filter(event => event.type === selectedFilter);
+
+            if (filteredEvents.length > 0) {
               return (
                 <View style={styles.eventsContainer}>
                   <View style={styles.eventsTitleContainer}>
                     <Text style={styles.eventsTitle}>📋 今日事件</Text>
                     <View style={styles.eventsCountBadge}>
-                      <Text style={styles.eventsCountText}>{todayEvents.length}</Text>
+                      <Text style={styles.eventsCountText}>{filteredEvents.length}</Text>
                     </View>
                   </View>
-                  {todayEvents.map((event) => (
+                  {filteredEvents.map((event) => (
                     <TouchableOpacity 
                       key={event.id} 
                       style={styles.eventItem}
@@ -650,9 +646,9 @@ export default function HomeScreen() {
                 key={index}
                 style={[
                   styles.filterOption,
-                  selectedFilter === option.label && styles.selectedFilterOption
+                  selectedFilter === option.value && styles.selectedFilterOption
                 ]}
-                onPress={() => handleFilterSelect(option.label)}
+                onPress={() => handleFilterSelect(option.value)}
               >
                                  <View style={styles.filterOptionContent}>
                    <View style={[styles.filterOptionIconContainer, { backgroundColor: option.bgColor }]}>
@@ -662,7 +658,7 @@ export default function HomeScreen() {
                    </View>
                    <Text style={[
                      styles.filterOptionText,
-                     selectedFilter === option.label && styles.selectedFilterOptionText
+                     selectedFilter === option.value && styles.selectedFilterOptionText
                    ]}>
                      {option.label}
                    </Text>

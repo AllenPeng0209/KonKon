@@ -141,6 +141,7 @@ export type Database = {
           source: string | null
           start_ts: number
           title: string
+          type: string | null
           updated_at: string | null
         }
         Insert: {
@@ -156,6 +157,7 @@ export type Database = {
           source?: string | null
           start_ts: number
           title: string
+          type?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -171,6 +173,7 @@ export type Database = {
           source?: string | null
           start_ts?: number
           title?: string
+          type?: string | null
           updated_at?: string | null
         }
         Relationships: [
