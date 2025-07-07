@@ -44,18 +44,121 @@ async function getOmniConfig(): Promise<OmniConfig> {
   };
 }
 
-// 语音输入处理（暂时简化）
+// DashScope 语音识别功能
+export async function speechToText(
+  audioBase64: string,
+  onRealtimeText?: (text: string) => void
+): Promise<string> {
+  try {
+    console.log('录音文件大小:', audioBase64.length, 'bytes (base64)');
+    
+    if (onRealtimeText) {
+      onRealtimeText('正在处理语音识别...');
+    }
+    
+    // 使用 DashScope ASR API 进行语音识别
+    const result = await performDashScopeASR(audioBase64, onRealtimeText);
+    
+    console.log('DashScope 语音识别结果:', result);
+    return result;
+    
+  } catch (error) {
+    console.error('语音识别失败:', error);
+    throw new Error(`语音识别失败: ${error instanceof Error ? error.message : '未知错误'}`);
+  }
+}
+
+// DashScope Qwen-Audio 语音识别实现
+async function performDashScopeASR(
+  audioBase64: string,
+  onRealtimeText?: (text: string) => void
+): Promise<string> {
+  try {
+    const config = await getOmniConfig();
+    
+    if (onRealtimeText) {
+      onRealtimeText('正在连接 Qwen-Audio...');
+    }
+    
+    // 使用 DashScope OpenAI 兼容的 Qwen-Audio API
+    const response = await fetch(`${config.baseURL}/compatible-mode/v1/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${config.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'qwen2.5-omni-7b',
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'input_audio',
+                input_audio: {
+                  data: `data:audio/wav;base64,${audioBase64}`
+                }
+              },
+              {
+                type: 'text',
+                text: '请将这段语音转录成文字，只输出转录的文字内容，不要其他解释。'
+              }
+            ]
+          }
+        ],
+        modalities: ['text']
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Qwen-Audio 错误:', response.status, errorText);
+      throw new Error(`Qwen-Audio API 错误: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    console.log('Qwen-Audio 响应:', data);
+    
+    if (onRealtimeText) {
+      onRealtimeText('语音识别完成');
+    }
+    
+    // 解析响应获取识别结果
+    const transcript = data.choices?.[0]?.message?.content || '';
+    
+    if (!transcript) {
+      throw new Error('语音识别结果为空');
+    }
+    
+    return transcript.trim();
+    
+  } catch (error) {
+    console.error('Qwen-Audio 失败:', error);
+    throw error;
+  }
+}
+
+
+// 语音输入处理 - 完整流程
 export async function processVoiceToCalendar(
-  audioData: string,
+  audioBase64: string,
   onProgress?: (chunk: string) => void
 ): Promise<ParsedCalendarResult> {
-  // 暂时返回提示信息，建议用户使用文字输入
-  return {
-    events: [],
-    summary: "语音功能正在开发中，请使用文字输入功能",
-    confidence: 0.1,
-    rawResponse: "语音功能暂不可用"
-  };
+  try {
+    // 第一步：语音转文字
+    const transcribedText = await speechToText(audioBase64, onProgress);
+    
+    if (!transcribedText || transcribedText.trim() === '') {
+      throw new Error('语音识别结果为空');
+    }
+    
+    // 第二步：文字转日程
+    return await processTextToCalendar(transcribedText, onProgress);
+    
+  } catch (error) {
+    console.error('语音转日程失败:', error);
+    throw error;
+  }
 }
 
 // 文本输入处理 - 使用与洞察页面相同的API调用方式
@@ -303,4 +406,43 @@ export async function testOmniConnection(): Promise<boolean> {
 // 获取支持的音频格式
 export function getSupportedAudioFormats(): string[] {
   return ['wav', 'mp3', 'aac', 'flac'];
+}
+
+// 测试语音识别连接 (Qwen-Audio)
+export async function testSpeechConnection(): Promise<boolean> {
+  try {
+    const config = await getOmniConfig();
+    
+    // 测试 Qwen-Audio OpenAI 兼容 API 连接
+    const response = await fetch(`${config.baseURL}/compatible-mode/v1/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${config.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'qwen2.5-omni-7b',
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: '你好'
+              }
+            ]
+          }
+        ]
+      }),
+    });
+    
+    // 即使返回错误，只要不是认证错误，就说明连接正常
+    const isConnected = response.status !== 401 && response.status !== 403;
+    
+    console.log('语音识别功能测试:', isConnected ? '✅ Qwen-Audio 连接正常' : '❌ Qwen-Audio 连接失败');
+    return isConnected;
+  } catch (error) {
+    console.error('语音识别连接测试失败:', error);
+    return false;
+  }
 }

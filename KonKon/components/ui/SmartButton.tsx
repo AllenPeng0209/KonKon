@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,9 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { processTextToCalendar, ParsedCalendarResult } from '../../lib/bailian_omni_calendar';
+import { Audio } from 'expo-av';
+import * as FileSystem from 'expo-file-system';
+import { processTextToCalendar, ParsedCalendarResult, speechToText } from '../../lib/bailian_omni_calendar';
 
 interface SmartButtonProps {
   onPress?: () => void;
@@ -45,6 +47,8 @@ export default function SmartButton({
   const [isRecording, setIsRecording] = useState(false);
   const [realTimeText, setRealTimeText] = useState('');
   const [rotateAnim] = useState(new Animated.Value(0));
+  const recordingRef = useRef<Audio.Recording | null>(null);
+  const realtimeTimeoutRefs = useRef<NodeJS.Timeout[]>([]);
 
   const toggleExpanded = () => {
     const toValue = isExpanded ? 0 : 1;
@@ -149,54 +153,144 @@ export default function SmartButton({
   };
 
   // 开始长按录音
-  const handleLongPressStart = () => {
+  const handleLongPressStart = async () => {
     if (!disabled && !isTextMode) {
       console.log('开始录音');
-      setIsRecording(true);
-      setRealTimeText('正在聆听...');
       
-      // 模拟实时转录 - 需要保存录音状态引用
-      let recordingRef = true;
-      setTimeout(() => {
-        if (recordingRef) {
-          setRealTimeText('正在识别...');
+      try {
+        // 请求录音权限
+        const { status } = await Audio.requestPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('权限错误', '需要麦克风权限才能录音');
+          return;
         }
-      }, 1000);
-      
-      setTimeout(() => {
-        if (recordingRef) {
-          setRealTimeText('明天下午三点...');
-        }
-      }, 2000);
+
+        // 设置音频模式
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: true,
+          playsInSilentModeIOS: true,
+        });
+
+        // 开始录音
+        const recording = new Audio.Recording();
+        await recording.prepareToRecordAsync({
+          android: {
+            extension: '.wav',
+            outputFormat: Audio.AndroidOutputFormat.DEFAULT,
+            audioEncoder: Audio.AndroidAudioEncoder.DEFAULT,
+            sampleRate: 16000,
+            numberOfChannels: 1,
+            bitRate: 128000,
+          },
+          ios: {
+            extension: '.wav',
+            outputFormat: Audio.IOSOutputFormat.LINEARPCM,
+            audioQuality: Audio.IOSAudioQuality.HIGH,
+            sampleRate: 16000,
+            numberOfChannels: 1,
+            bitRate: 128000,
+            linearPCMBitDepth: 16,
+            linearPCMIsBigEndian: false,
+            linearPCMIsFloat: false,
+          },
+          web: {
+            mimeType: 'audio/wav',
+            bitsPerSecond: 128000,
+          },
+        });
+        await recording.startAsync();
+        
+        recordingRef.current = recording;
+        setIsRecording(true);
+        setRealTimeText('正在聆听...');
+        
+        // 清除之前的定时器
+        realtimeTimeoutRefs.current.forEach(timeout => clearTimeout(timeout));
+        realtimeTimeoutRefs.current = [];
+        
+        // 为 WebSocket 实时识别做准备
+        // 实时文本更新会通过 speechToText 的回调函数处理
+        
+      } catch (error) {
+        console.error('开始录音失败:', error);
+        Alert.alert('录音失败', '无法开始录音，请检查麦克风权限');
+      }
     }
   };
 
   // 结束长按录音
   const handleLongPressEnd = async () => {
-    if (isRecording) {
+    if (isRecording && recordingRef.current) {
       console.log('结束录音');
-      setIsRecording(false);
-      setRealTimeText('正在处理...');
       
-      // 模拟语音识别结果
-      const recognizedText = realTimeText || '明天下午三点开会';
-      
-      // 调用文字转日程接口
-      if (onTextResult) {
-        try {
+      try {
+        setIsRecording(false);
+        setRealTimeText('录音结束，正在识别...');
+        
+        // 清除定时器
+        realtimeTimeoutRefs.current.forEach(timeout => clearTimeout(timeout));
+        realtimeTimeoutRefs.current = [];
+        
+        // 停止录音
+        await recordingRef.current.stopAndUnloadAsync();
+        const uri = recordingRef.current.getURI();
+        recordingRef.current = null;
+        
+        if (!uri) {
+          throw new Error('录音文件为空');
+        }
+        
+        // 读取录音文件并转换为Base64
+        const base64Audio = await FileSystem.readAsStringAsync(uri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        
+        console.log('录音完成，开始 Qwen-Audio 语音识别...');
+        setRealTimeText('正在连接 Qwen-Audio...');
+        
+        // 调用 Qwen-Audio 语音识别API
+        const transcribedText = await speechToText(base64Audio, (text) => {
+          // 更新处理状态文本
+          setRealTimeText(text);
+        });
+        
+        console.log('Qwen-Audio 语音识别完成:', transcribedText);
+        
+        if (!transcribedText || transcribedText.trim() === '') {
+          throw new Error('语音识别结果为空，请重新录音');
+        }
+        
+        setRealTimeText('正在解析日程...');
+        
+        // 调用文字转日程接口
+        if (onTextResult) {
           setIsProcessing(true);
-          const result = await processTextToCalendar(recognizedText);
+          const result = await processTextToCalendar(transcribedText);
           onTextResult(result);
           setRealTimeText('');
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : '处理失败';
-          if (onError) {
-            onError(errorMessage);
-          }
-          setRealTimeText('');
-        } finally {
-          setIsProcessing(false);
         }
+        
+        // 删除临时录音文件
+        try {
+          await FileSystem.deleteAsync(uri, { idempotent: true });
+        } catch (deleteError) {
+          console.warn('删除临时录音文件失败:', deleteError);
+        }
+        
+      } catch (error) {
+        console.error('录音处理失败:', error);
+        const errorMessage = error instanceof Error ? error.message : '录音处理失败';
+        
+        if (onError) {
+          onError(errorMessage);
+        } else {
+          Alert.alert('处理失败', errorMessage);
+        }
+        
+        setRealTimeText('');
+        recordingRef.current = null;
+      } finally {
+        setIsProcessing(false);
       }
     }
   };

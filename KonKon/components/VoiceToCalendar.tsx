@@ -13,7 +13,8 @@ import SmartButton from './ui/SmartButton';
 import { 
   ParsedCalendarResult, 
   CalendarEvent,
-  testOmniConnection 
+  testOmniConnection,
+  testSpeechConnection
 } from '../lib/bailian_omni_calendar';
 import { useEvents } from '../hooks/useEvents';
 
@@ -40,13 +41,23 @@ export const VoiceToCalendar: React.FC<VoiceToCalendarProps> = ({
   const handleTestConnection = useCallback(async () => {
     setIsConnecting(true);
     try {
-      const isConnected = await testOmniConnection();
+      // 测试文字模型和语音识别模型
+      const [textConnected, speechConnected] = await Promise.all([
+        testOmniConnection(),
+        testSpeechConnection()
+      ]);
+      
+      const isConnected = textConnected && speechConnected;
       setConnectionStatus(isConnected ? 'connected' : 'failed');
       
       if (isConnected) {
-        Alert.alert('连接成功', '千问omni模型连接正常');
+        Alert.alert('连接成功', '百炼文字和语音识别API连接正常');
       } else {
-        Alert.alert('连接失败', '请检查网络连接和API密钥配置');
+        let message = '连接失败：\n';
+        if (!textConnected) message += '- 文字处理API连接失败\n';
+        if (!speechConnected) message += '- 语音识别API连接失败\n';
+        message += '请检查网络连接和API密钥配置';
+        Alert.alert('连接失败', message);
       }
     } catch (error) {
       console.error('连接测试失败:', error);
