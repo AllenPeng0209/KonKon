@@ -23,6 +23,7 @@ import CalendarService from '@/lib/calendarService';
 import { processVoiceToCalendar, processImageToCalendar, ParsedCalendarResult } from '@/lib/bailian_omni_calendar';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
+import LoadingModal from '@/components/LoadingModal';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -39,6 +40,7 @@ export default function HomeScreen() {
   const [hasCalendarPermission, setHasCalendarPermission] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date().toISOString().slice(0, 7));
   const [isProcessingImage, setIsProcessingImage] = useState(false);
+  const [loadingText, setLoadingText] = useState('');
   
   // 事件管理
   const { 
@@ -209,7 +211,7 @@ export default function HomeScreen() {
       const imageUri = pickerResult.assets[0].uri;
       try {
         setIsProcessingImage(true);
-        Alert.alert('正在处理图片', '我们正在分析图片内容并为您生成日程，请稍候...');
+        setLoadingText('我们正在分析图片内容并为您生成日程，请稍候...');
         const base64Image = await FileSystem.readAsStringAsync(imageUri, {
           encoding: FileSystem.EncodingType.Base64,
         });
@@ -220,6 +222,7 @@ export default function HomeScreen() {
         Alert.alert('处理失败', `无法从图片创建日程: ${error instanceof Error ? error.message : '未知错误'}`);
       } finally {
         setIsProcessingImage(false);
+        setLoadingText('');
       }
     }
   };
@@ -819,6 +822,8 @@ export default function HomeScreen() {
           setShowVoiceToCalendar(false);
         }}
       />
+
+      <LoadingModal isVisible={isProcessingImage} text={loadingText} />
     </SafeAreaView>
   );
 }
