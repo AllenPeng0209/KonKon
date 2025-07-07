@@ -20,7 +20,9 @@ import { VoiceToCalendar } from '@/components/VoiceToCalendar';
 import { useEvents } from '@/hooks/useEvents';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import CalendarService from '@/lib/calendarService';
-import { processVoiceToCalendar, ParsedCalendarResult } from '@/lib/bailian_omni_calendar';
+import { processVoiceToCalendar, processImageToCalendar, ParsedCalendarResult } from '@/lib/bailian_omni_calendar';
+import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -36,6 +38,7 @@ export default function HomeScreen() {
   const [editingEvent, setEditingEvent] = useState<any>(null);
   const [hasCalendarPermission, setHasCalendarPermission] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date().toISOString().slice(0, 7));
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
   
   // 事件管理
   const { 
@@ -169,6 +172,64 @@ export default function HomeScreen() {
         Alert.alert('错误', '无法开始录制，请检查麦克风权限');
       }
     }
+  };
+
+  // 处理图片转日程
+  const handleImageSelection = async (pickerFunction: 'camera' | 'library') => {
+    let permissionResult;
+    if (pickerFunction === 'camera') {
+      permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+    } else {
+      permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    }
+
+    if (permissionResult.granted === false) {
+      Alert.alert('权限不足', `需要${pickerFunction === 'camera' ? '相机' : '相册'}权限才能继续`);
+      return;
+    }
+
+    const pickerResult = pickerFunction === 'camera'
+      ? await ImagePicker.launchCameraAsync({
+          allowsEditing: true,
+          aspect: [4, 3],
+          quality: 0.5,
+        })
+      : await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          aspect: [4, 3],
+          quality: 0.5,
+        });
+
+    if (pickerResult.canceled) {
+      return;
+    }
+
+    if (pickerResult.assets && pickerResult.assets.length > 0) {
+      const imageUri = pickerResult.assets[0].uri;
+      try {
+        setIsProcessingImage(true);
+        Alert.alert('正在处理图片', '我们正在分析图片内容并为您生成日程，请稍候...');
+        const base64Image = await FileSystem.readAsStringAsync(imageUri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        const result = await processImageToCalendar(base64Image);
+        handleAIResult(result);
+      } catch (error) {
+        console.error('图片处理失败:', error);
+        Alert.alert('处理失败', `无法从图片创建日程: ${error instanceof Error ? error.message : '未知错误'}`);
+      } finally {
+        setIsProcessingImage(false);
+      }
+    }
+  };
+
+  const handlePhotoPress = () => {
+    handleImageSelection('camera');
+  };
+
+  const handleAlbumPress = () => {
+    handleImageSelection('library');
   };
 
   // 处理语音转日程
@@ -630,7 +691,9 @@ export default function HomeScreen() {
         onTextResult={handleTextResult}
         onError={handleTextError}
         onManualAddPress={handleManualAdd}
-        disabled={voiceState.isLoading}
+        onPhotoPress={handlePhotoPress}
+        onAlbumPress={handleAlbumPress}
+        disabled={voiceState.isLoading || isProcessingImage}
       />
 
       {/* 过滤菜单 */}

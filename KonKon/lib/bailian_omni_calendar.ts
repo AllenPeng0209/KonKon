@@ -250,7 +250,122 @@ export async function processTextToCalendar(
   }
 }
 
-// 解析响应为日程结构
+// 图片输入处理
+export async function processImageToCalendar(
+  base64Image: string,
+  onProgress?: (chunk: string) => void
+): Promise<ParsedCalendarResult> {
+  try {
+    const config = await getOmniConfig();
+    const mimeType = base64Image.startsWith('data:image/jpeg') ? 'image/jpeg' : 'image/png';
+
+    // Using the native Bailian API format as per documentation
+    // This avoids the streaming issues encountered with the OpenAI compatible endpoint.
+    const requestBody = {
+      model: "qwen-vl-max", // Using the dedicated Vision-Language model
+      input: {
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                "image": `data:${mimeType};base64,${base64Image}`
+              },
+              {
+                "text": `你是一个智能日程助手。请分析这张图片，提取或推断出图片中的日程信息。如果图片中没有明确的事件，可以根据图片内容创造一个相关的事件。请以JSON格式返回。当前时间是 ${new Date().toISOString()}`
+              }
+            ]
+          }
+        ]
+      },
+      parameters: {
+        result_format: "message" // Required parameter for this endpoint
+      }
+    };
+    
+    if (onProgress) onProgress('正在分析图片...');
+
+    // Using the native Bailian v2 chat completion endpoint
+    const response = await fetch(`${config.baseURL}/v2/completion/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${config.apiKey}`,
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Bailian Image API Error:', response.status, errorText);
+      throw new Error(`图片分析接口调用失败: ${response.status} - ${errorText}`);
+    }
+
+    // This is now a non-streaming response.
+    const data = await response.json();
+    
+    if (onProgress) onProgress('图片分析完成，正在解析结果...');
+    
+    console.log('Bailian Image API Full Response:', JSON.stringify(data, null, 2));
+
+    if (data.output && data.output.choices && data.output.choices.length > 0) {
+      const messageContent = data.output.choices[0].message.content;
+      return parseCalendarResult(messageContent, onProgress);
+    } else {
+      console.error('Invalid response structure from Bailian Image API:', data);
+      throw new Error('从图片分析服务返回了无效的结果格式。');
+    }
+
+  } catch (error) {
+    console.error('图片转日程失败:', error);
+    throw error;
+  }
+}
+
+// Helper function to parse the AI's string response into a JSON object.
+function parseCalendarResult(
+  content: string,
+  onProgress?: (chunk: string) => void
+): ParsedCalendarResult {
+  if (onProgress) onProgress('正在解析结果...');
+  console.log("Raw content from AI for parsing: ", content);
+
+  try {
+    // Clean the content: remove markdown code block fences and trim whitespace.
+    const cleanedContent = content.replace(/```json/g, '').replace(/```/g, '').trim();
+    const parsed = JSON.parse(cleanedContent);
+
+    // Basic validation to ensure the parsed object has the necessary properties.
+    if (!parsed.title || !parsed.startTime || !parsed.endTime) {
+      throw new Error('解析后的JSON缺少必要的字段 (title, startTime, endTime)。');
+    }
+    
+    const event: CalendarEvent = {
+      id: generateEventId(), // Generate a unique ID for the new event
+      title: parsed.title,
+      description: parsed.description || '',
+      startTime: new Date(parsed.startTime),
+      endTime: new Date(parsed.endTime),
+      location: parsed.location || '',
+      confidence: parsed.confidence || 0.9, // Use confidence from AI or default
+    };
+
+    console.log("Parsed calendar event: ", event);
+
+    return {
+      events: [event],
+      summary: event.title,
+      confidence: event.confidence,
+      rawResponse: content,
+    };
+  } catch (error) {
+    console.error('无法将AI响应解析为日历事件JSON:', error, "Raw content was:", content);
+    // Re-throw the error to be caught by the calling function's try-catch block.
+    throw new Error(`无法解析AI响应: ${content}`);
+  }
+}
+
+// 解析大模型返回的日历事件字符串
 function parseCalendarResponse(responseText: string): ParsedCalendarResult {
   try {
     console.log('原始响应:', responseText);

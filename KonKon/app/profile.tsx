@@ -51,7 +51,22 @@ export default function ProfileScreen() {
 
   const handleSetting = (setting: string) => {
     // Handle different settings
-    console.log('Setting:', setting);
+    switch (setting) {
+      case 'settings':
+        router.push('/settings');
+        break;
+      case 'userAgreement':
+        router.push('/user-agreement');
+        break;
+      case 'privacyPolicy':
+        router.push('/privacy-policy');
+        break;
+      case 'about':
+        router.push('/about');
+        break;
+      default:
+        console.log('Setting:', setting);
+    }
   };
 
   const handleFunction = (func: string) => {

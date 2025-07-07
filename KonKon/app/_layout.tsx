@@ -41,6 +41,13 @@ export default function RootLayout() {
             <Stack.Screen name="create-family" options={{ headerShown: false }} />
             <Stack.Screen name="family-management" options={{ headerShown: false }} />
             <Stack.Screen name="join-family" options={{ headerShown: false }} />
+            <Stack.Screen name="settings" options={{ headerShown: false }} />
+            <Stack.Screen name="user-agreement" options={{ headerShown: false }} />
+            <Stack.Screen name="privacy-policy" options={{ headerShown: false }} />
+            <Stack.Screen name="about" options={{ headerShown: false }} />
+            <Stack.Screen name="edit-profile" options={{ headerShown: false }} />
+            <Stack.Screen name="notification-settings" options={{ headerShown: false }} />
+            <Stack.Screen name="language-selection" options={{ headerShown: false }} />
             <Stack.Screen name="+not-found" />
           </Stack>
           <StatusBar style="auto" />
