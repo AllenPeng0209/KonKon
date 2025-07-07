@@ -42,6 +42,8 @@ export default function SmartButton({
   const [isTextMode, setIsTextMode] = useState(false);
   const [inputText, setInputText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [realTimeText, setRealTimeText] = useState('');
   const [rotateAnim] = useState(new Animated.Value(0));
 
   const toggleExpanded = () => {
@@ -146,6 +148,59 @@ export default function SmartButton({
     setIsProcessing(false);
   };
 
+  // 开始长按录音
+  const handleLongPressStart = () => {
+    if (!disabled && !isTextMode) {
+      console.log('开始录音');
+      setIsRecording(true);
+      setRealTimeText('正在聆听...');
+      
+      // 模拟实时转录 - 需要保存录音状态引用
+      let recordingRef = true;
+      setTimeout(() => {
+        if (recordingRef) {
+          setRealTimeText('正在识别...');
+        }
+      }, 1000);
+      
+      setTimeout(() => {
+        if (recordingRef) {
+          setRealTimeText('明天下午三点...');
+        }
+      }, 2000);
+    }
+  };
+
+  // 结束长按录音
+  const handleLongPressEnd = async () => {
+    if (isRecording) {
+      console.log('结束录音');
+      setIsRecording(false);
+      setRealTimeText('正在处理...');
+      
+      // 模拟语音识别结果
+      const recognizedText = realTimeText || '明天下午三点开会';
+      
+      // 调用文字转日程接口
+      if (onTextResult) {
+        try {
+          setIsProcessing(true);
+          const result = await processTextToCalendar(recognizedText);
+          onTextResult(result);
+          setRealTimeText('');
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : '处理失败';
+          if (onError) {
+            onError(errorMessage);
+          }
+          setRealTimeText('');
+        } finally {
+          setIsProcessing(false);
+        }
+      }
+    }
+  };
+
   const rotation = rotateAnim.interpolate({
     inputRange: [0, 1],
     outputRange: ['0deg', '45deg'],
@@ -241,6 +296,15 @@ export default function SmartButton({
         </View>
       )}
       
+      {/* 实时转录显示框 */}
+      {(isRecording || realTimeText) && (
+        <View style={styles.realTimeTranscriptContainer}>
+          <Text style={styles.realTimeTranscriptText}>
+            {realTimeText || '正在聆听...'}
+          </Text>
+        </View>
+      )}
+      
       {/* 主按钮区域 */}
       <View style={styles.mainButtonContainer}>
         {/* 左侧加号按钮 */}
@@ -255,11 +319,21 @@ export default function SmartButton({
         
         {/* 中间录音按钮 */}
         <TouchableOpacity 
-          style={[styles.smartButton, disabled && styles.smartButtonDisabled]}
-          onPress={onPress}
+          style={[
+            styles.smartButton, 
+            disabled && styles.smartButtonDisabled,
+            isRecording && styles.smartButtonRecording
+          ]}
+          onPressIn={handleLongPressStart}
+          onPressOut={handleLongPressEnd}
           disabled={disabled}
         >
-          <Text style={styles.smartButtonText}>{text}</Text>
+          <Text style={[
+            styles.smartButtonText,
+            isRecording && styles.smartButtonTextRecording
+          ]}>
+            {isRecording ? '🎤 录音中...' : text}
+          </Text>
         </TouchableOpacity>
         
         {/* 右侧文字输入按钮 */}
@@ -337,10 +411,16 @@ const styles = StyleSheet.create({
   smartButtonDisabled: {
     backgroundColor: '#999',
   },
+  smartButtonRecording: {
+    backgroundColor: '#FF3B30',
+  },
   smartButtonText: {
     fontSize: 16,
     color: '#fff',
     fontWeight: '500',
+  },
+  smartButtonTextRecording: {
+    fontWeight: '600',
   },
   textInputButton: {
     width: 40,
@@ -420,5 +500,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     fontStyle: 'italic',
+  },
+  // 实时转录显示框样式
+  realTimeTranscriptContainer: {
+    backgroundColor: '#95EC69',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+    alignSelf: 'center',
+    minWidth: 150,
+    maxWidth: '80%',
+  },
+  realTimeTranscriptText: {
+    fontSize: 14,
+    color: '#333',
+    textAlign: 'center',
+    fontWeight: '500',
   },
 }); 

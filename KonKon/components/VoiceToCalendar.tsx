@@ -178,14 +178,14 @@ export const VoiceToCalendar: React.FC<VoiceToCalendarProps> = ({
         <ScrollView style={styles.content}>
           {/* 语音输入区域 */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>语音和文字输入</Text>
+            <Text style={styles.sectionTitle}>语音创建日程</Text>
             <SmartButton
               onTextResult={handleVoiceResult}
               onError={handleError}
-              text="长按说话 或 点击右侧输入文字"
+              text="长按说话，快速创建日程"
             />
             <Text style={styles.inputHint}>
-              💡 支持语音录制和文字输入两种方式创建日程
+              💡 长按录音按钮说话，实时转录，松开后自动创建日程
             </Text>
           </View>
 
