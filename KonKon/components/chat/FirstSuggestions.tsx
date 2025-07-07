@@ -8,11 +8,11 @@ interface FirstSuggestionsProps {
 
 export function FirstSuggestions({ onSuggestionPress }: FirstSuggestionsProps) {
   const suggestions = [
-    '分析一下我的消费习惯',
-    '今天的天气怎么样？',
-    '推荐几部好看的电影',
-    '帮我制定一个理财计划',
-    '解释一下什么是 MBTI',
+    '帮我安排本周的家庭活动',
+    '提醒我家人的生日和重要纪念日',
+    '制定家庭购物清单',
+    '安排家务分工计划',
+    '推荐适合家庭的周末活动',
   ];
 
   return (

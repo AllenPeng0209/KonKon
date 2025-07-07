@@ -49,6 +49,10 @@ export default function ExploreScreen() {
     router.back();
   };
 
+  const navigateToProfile = () => {
+    router.push('/profile');
+  };
+
   const handleClearChat = () => {
     clearMessages();
   };
@@ -86,7 +90,7 @@ export default function ExploreScreen() {
               </TouchableOpacity>
             )}
           </View>
-          <TouchableOpacity style={styles.avatarButton}>
+          <TouchableOpacity style={styles.avatarButton} onPress={navigateToProfile}>
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>👤</Text>
             </View>

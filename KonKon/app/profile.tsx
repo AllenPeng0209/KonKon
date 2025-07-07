@@ -19,11 +19,11 @@ export default function ProfileScreen() {
   const { user } = useAuth();
 
   const handleBack = () => {
-    router.back();
+    router.push('/(tabs)');
   };
 
   const handleVIPBenefits = () => {
-    // Handle VIP benefits
+    // Handle family management
   };
 
   const handleSetting = (setting: string) => {
@@ -74,14 +74,14 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* VIP通知卡片 */}
+          {/* 家庭管理通知卡片 */}
           <View style={styles.vipCard}>
             <View style={styles.vipCardContent}>
-              <Text style={styles.vipIcon}>🦝</Text>
-              <Text style={styles.vipMessage}>你已是唯皮VIP尊享会员啦</Text>
+              <Text style={styles.vipIcon}>🏡</Text>
+              <Text style={styles.vipMessage}>欢迎使用家庭管理中心</Text>
             </View>
             <TouchableOpacity style={styles.vipButton} onPress={handleVIPBenefits}>
-              <Text style={styles.vipButtonText}>查看权益</Text>
+              <Text style={styles.vipButtonText}>管理家庭</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -89,34 +89,40 @@ export default function ProfileScreen() {
         {/* 功能网格 */}
         <View style={styles.functionsGrid}>
           <View style={styles.functionsRow}>
-            <TouchableOpacity style={styles.functionItem} onPress={() => handleFunction('autoRecord')}>
-              <Text style={styles.functionIcon}>🐶</Text>
-              <Text style={styles.functionText}>自动记账</Text>
+            <TouchableOpacity style={styles.functionItem} onPress={() => handleFunction('familySchedule')}>
+              <Text style={styles.functionIcon}>📅</Text>
+              <Text style={styles.functionText}>家庭日程</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.functionItem} onPress={() => handleFunction('billImport')}>
-              <Text style={styles.functionIcon}>📊</Text>
-              <Text style={styles.functionText}>账单导入</Text>
+            <TouchableOpacity style={styles.functionItem} onPress={() => handleFunction('memberManagement')}>
+              <Text style={styles.functionIcon}>👥</Text>
+              <Text style={styles.functionText}>成员管理</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.functionItem} onPress={() => handleFunction('assetManagement')}>
-              <Text style={styles.functionIcon}>✨</Text>
-              <Text style={styles.functionText}>资产管理</Text>
+            <TouchableOpacity style={styles.functionItem} onPress={() => handleFunction('houseworkAssignment')}>
+              <Text style={styles.functionIcon}>🏠</Text>
+              <Text style={styles.functionText}>家务分配</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.functionItem} onPress={() => handleFunction('cardPocket')}>
-              <Text style={styles.functionIcon}>🎒</Text>
-              <Text style={styles.functionText}>卡片口袋</Text>
+            <TouchableOpacity style={styles.functionItem} onPress={() => handleFunction('birthdayReminder')}>
+              <Text style={styles.functionIcon}>🎂</Text>
+              <Text style={styles.functionText}>生日提醒</Text>
             </TouchableOpacity>
           </View>
           <View style={styles.functionsRow}>
-            <TouchableOpacity style={styles.functionItem} onPress={() => handleFunction('widget')}>
-              <Text style={styles.functionIcon}>🐹</Text>
-              <Text style={styles.functionText}>小组件</Text>
+            <TouchableOpacity style={styles.functionItem} onPress={() => handleFunction('familyAlbum')}>
+              <Text style={styles.functionIcon}>📸</Text>
+              <Text style={styles.functionText}>家庭相册</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.functionItem} onPress={() => handleFunction('categoryManagement')}>
-              <Text style={styles.functionIcon}>🦫</Text>
-              <Text style={styles.functionText}>分类管理</Text>
+            <TouchableOpacity style={styles.functionItem} onPress={() => handleFunction('shoppingList')}>
+              <Text style={styles.functionIcon}>🛒</Text>
+              <Text style={styles.functionText}>购物清单</Text>
             </TouchableOpacity>
-            <View style={styles.functionItem} />
-            <View style={styles.functionItem} />
+            <TouchableOpacity style={styles.functionItem} onPress={() => handleFunction('familyBudget')}>
+              <Text style={styles.functionIcon}>💰</Text>
+              <Text style={styles.functionText}>家庭预算</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.functionItem} onPress={() => handleFunction('emergencyContact')}>
+              <Text style={styles.functionIcon}>🚨</Text>
+              <Text style={styles.functionText}>紧急联系</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -147,15 +153,17 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFF8E7',
+    backgroundColor: '#f9fafb',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 15,
-    backgroundColor: '#FFF8E7',
+    paddingTop: 12,
+    paddingBottom: 16,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
   },
   backButton: {
     width: 40,
@@ -165,13 +173,13 @@ const styles = StyleSheet.create({
   },
   backIcon: {
     fontSize: 24,
-    color: '#333',
+    color: '#007AFF',
   },
   headerTitle: {
     flex: 1,
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#2c3e50',
     textAlign: 'center',
   },
   headerRight: {
@@ -217,30 +225,30 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 22,
     fontWeight: '600',
-    color: '#333',
+    color: '#2c3e50',
     marginRight: 10,
   },
   vipBadge: {
-    backgroundColor: '#FFE4B5',
+    backgroundColor: '#007AFF',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 12,
   },
   vipText: {
     fontSize: 12,
-    color: '#D2691E',
+    color: '#FFF',
   },
   userId: {
     fontSize: 14,
-    color: '#999',
+    color: '#6b7280',
     marginBottom: 5,
   },
   recordDays: {
     fontSize: 14,
-    color: '#666',
+    color: '#6b7280',
   },
   daysNumber: {
-    color: '#4A90E2',
+    color: '#007AFF',
     fontWeight: '600',
   },
   editButton: {
@@ -253,12 +261,20 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   vipCard: {
-    backgroundColor: '#2C2C2C',
+    backgroundColor: '#007AFF',
     borderRadius: 16,
     padding: 20,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
   vipCardContent: {
     flexDirection: 'row',
@@ -275,21 +291,31 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   vipButton: {
-    backgroundColor: '#FFE4B5',
+    backgroundColor: '#FFF',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
   },
   vipButtonText: {
     fontSize: 14,
-    color: '#D2691E',
+    color: '#007AFF',
     fontWeight: '600',
   },
   functionsGrid: {
-    backgroundColor: '#F8F8F8',
+    backgroundColor: '#f0f8ff',
     borderRadius: 16,
     padding: 20,
     marginBottom: 30,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(135, 206, 235, 0.2)',
   },
   functionsRow: {
     flexDirection: 'row',
@@ -306,14 +332,23 @@ const styles = StyleSheet.create({
   },
   functionText: {
     fontSize: 13,
-    color: '#333',
+    color: '#2c3e50',
     textAlign: 'center',
+    fontWeight: '500',
   },
   settingsSection: {
     backgroundColor: '#FFF',
     borderRadius: 16,
     overflow: 'hidden',
     marginBottom: 30,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
   },
   settingItem: {
     flexDirection: 'row',
@@ -322,14 +357,15 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
     paddingHorizontal: 20,
     borderBottomWidth: 0.5,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: '#f0f0f0',
   },
   settingText: {
     fontSize: 16,
-    color: '#333',
+    color: '#2c3e50',
+    fontWeight: '500',
   },
   settingArrow: {
     fontSize: 16,
-    color: '#999',
+    color: '#6b7280',
   },
 }); 
