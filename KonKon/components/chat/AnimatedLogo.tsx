@@ -33,6 +33,7 @@ export function AnimatedLogo() {
   }, []);
 
   const animatedStyle = useAnimatedStyle(() => {
+    'worklet';
     return {
       transform: [{ scale: scale.value }],
       opacity: opacity.value,

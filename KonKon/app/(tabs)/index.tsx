@@ -16,8 +16,11 @@ import { useRouter } from 'expo-router';
 import SmartButton from '@/components/ui/SmartButton';
 import AddEventModal from '@/components/AddEventModal';
 import EventListModal from '@/components/EventListModal';
+import { VoiceToCalendar } from '@/components/VoiceToCalendar';
 import { useEvents } from '@/hooks/useEvents';
+import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import CalendarService from '@/lib/calendarService';
+import { processVoiceToCalendar, ParsedCalendarResult } from '@/lib/bailian_omni_calendar';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -28,6 +31,7 @@ export default function HomeScreen() {
   const [selectedFilter, setSelectedFilter] = useState('全部');
   const [showAddEventModal, setShowAddEventModal] = useState(false);
   const [showEventListModal, setShowEventListModal] = useState(false);
+  const [showVoiceToCalendar, setShowVoiceToCalendar] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [editingEvent, setEditingEvent] = useState<any>(null);
   const [hasCalendarPermission, setHasCalendarPermission] = useState(false);
@@ -46,6 +50,17 @@ export default function HomeScreen() {
     getMonthEvents,
     fetchEvents
   } = useEvents();
+
+  // 语音录制
+  const {
+    state: voiceState,
+    startRecording,
+    stopRecording,
+    clearRecording,
+  } = useVoiceRecorder({
+    maxDuration: 180000, // 3分钟
+    audioFormat: 'wav',
+  });
 
   // 过滤选项
   const filterOptions = [
@@ -120,6 +135,148 @@ export default function HomeScreen() {
     setSelectedDate(new Date());
     setEditingEvent(null); // 清空编辑状态
     setShowAddEventModal(true);
+  };
+
+  // 处理语音录制按钮点击
+  const handleVoicePress = async () => {
+    if (voiceState.isRecording) {
+      // 停止录制并处理语音
+      try {
+        const base64Data = await stopRecording();
+        if (base64Data) {
+          Alert.alert(
+            '处理语音',
+            '是否将录制的语音转换为日程？',
+            [
+              { text: '取消', onPress: () => clearRecording() },
+              { 
+                text: '转换', 
+                onPress: () => handleVoiceToCalendar(base64Data)
+              }
+            ]
+          );
+        }
+      } catch (error) {
+        console.error('停止录制失败:', error);
+        Alert.alert('错误', '录制失败，请重试');
+      }
+    } else {
+      // 开始录制
+      try {
+        await startRecording();
+      } catch (error) {
+        console.error('开始录制失败:', error);
+        Alert.alert('错误', '无法开始录制，请检查麦克风权限');
+      }
+    }
+  };
+
+  // 处理语音转日程
+  const handleVoiceToCalendar = async (base64Data: string) => {
+    try {
+      const result = await processVoiceToCalendar(base64Data);
+      handleAIResult(result);
+    } catch (error) {
+      console.error('语音处理失败:', error);
+      Alert.alert('处理失败', '语音解析失败，请重试');
+    } finally {
+      clearRecording();
+    }
+  };
+
+  // 处理文字输入转日程的结果（兼容原有逻辑）
+  const handleTextResult = (result: ParsedCalendarResult) => {
+    handleAIResult(result);
+  };
+
+  // 统一处理AI解析结果
+  const handleAIResult = (result: ParsedCalendarResult) => {
+    console.log('AI result:', result);
+    
+    if (result.events && result.events.length > 0) {
+      if (result.events.length === 1) {
+        // 单个事件，直接显示确认对话框
+        const event = result.events[0];
+        const confidence = Math.round(result.confidence * 100);
+        
+        // 格式化时间显示
+        const startTime = new Date(event.startTime);
+        const endTime = new Date(event.endTime);
+        const formatTime = (date: Date) => {
+          return `${date.getMonth() + 1}月${date.getDate()}日 ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+        };
+        
+        // 生成鼓励语言
+        const encouragements = [
+          '太棒了！又一个充实的安排！',
+          '很好的时间规划！',
+          '继续保持这种积极的生活态度！',
+          '规律的日程会让生活更有条理！',
+          '为你的时间管理点赞！'
+        ];
+        const encouragement = encouragements[Math.floor(Math.random() * encouragements.length)];
+        
+        Alert.alert(
+          '🎯 解析成功',
+          `${encouragement}\n\n📅 事件：${event.title}\n⏰ 时间：${formatTime(startTime)} - ${formatTime(endTime)}\n${event.location ? `📍 地点：${event.location}\n` : ''}🎯 置信度：${confidence}%\n\n确认创建这个日程吗？`,
+          [
+            { text: '取消', style: 'cancel' },
+            { 
+              text: '✅ 创建', 
+              onPress: () => handleCreateAIEvent(event)
+            }
+          ]
+        );
+      } else {
+        // 多个事件，显示详细的语音转日程界面
+        setShowVoiceToCalendar(true);
+      }
+    } else {
+      Alert.alert('解析失败', '未能识别到有效的日程事件，请重新输入');
+    }
+  };
+
+  // 创建从AI解析出的事件（支持语音和文字）
+  const handleCreateAIEvent = async (event: any) => {
+    try {
+      const eventData = {
+        title: event.title,
+        description: event.description || '',
+        date: event.startTime,
+        startTime: event.startTime.toTimeString().substring(0, 5),
+        endTime: event.endTime.toTimeString().substring(0, 5),
+        location: event.location || '',
+        color: '#007AFF', // 添加颜色
+      };
+      
+      console.log('创建事件数据:', eventData);
+      
+      const createdEvent = await createEvent(eventData);
+      if (createdEvent) {
+        console.log('事件创建成功:', createdEvent);
+        // 显示优雅的成功提示
+        Alert.alert(
+          '✅ 创建成功', 
+          `日程"${event.title}"已添加到您的日历`,
+          [{ text: '好的', style: 'default' }]
+        );
+        // 重新获取当月事件
+        const currentDate = new Date();
+        await fetchEvents(currentDate.getFullYear(), currentDate.getMonth() + 1);
+      } else {
+        console.error('事件创建失败: createEvent 返回 null');
+        Alert.alert('❌ 创建失败', '创建日程时发生错误，请重试');
+      }
+    } catch (error) {
+      console.error('创建事件失败:', error);
+      Alert.alert('创建失败', '创建日程时发生错误');
+    }
+  };
+
+  // 处理文字输入错误
+  const handleTextError = (error: string) => {
+    console.error('Text input error:', error);
+    Alert.alert('处理失败', error);
   };
 
   // 处理事件创建
@@ -377,16 +534,32 @@ export default function HomeScreen() {
           {/* 显示今天的事件 */}
           {(() => {
             const todayEvents = getEventsByDate(new Date());
+            console.log('📅 今日事件检查:', { 
+              today: new Date().toISOString(),
+              totalEvents: events.length,
+              todayEvents: todayEvents.length,
+              allEvents: events.map(e => ({ 
+                id: e.id, 
+                title: e.title, 
+                start_ts: e.start_ts,
+                date: new Date(e.start_ts * 1000).toISOString()
+              }))
+            });
             if (todayEvents.length > 0) {
               return (
                 <View style={styles.eventsContainer}>
-                  <Text style={styles.eventsTitle}>今日事件</Text>
+                  <View style={styles.eventsTitleContainer}>
+                    <Text style={styles.eventsTitle}>📋 今日事件</Text>
+                    <View style={styles.eventsCountBadge}>
+                      <Text style={styles.eventsCountText}>{todayEvents.length}</Text>
+                    </View>
+                  </View>
                   {todayEvents.map((event) => (
                     <TouchableOpacity 
                       key={event.id} 
                       style={styles.eventItem}
                       onPress={() => handleEditEvent(event)}
-                      activeOpacity={0.7}
+                      activeOpacity={0.8}
                     >
                       <View style={[styles.eventColor, { backgroundColor: event.color || '#007AFF' }]} />
                       <View style={styles.eventContent}>
@@ -394,13 +567,20 @@ export default function HomeScreen() {
                         {event.description && (
                           <Text style={styles.eventDescription}>{event.description}</Text>
                         )}
-                        <Text style={styles.eventTime}>
-                          {new Date(event.start_ts * 1000).toLocaleTimeString('zh-CN', { 
-                            hour: '2-digit', 
-                            minute: '2-digit' 
-                          })}
-                          {event.location && ` · ${event.location}`}
-                        </Text>
+                        <View style={styles.eventMeta}>
+                          <Text style={styles.eventTime}>
+                            🕐 {new Date(event.start_ts * 1000).toLocaleTimeString('zh-CN', { 
+                              hour: '2-digit', 
+                              minute: '2-digit' 
+                            })}
+                          </Text>
+                          {event.location && (
+                            <Text style={styles.eventLocation}>📍 {event.location}</Text>
+                          )}
+                        </View>
+                      </View>
+                      <View style={styles.eventActions}>
+                        <Text style={styles.eventActionIcon}>›</Text>
                       </View>
                     </TouchableOpacity>
                   ))}
@@ -414,7 +594,7 @@ export default function HomeScreen() {
                   </View>
                   <View style={styles.aiContent}>
                     <Text style={styles.aiGreeting}>今天还没有安排事件</Text>
-                    <Text style={styles.aiSuggestion}>点击下方"手动添加"来创建新事件</Text>
+                    <Text style={styles.aiSuggestion}>点击下方&ldquo;手动添加&rdquo;来创建新事件</Text>
                   </View>
                 </View>
               );
@@ -445,9 +625,16 @@ export default function HomeScreen() {
 
       {/* 底部快速记录按钮 */}
       <SmartButton 
-        onPress={() => console.log('Record pressed')}
-        onMorePress={() => console.log('More pressed')}
+        onPress={handleVoicePress}
+        text={voiceState.isRecording ? 
+          `录制中... ${Math.floor(voiceState.duration / 1000)}s` : 
+          '长按说话，快速记录'
+        }
+        onTextInputPress={() => console.log('Text input pressed')}
+        onTextResult={handleTextResult}
+        onError={handleTextError}
         onManualAddPress={handleManualAdd}
+        disabled={voiceState.isLoading}
       />
 
       {/* 过滤菜单 */}
@@ -511,6 +698,18 @@ export default function HomeScreen() {
             const currentDate = new Date();
             fetchEvents(currentDate.getFullYear(), currentDate.getMonth() + 1);
           }
+        }}
+      />
+      
+      {/* 语音转日程模态框 */}
+      <VoiceToCalendar
+        isVisible={showVoiceToCalendar}
+        onClose={() => setShowVoiceToCalendar(false)}
+        onEventsCreated={(events) => {
+          // 重新获取当月事件
+          const currentDate = new Date();
+          fetchEvents(currentDate.getFullYear(), currentDate.getMonth() + 1);
+          setShowVoiceToCalendar(false);
         }}
       />
     </SafeAreaView>
@@ -840,13 +1039,31 @@ const styles = StyleSheet.create({
   eventsContainer: {
     marginBottom: 20,
   },
+  eventsTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
   eventsTitle: {
     fontSize: 18,
     fontWeight: '700',
     color: '#2c3e50',
-    marginBottom: 16,
     letterSpacing: 0.5,
-    textAlign: 'left',
+  },
+  eventsCountBadge: {
+    backgroundColor: '#007AFF',
+    borderRadius: 12,
+    minWidth: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+  },
+  eventsCountText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '600',
   },
   eventItem: {
     flexDirection: 'row',
@@ -899,11 +1116,32 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     letterSpacing: 0.1,
   },
+  eventMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 4,
+  },
   eventTime: {
     fontSize: 13,
-    color: '#9ca3af',
+    color: '#6b7280',
     fontWeight: '500',
-    letterSpacing: 0.2,
+  },
+  eventLocation: {
+    fontSize: 13,
+    color: '#6b7280',
+    fontWeight: '500',
+  },
+  eventActions: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 24,
+    height: 24,
+  },
+  eventActionIcon: {
+    fontSize: 18,
+    color: '#d1d5db',
+    fontWeight: '300',
   },
   
   // 过滤菜单样式

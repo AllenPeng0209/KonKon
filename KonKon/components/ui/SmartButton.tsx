@@ -6,12 +6,17 @@ import {
   StyleSheet,
   Animated,
   TextInput,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
+import { processTextToCalendar, ParsedCalendarResult } from '../../lib/bailian_omni_calendar';
 
 interface SmartButtonProps {
   onPress?: () => void;
-  onMorePress?: () => void;
+  onTextInputPress?: () => void;
   onSendText?: (text: string) => void;
+  onTextResult?: (result: ParsedCalendarResult) => void;
+  onError?: (error: string) => void;
   onPhotoPress?: () => void;
   onAlbumPress?: () => void;
   onManualAddPress?: () => void;
@@ -22,8 +27,10 @@ interface SmartButtonProps {
 
 export default function SmartButton({
   onPress,
-  onMorePress,
+  onTextInputPress,
   onSendText,
+  onTextResult,
+  onError,
   onPhotoPress,
   onAlbumPress,
   onManualAddPress,
@@ -34,6 +41,7 @@ export default function SmartButton({
   const [isExpanded, setIsExpanded] = useState(false);
   const [isTextMode, setIsTextMode] = useState(false);
   const [inputText, setInputText] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
   const [rotateAnim] = useState(new Animated.Value(0));
 
   const toggleExpanded = () => {
@@ -83,9 +91,9 @@ export default function SmartButton({
     }).start();
   };
 
-  const handleMorePress = () => {
-    if (onMorePress) {
-      onMorePress();
+  const handleTextInputPress = () => {
+    if (onTextInputPress) {
+      onTextInputPress();
     }
     setIsTextMode(!isTextMode);
     // 如果切换到文字模式，先关闭展开的功能按钮
@@ -99,9 +107,35 @@ export default function SmartButton({
     }
   };
 
-  const handleSendText = () => {
-    if (inputText.trim() && onSendText) {
-      onSendText(inputText.trim());
+  const handleSendText = async () => {
+    if (!inputText.trim()) return;
+    
+    const textToProcess = inputText.trim();
+    
+    // 如果有简单的文字回调，先调用它
+    if (onSendText) {
+      onSendText(textToProcess);
+    }
+    
+    // 如果有文字转日程回调，进行AI处理
+    if (onTextResult) {
+      setIsProcessing(true);
+      try {
+        const result = await processTextToCalendar(textToProcess);
+        onTextResult(result);
+        setInputText('');
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : '处理失败';
+        if (onError) {
+          onError(errorMessage);
+        } else {
+          Alert.alert('处理失败', errorMessage);
+        }
+      } finally {
+        setIsProcessing(false);
+      }
+    } else {
+      // 如果没有AI处理回调，只是清空输入
       setInputText('');
     }
   };
@@ -109,6 +143,7 @@ export default function SmartButton({
   const handleBackToVoice = () => {
     setIsTextMode(false);
     setInputText('');
+    setIsProcessing(false);
   };
 
   const rotation = rotateAnim.interpolate({
@@ -125,6 +160,7 @@ export default function SmartButton({
           <TouchableOpacity 
             style={styles.backButton}
             onPress={handleBackToVoice}
+            disabled={isProcessing}
           >
             <Text style={styles.backIcon}>🎤</Text>
           </TouchableOpacity>
@@ -133,12 +169,13 @@ export default function SmartButton({
           <View style={styles.inputContainer}>
             <TextInput
               style={styles.textInput}
-              placeholder="输入文字..."
+              placeholder="输入日程描述，如：明天下午3点开会..."
               value={inputText}
               onChangeText={setInputText}
               multiline
-              maxLength={500}
+              maxLength={1000}
               autoFocus
+              editable={!isProcessing}
             />
           </View>
           
@@ -149,14 +186,25 @@ export default function SmartButton({
               inputText.trim() ? styles.sendButtonActive : styles.sendButtonInactive
             ]}
             onPress={handleSendText}
-            disabled={!inputText.trim()}
+            disabled={!inputText.trim() || isProcessing}
           >
-            <Text style={[
-              styles.sendIcon,
-              inputText.trim() ? styles.sendIconActive : styles.sendIconInactive
-            ]}>➤</Text>
+            {isProcessing ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={[
+                styles.sendIcon,
+                inputText.trim() ? styles.sendIconActive : styles.sendIconInactive
+              ]}>➤</Text>
+            )}
           </TouchableOpacity>
         </View>
+        
+        {/* 处理状态提示 */}
+        {isProcessing && (
+          <View style={styles.processingContainer}>
+            <Text style={styles.processingText}>正在智能解析日程...</Text>
+          </View>
+        )}
       </View>
     );
   }
@@ -214,9 +262,12 @@ export default function SmartButton({
           <Text style={styles.smartButtonText}>{text}</Text>
         </TouchableOpacity>
         
-        {/* 右侧更多按钮 */}
-        <TouchableOpacity style={styles.moreButton} onPress={handleMorePress}>
-          <Text style={styles.moreButtonText}>⋯</Text>
+        {/* 右侧文字输入按钮 */}
+        <TouchableOpacity 
+          style={styles.textInputButton} 
+          onPress={handleTextInputPress}
+        >
+          <Text style={styles.textInputButtonText}>✏️</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -291,7 +342,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '500',
   },
-  moreButton: {
+  textInputButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -300,7 +351,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginLeft: 12,
   },
-  moreButtonText: {
+  textInputButtonText: {
     fontSize: 16,
     color: '#fff',
   },
@@ -329,13 +380,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     marginRight: 12,
-    maxHeight: 100,
+    maxHeight: 120,
   },
   textInput: {
     fontSize: 16,
     color: '#333',
     minHeight: 24,
-    maxHeight: 80,
+    maxHeight: 100,
     textAlignVertical: 'top',
   },
   sendButton: {
@@ -360,5 +411,14 @@ const styles = StyleSheet.create({
   },
   sendIconInactive: {
     color: '#999',
+  },
+  processingContainer: {
+    marginTop: 8,
+    alignItems: 'center',
+  },
+  processingText: {
+    fontSize: 14,
+    color: '#666',
+    fontStyle: 'italic',
   },
 }); 

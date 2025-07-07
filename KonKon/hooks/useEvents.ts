@@ -74,6 +74,8 @@ export const useEvents = () => {
   const fetchEvents = async (year?: number, month?: number) => {
     if (!user) return;
     
+    console.log('🔄 开始获取事件...', { userId: user.id, year, month, userFamilies });
+    
     try {
       setLoading(true);
       setError(null);
@@ -176,6 +178,12 @@ export const useEvents = () => {
       });
 
       const allEvents = Array.from(eventMap.values()).sort((a, b) => a.start_ts - b.start_ts);
+      console.log('✅ 获取事件成功:', { 
+        totalEvents: allEvents.length, 
+        personalEvents: personalEvents.length, 
+        sharedEvents: sharedEvents.length,
+        events: allEvents.map(e => ({ id: e.id, title: e.title, start_ts: e.start_ts }))
+      });
       setEvents(allEvents);
 
     } catch (err) {
@@ -193,21 +201,43 @@ export const useEvents = () => {
       return null;
     }
 
+    console.log('📝 开始创建事件...', eventData);
+
     try {
-      // 计算时间戳
+      // 计算时间戳 - 修复时区和年份问题
       const startTime = eventData.startTime || '09:00';
       const endTime = eventData.endTime || '10:00';
       
-      const startDateTime = new Date(eventData.date);
+      // 确保使用正确的日期，避免时区混乱
+      let baseDate: Date;
+      if (eventData.date instanceof Date) {
+        // 如果是Date对象，使用本地时区的年月日
+        baseDate = new Date(eventData.date.getFullYear(), eventData.date.getMonth(), eventData.date.getDate());
+      } else {
+        // 如果是其他格式，先转换
+        const tempDate = new Date(eventData.date);
+        baseDate = new Date(tempDate.getFullYear(), tempDate.getMonth(), tempDate.getDate());
+      }
+      
       const [startHour, startMinute] = startTime.split(':').map(Number);
+      const [endHour, endMinute] = endTime.split(':').map(Number);
+      
+      const startDateTime = new Date(baseDate);
       startDateTime.setHours(startHour, startMinute, 0, 0);
       
-      const endDateTime = new Date(eventData.date);
-      const [endHour, endMinute] = endTime.split(':').map(Number);
+      const endDateTime = new Date(baseDate);
       endDateTime.setHours(endHour, endMinute, 0, 0);
 
       const startTs = Math.floor(startDateTime.getTime() / 1000);
       const endTs = Math.floor(endDateTime.getTime() / 1000);
+      
+      console.log('⏰ 时间计算:', { 
+        originalDate: eventData.date,
+        startTime, endTime,
+        startDateTime: startDateTime.toISOString(),
+        endDateTime: endDateTime.toISOString(),
+        startTs, endTs
+      });
 
       // 创建个人事件（family_id 为 null）
       const newEvent: EventInsert = {
@@ -222,6 +252,8 @@ export const useEvents = () => {
         source: 'manual',
       };
 
+      console.log('💾 准备插入事件到Supabase:', newEvent);
+
       const { data, error } = await supabase
         .from('events')
         .insert([newEvent])
@@ -229,9 +261,11 @@ export const useEvents = () => {
         .single();
 
       if (error) {
-        console.error('Supabase 错误:', error);
+        console.error('❌ Supabase 插入错误:', error);
         throw error;
       }
+
+      console.log('✅ 事件已成功保存到Supabase:', data);
 
       // 如果需要分享到群组，创建分享记录
       if (eventData.shareToFamilies && eventData.shareToFamilies.length > 0) {
@@ -258,7 +292,16 @@ export const useEvents = () => {
         shared_families: eventData.shareToFamilies || []
       };
       
-      setEvents(prev => [...prev, newEventWithShares]);
+      console.log('🔄 添加事件到本地状态:', newEventWithShares);
+      setEvents(prev => {
+        const updated = [...prev, newEventWithShares];
+        console.log('📊 本地事件列表更新:', { 
+          previousCount: prev.length, 
+          newCount: updated.length,
+          newEvent: { id: newEventWithShares.id, title: newEventWithShares.title }
+        });
+        return updated;
+      });
       return data;
 
     } catch (err) {
@@ -480,19 +523,43 @@ export const useEvents = () => {
     }
   };
 
-  // 获取指定日期的事件
+  // 获取指定日期的事件 - 修复时区问题
   const getEventsByDate = (date: Date): EventWithShares[] => {
-    const startOfDay = new Date(date);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(date);
-    endOfDay.setHours(23, 59, 59, 999);
+    // 使用本地时区的日期范围
+    const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
+    const endOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
 
     const startTs = Math.floor(startOfDay.getTime() / 1000);
     const endTs = Math.floor(endOfDay.getTime() / 1000);
 
-    return events.filter(event => 
+    console.log('🔍 getEventsByDate调试:', {
+      inputDate: date.toISOString(),
+      localDate: `${date.getFullYear()}-${(date.getMonth()+1).toString().padStart(2,'0')}-${date.getDate().toString().padStart(2,'0')}`,
+      startOfDay: startOfDay.toISOString(),
+      endOfDay: endOfDay.toISOString(),
+      startTs,
+      endTs,
+      totalEvents: events.length,
+      eventsDetail: events.map(e => ({
+        id: e.id,
+        title: e.title,
+        start_ts: e.start_ts,
+        date: new Date(e.start_ts * 1000).toISOString(),
+        localDate: new Date(e.start_ts * 1000).toLocaleDateString(),
+        isInRange: e.start_ts >= startTs && e.start_ts <= endTs
+      }))
+    });
+
+    const filteredEvents = events.filter(event => 
       event.start_ts >= startTs && event.start_ts <= endTs
     );
+
+    console.log('📅 过滤结果:', {
+      matchedEvents: filteredEvents.length,
+      events: filteredEvents.map(e => ({ id: e.id, title: e.title }))
+    });
+
+    return filteredEvents;
   };
 
   // 获取指定月份的事件
@@ -517,13 +584,15 @@ export const useEvents = () => {
   // 当用户信息获取到后，立即获取个人事件
   useEffect(() => {
     if (user) {
+      console.log('用户登录，开始获取事件...');
       fetchEvents();
     }
   }, [user]);
 
-  // 当家庭列表获取到后，重新获取所有事件（包括群组事件）
+  // 当家庭列表变化时，重新获取所有事件（包括群组事件和个人事件）
   useEffect(() => {
-    if (user && userFamilies.length > 0) {
+    if (user) {
+      console.log('家庭列表更新，重新获取事件...', userFamilies);
       fetchEvents();
     }
   }, [userFamilies]);

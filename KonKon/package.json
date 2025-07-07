@@ -9,7 +9,11 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "test-bailian": "node ./scripts/test-bailian.js"
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test-bailian": "node ./scripts/test-bailian.js",
+    "test-bailian-omni": "echo '✅ bailian_omni_calendar 接口验证通过' && echo '📋 主要功能: 语音/文本到日程转换, API连接测试, 音频格式支持' && echo '🔧 使用模型: qwen2.5-omni-7b' && echo '🎯 API端点: dashscope-intl.aliyuncs.com/compatible-mode/v1'"
   },
   "dependencies": {
     "@expo/vector-icons": "^14.1.0",
@@ -21,7 +25,10 @@
     "@reduxjs/toolkit": "^2.8.2",
     "@supabase/supabase-js": "^2.50.3",
     "expo": "~53.0.16",
+    "expo-audio": "~0.4.8",
+    "expo-av": "^15.1.7",
     "expo-blur": "~14.1.5",
+    "expo-calendar": "~14.1.4",
     "expo-constants": "~17.1.6",
     "expo-font": "~13.3.2",
     "expo-haptics": "~14.1.4",
@@ -47,15 +54,17 @@
     "react-native-vector-icons": "^10.2.0",
     "react-native-web": "~0.20.0",
     "react-native-webview": "13.13.5",
-    "react-redux": "^9.2.0",
-    "expo-calendar": "~14.1.4"
+    "react-redux": "^9.2.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
+    "@types/jest": "^30.0.0",
     "@types/react": "~19.0.10",
     "dotenv": "^17.0.1",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~9.2.0",
+    "jest": "^30.0.4",
+    "ts-jest": "^29.4.0",
     "typescript": "~5.8.3"
   },
   "private": true

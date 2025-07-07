@@ -29,6 +29,7 @@ export function KeyboardFriendlyScrollView({
 
   // A self-contained check to lazily determine how large the keyboard is when it's open.
   useDerivedValue(() => {
+    'worklet';
     if (keyboard.state.value === KeyboardState.OPEN) {
       keyboardHeight.value = keyboard.height.value;
     }
