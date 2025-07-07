@@ -374,20 +374,31 @@ function normalizeEventKeys(event: any): any {
 
 function parseTime(timeStr: string, referenceDate: Date): Date | null {
     if (!timeStr) return null;
-    
-    // 尝试直接解析 "YYYY-MM-DD HH:mm:ss" 或 ISO 8601
-    let date = new Date(timeStr);
+
+    // Most reliable: Manually parse the expected format YYYY-MM-DD HH:mm:ss
+    const fullDateRegex = /(\d{4})-(\d{2})-(\d{2})\s(\d{2}):(\d{2}):(\d{2})/;
+    const fullMatch = timeStr.match(fullDateRegex);
+
+    if (fullMatch) {
+        const [, year, month, day, hours, minutes, seconds] = fullMatch.map(Number);
+        // JS Date month is 0-indexed, so we subtract 1
+        return new Date(year, month - 1, day, hours, minutes, seconds);
+    }
+
+    // Fallback 1: Try ISO 8601 format
+    const compliantTimeStr = timeStr.replace(' ', 'T');
+    let date = new Date(compliantTimeStr);
     if (!isNaN(date.getTime())) {
         return date;
     }
     
-    // 尝试解析 "HH:mm" 或 "HH:mm AM/PM"
+    // Fallback 2: Try parsing "HH:mm" or "HH:mm AM/PM" relative to a reference date
     const timeRegex = /(\d{1,2}):(\d{2})\s*(AM|PM)?/i;
-    const match = timeStr.match(timeRegex);
-    if (match) {
-        let hours = parseInt(match[1], 10);
-        const minutes = parseInt(match[2], 10);
-        const period = match[3]?.toUpperCase();
+    const timeMatch = timeStr.match(timeRegex);
+    if (timeMatch) {
+        let hours = parseInt(timeMatch[1], 10);
+        const minutes = parseInt(timeMatch[2], 10);
+        const period = timeMatch[3]?.toUpperCase();
 
         if (period === 'PM' && hours < 12) {
             hours += 12;
@@ -401,6 +412,7 @@ function parseTime(timeStr: string, referenceDate: Date): Date | null {
         return newDate;
     }
 
+    console.warn(`Could not parse time string: "${timeStr}"`);
     return null;
 }
 
@@ -444,41 +456,28 @@ function parseCalendarResult(
         }
 
         const normalizedEvents = (parsedData.events || []).map((rawEvent: any) => {
-             let event = normalizeEventKeys(rawEvent);
+             const event = normalizeEventKeys(rawEvent);
 
-             // 处理时间
-             const referenceDate = new Date(); // 使用当前时间作为基准
+             const referenceDate = new Date();
              const startTime = parseTime(event.startTime, referenceDate);
              let endTime = parseTime(event.endTime, referenceDate);
              
-             // 如果只有 startTime 和 duration
+             // If only startTime and duration are available
              if (startTime && !endTime && event.duration) {
                  const { hours, minutes } = parseDuration(event.duration);
                  endTime = new Date(startTime.getTime() + hours * 60 * 60 * 1000 + minutes * 60 * 1000);
              }
 
-             // 如果开始时间是范围，例如 "09:00 - 17:00"
-             if (typeof event.startTime === 'string' && event.startTime.includes('-')) {
-                 const [startStr, endStr] = event.startTime.split('-').map((s: string) => s.trim());
-                 const parsedStart = parseTime(startStr, referenceDate);
-                 const parsedEnd = parseTime(endStr, referenceDate);
-                 if (parsedStart) event.startTime = parsedStart;
-                 if (parsedEnd) event.endTime = parsedEnd;
-             } else {
-                 event.startTime = startTime;
-                 event.endTime = endTime;
-             }
-
-             // 如果 endTime 仍然无效, 设置一个默认时长
-             if (event.startTime && !event.endTime) {
-                 event.endTime = new Date(event.startTime.getTime() + 60 * 60 * 1000); // 默认1小时
+             // If endTime is still invalid, set a default duration
+             if (startTime && !endTime) {
+                 endTime = new Date(startTime.getTime() + 60 * 60 * 1000); // Default 1 hour
              }
 
             return {
-                ...event,
+                ...event, // Spread original event data first
                 id: generateEventId(),
-                startTime: event.startTime,
-                endTime: event.endTime,
+                startTime: startTime, // Overwrite with parsed Date object
+                endTime: endTime,     // Overwrite with parsed Date object
                 confidence: event.confidence || parsedData.confidence || 0.85,
             };
         });

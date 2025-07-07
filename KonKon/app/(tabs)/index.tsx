@@ -255,43 +255,38 @@ export default function HomeScreen() {
     console.log('AI result:', result);
     
     if (result.events && result.events.length > 0) {
-      if (result.events.length === 1) {
-        // 单个事件，直接显示确认对话框
-        const event = result.events[0];
-        const confidence = Math.round(result.confidence * 100);
-        
-        // 格式化时间显示
-        const startTime = new Date(event.startTime);
-        const endTime = new Date(event.endTime);
-        const formatTime = (date: Date) => {
-          return `${date.getMonth() + 1}月${date.getDate()}日 ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
-        };
-        
-        // 生成鼓励语言
-        const encouragements = [
-          '太棒了！又一个充实的安排！',
-          '很好的时间规划！',
-          '继续保持这种积极的生活态度！',
-          '规律的日程会让生活更有条理！',
-          '为你的时间管理点赞！'
-        ];
-        const encouragement = encouragements[Math.floor(Math.random() * encouragements.length)];
-        
-        Alert.alert(
-          '🎯 解析成功',
-          `${encouragement}\n\n📅 事件：${event.title}\n⏰ 时间：${formatTime(startTime)} - ${formatTime(endTime)}\n${event.location ? `📍 地点：${event.location}\n` : ''}🎯 置信度：${confidence}%\n\n确认创建这个日程吗？`,
-          [
-            { text: '取消', style: 'cancel' },
-            { 
-              text: '✅ 创建', 
-              onPress: () => handleCreateAIEvent(event)
-            }
-          ]
-        );
-      } else {
-        // 多个事件，显示详细的语音转日程界面
-        setShowVoiceToCalendar(true);
-      }
+      // Always take the first event for simplicity, even if multiple are returned.
+      const event = result.events[0];
+      const confidence = Math.round(result.confidence * 100);
+      
+      // 格式化时间显示
+      const startTime = new Date(event.startTime);
+      const endTime = new Date(event.endTime);
+      const formatTime = (date: Date) => {
+        return `${date.getMonth() + 1}月${date.getDate()}日 ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+      };
+      
+      // 生成鼓励语言
+      const encouragements = [
+        '太棒了！又一个充实的安排！',
+        '很好的时间规划！',
+        '继续保持这种积极的生活态度！',
+        '规律的日程会让生活更有条理！',
+        '为你的时间管理点赞！'
+      ];
+      const encouragement = encouragements[Math.floor(Math.random() * encouragements.length)];
+      
+      Alert.alert(
+        '🎯 解析成功',
+        `${encouragement}\n\n📅 事件：${event.title}\n⏰ 时间：${formatTime(startTime)} - ${formatTime(endTime)}\n${event.location ? `📍 地点：${event.location}\n` : ''}🎯 置信度：${confidence}%\n\n确认创建这个日程吗？`,
+        [
+          { text: '取消', style: 'cancel' },
+          { 
+            text: '✅ 创建', 
+            onPress: () => handleCreateAIEvent(event)
+          }
+        ]
+      );
     } else {
       Alert.alert('解析失败', '未能识别到有效的日程事件，请重新输入');
     }
