@@ -8,6 +8,7 @@ import {
   ScrollView,
   Image,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
@@ -29,7 +30,22 @@ export default function ProfileScreen() {
     if (userFamily) {
       router.push('/family-management');
     } else {
-      router.push('/create-family');
+      // 如果没有家族，显示选择对话框
+      Alert.alert(
+        '家族を作成または参加',
+        '家族管理を開始するためのオプションを選択してください',
+        [
+          { text: 'キャンセル', style: 'cancel' },
+          {
+            text: '家族を作成',
+            onPress: () => router.push('/create-family'),
+          },
+          {
+            text: '家族に参加',
+            onPress: () => router.push('/join-family'),
+          },
+        ]
+      );
     }
   };
 
