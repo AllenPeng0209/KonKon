@@ -300,39 +300,92 @@ export default function HomeScreen() {
   // 创建从AI解析出的事件（支持语音和文字）
   const handleCreateAIEvent = async (event: any) => {
     try {
+
+      const startDate = new Date(event.startTime);
+      const endDate = new Date(event.endTime);
+
+      // Defensively check for invalid date objects
+      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        Alert.alert('时间解析错误', 'AI返回了无效的时间格式，无法创建日程。');
+        return;
+      }
+      
+      // Defensively check that start is before end
+      if (startDate >= endDate) {
+        Alert.alert('时间顺序错误', 'AI解析出的开始时间晚于或等于结束时间，无法创建日程。');
+        return;
+      }
+
+      // Check if the event spans across multiple days, which the current createEvent hook might not support.
+      const startDay = new Date(startDate);
+      startDay.setHours(0, 0, 0, 0);
+      const endDay = new Date(endDate);
+      endDay.setHours(0, 0, 0, 0);
+
+      if (startDay.getTime() !== endDay.getTime()) {
+        Alert.alert(
+          '跨天事件提醒',
+          'AI解析出一个跨天的事件。当前版本的创建功能会将它作为一整天的事件（从开始日的00:00到结束日的23:59）来处理，您想继续吗？',
+          [
+            { text: '手动调整', style: 'cancel' },
+            {
+              text: '继续创建',
+              onPress: async () => {
+                const eventData = {
+                  title: event.title,
+                  description: `${event.description || ''} (跨天事件)`.trim(),
+                  date: startDate,
+                  allDay: true, // Treat as an all-day event
+                  location: event.location || '',
+                  color: '#007AFF',
+                };
+                 await createAndRefresh(eventData);
+              },
+            },
+          ]
+        );
+        return;
+      }
+      
       const eventData = {
         title: event.title,
         description: event.description || '',
-        date: event.startTime,
-        startTime: event.startTime.toTimeString().substring(0, 5),
-        endTime: event.endTime.toTimeString().substring(0, 5),
+        date: startDate,
+        startTime: startDate.toTimeString().substring(0, 5),
+        endTime: endDate.toTimeString().substring(0, 5),
         location: event.location || '',
         color: '#007AFF', // 添加颜色
       };
       
+      await createAndRefresh(eventData);
+
+    } catch (error) {
+      console.error('创建AI事件失败:', error);
+      Alert.alert('创建失败', `创建日程时发生未知错误: ${error instanceof Error ? error.message : ''}`);
+    }
+  };
+
+  // Helper function to create event and refresh list
+  const createAndRefresh = async (eventData: any) => {
       console.log('创建事件数据:', eventData);
       
       const createdEvent = await createEvent(eventData);
       if (createdEvent) {
         console.log('事件创建成功:', createdEvent);
-        // 显示优雅的成功提示
         Alert.alert(
           '✅ 创建成功', 
-          `日程"${event.title}"已添加到您的日历`,
+          `日程"${eventData.title}"已添加到您的日历`,
           [{ text: '好的', style: 'default' }]
         );
-        // 重新获取当月事件
-        const currentDate = new Date();
-        await fetchEvents(currentDate.getFullYear(), currentDate.getMonth() + 1);
+        const newEventDate = new Date(eventData.date);
+        await fetchEvents(newEventDate.getFullYear(), newEventDate.getMonth() + 1);
       } else {
         console.error('事件创建失败: createEvent 返回 null');
-        Alert.alert('❌ 创建失败', '创建日程时发生错误，请重试');
+        const errorMessage = eventsError || '创建日程时发生错误，请重试';
+        Alert.alert('❌ 创建失败', errorMessage);
       }
-    } catch (error) {
-      console.error('创建事件失败:', error);
-      Alert.alert('创建失败', '创建日程时发生错误');
-    }
-  };
+  }
+
 
   // 处理文字输入错误
   const handleTextError = (error: string) => {

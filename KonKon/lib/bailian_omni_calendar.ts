@@ -242,7 +242,7 @@ export async function processTextToCalendar(
     const data = await response.json();
     const responseText = data.output?.text || '';
     
-    return parseCalendarResponse(responseText);
+    return parseCalendarResult(responseText);
 
   } catch (error) {
     console.error('文本处理失败:', error);
@@ -252,210 +252,258 @@ export async function processTextToCalendar(
 
 // 图片输入处理
 export async function processImageToCalendar(
-  base64Image: string,
-  onProgress?: (chunk: string) => void
+  base64Image: string
 ): Promise<ParsedCalendarResult> {
   try {
     const config = await getOmniConfig();
-    const mimeType = base64Image.startsWith('data:image/jpeg') ? 'image/jpeg' : 'image/png';
 
-    // Using the native Bailian API format as per documentation
-    // This avoids the streaming issues encountered with the OpenAI compatible endpoint.
     const requestBody = {
-      model: "qwen-vl-max", // Using the dedicated Vision-Language model
+      model: "qwen-vl-max",
       input: {
         messages: [
           {
             role: "user",
             content: [
               {
-                "image": `data:${mimeType};base64,${base64Image}`
+                image: `data:image/jpeg;base64,${base64Image}`
               },
               {
-                "text": `你是一个智能日程助手。请分析这张图片，提取或推断出图片中的日程信息。如果图片中没有明确的事件，可以根据图片内容创造一个相关的事件。请以JSON格式返回。当前时间是 ${new Date().toISOString()}`
+                text: (() => {
+                  const now = new Date();
+                  const today = now.toISOString().split('T')[0];
+                  const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+                  const currentYear = now.getFullYear();
+                  const currentMonth = now.getMonth() + 1;
+                  const currentDate = now.getDate();
+                  
+                  return `你是一个智能日程助手。请分析图片内容，提取所有可能的日程信息，并返回JSON格式的结构化数据。
+
+返回格式：
+{
+  "events": [
+    {
+      "title": "事件标题",
+      "description": "详细描述",
+      "startTime": "YYYY-MM-DD HH:mm:ss",
+      "endTime": "YYYY-MM-DD HH:mm:ss",
+      "location": "地点（可选）",
+      "isRecurring": false,
+      "recurringPattern": "重复模式（可选）",
+      "confidence": 0.9
+    }
+  ],
+  "summary": "解析摘要",
+  "confidence": 0.85
+}
+
+注意：
+1. 时间格式必须是YYYY-MM-DD HH:mm:ss，年份必须是${currentYear}年
+2. 当前日期是${now.toLocaleDateString('zh-CN')}，今天是${currentYear}年${currentMonth}月${currentDate}日
+3. 如果用户只说了时间没说日期，默认为今天或明天，年份必须是${currentYear}年
+4. 如果没有明确的结束时间，根据事件类型估算（如会议1小时，吃饭1小时等）
+5. confidence表示解析的置信度（0-1之间）
+6. 必须返回有效的JSON格式，不要包含其他解释文字
+7. 相对时间参考：今天=${today}，明天=${tomorrow}`;
+                })()
               }
             ]
           }
         ]
       },
       parameters: {
-        result_format: "message" // Required parameter for this endpoint
+        "max_tokens": 2000,
+        "temperature": 0.1,
+        "top_p": 0.8
       }
     };
     
-    if (onProgress) onProgress('正在分析图片...');
-
-    // Using the native Bailian v2 chat completion endpoint
-    const response = await fetch(`${config.baseURL}/v2/completion/chat`, {
+    // 使用多模态API endpoint
+    const response = await fetch(`${config.baseURL}/api/v1/services/aigc/multimodal-generation/generation`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${config.apiKey}`,
       },
-      body: JSON.stringify(requestBody),
+      body: JSON.stringify(requestBody)
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Bailian Image API Error:', response.status, errorText);
-      throw new Error(`图片分析接口调用失败: ${response.status} - ${errorText}`);
+      console.error('Bailian API Error:', response.status, errorText);
+      throw new Error(`API 请求失败: ${response.status} - ${errorText}`);
     }
 
-    // This is now a non-streaming response.
     const data = await response.json();
-    
-    if (onProgress) onProgress('图片分析完成，正在解析结果...');
-    
-    console.log('Bailian Image API Full Response:', JSON.stringify(data, null, 2));
+    console.log("Bailian Response:", JSON.stringify(data, null, 2));
 
-    if (data.output && data.output.choices && data.output.choices.length > 0) {
-      const messageContent = data.output.choices[0].message.content;
-      return parseCalendarResult(messageContent, onProgress);
-    } else {
-      console.error('Invalid response structure from Bailian Image API:', data);
-      throw new Error('从图片分析服务返回了无效的结果格式。');
+    const responseText = data.output?.choices?.[0]?.message?.content?.[0]?.text || '';
+    if (!responseText) {
+       throw new Error('从图片解析日程失败: AI未返回有效内容。');
     }
+    
+    return parseCalendarResult(responseText);
 
   } catch (error) {
-    console.error('图片转日程失败:', error);
-    throw error;
+    console.error('图片处理失败:', error);
+    throw new Error(`图片处理失败: ${error instanceof Error ? error.message : '未知错误'}`);
   }
 }
 
-// Helper function to parse the AI's string response into a JSON object.
-function parseCalendarResult(
-  content: string,
-  onProgress?: (chunk: string) => void
-): ParsedCalendarResult {
-  if (onProgress) onProgress('正在解析结果...');
-  console.log("Raw content from AI for parsing: ", content);
 
-  try {
-    // Clean the content: remove markdown code block fences and trim whitespace.
-    const cleanedContent = content.replace(/```json/g, '').replace(/```/g, '').trim();
-    const parsed = JSON.parse(cleanedContent);
+function normalizeEventKeys(event: any): any {
+    const mapping: { [key: string]: string } = {
+        event: 'title',
+        event_name: 'title',
+        name: 'title',
+        start_time: 'startTime',
+        starttime: 'startTime',
+        end_time: 'endTime',
+        endtime: 'endTime',
+        desc: 'description',
+        details: 'description',
+        place: 'location',
+    };
 
-    // Basic validation to ensure the parsed object has the necessary properties.
-    if (!parsed.title || !parsed.startTime || !parsed.endTime) {
-      throw new Error('解析后的JSON缺少必要的字段 (title, startTime, endTime)。');
+    const normalized: { [key: string]: any } = {};
+    for (const key in event) {
+        const normalizedKey = mapping[key.toLowerCase()] || key;
+        normalized[normalizedKey] = event[key];
     }
-    
-    const event: CalendarEvent = {
-      id: generateEventId(), // Generate a unique ID for the new event
-      title: parsed.title,
-      description: parsed.description || '',
-      startTime: new Date(parsed.startTime),
-      endTime: new Date(parsed.endTime),
-      location: parsed.location || '',
-      confidence: parsed.confidence || 0.9, // Use confidence from AI or default
-    };
-
-    console.log("Parsed calendar event: ", event);
-
-    return {
-      events: [event],
-      summary: event.title,
-      confidence: event.confidence,
-      rawResponse: content,
-    };
-  } catch (error) {
-    console.error('无法将AI响应解析为日历事件JSON:', error, "Raw content was:", content);
-    // Re-throw the error to be caught by the calling function's try-catch block.
-    throw new Error(`无法解析AI响应: ${content}`);
-  }
+    return normalized;
 }
 
-// 解析大模型返回的日历事件字符串
-function parseCalendarResponse(responseText: string): ParsedCalendarResult {
-  try {
-    console.log('原始响应:', responseText);
+function parseTime(timeStr: string, referenceDate: Date): Date | null {
+    if (!timeStr) return null;
     
-    // 尝试提取JSON部分
-    let jsonStr = responseText;
-    
-    // 查找JSON开始和结束标记
-    const jsonStart = responseText.indexOf('{');
-    const jsonEnd = responseText.lastIndexOf('}');
-    
-    if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
-      jsonStr = responseText.substring(jsonStart, jsonEnd + 1);
+    // 尝试直接解析 "YYYY-MM-DD HH:mm:ss" 或 ISO 8601
+    let date = new Date(timeStr);
+    if (!isNaN(date.getTime())) {
+        return date;
     }
     
-    console.log('提取的JSON:', jsonStr);
-    
-    const parsed = JSON.parse(jsonStr);
-    
-    // 验证和转换数据
-    const events: CalendarEvent[] = [];
-    
-    if (parsed.events && Array.isArray(parsed.events)) {
-      for (const event of parsed.events) {
-        try {
-          // 处理日期时间
-          let startTime: Date;
-          let endTime: Date;
-          
-          if (typeof event.startTime === 'string') {
-            startTime = new Date(event.startTime);
-          } else {
-            startTime = new Date();
-          }
-          
-          if (typeof event.endTime === 'string') {
-            endTime = new Date(event.endTime);
-          } else {
-            // 默认结束时间为开始时间后1小时
-            endTime = new Date(startTime.getTime() + 60 * 60 * 1000);
-          }
-          
-          events.push({
-            id: generateEventId(),
-            title: event.title || '未命名事件',
-            description: event.description || '',
-            startTime,
-            endTime,
-            location: event.location || '',
-            isRecurring: event.isRecurring || false,
-            recurringPattern: event.recurringPattern || '',
-            confidence: event.confidence || 0.8,
-          });
-        } catch (eventError) {
-          console.warn('解析单个事件失败:', eventError, event);
+    // 尝试解析 "HH:mm" 或 "HH:mm AM/PM"
+    const timeRegex = /(\d{1,2}):(\d{2})\s*(AM|PM)?/i;
+    const match = timeStr.match(timeRegex);
+    if (match) {
+        let hours = parseInt(match[1], 10);
+        const minutes = parseInt(match[2], 10);
+        const period = match[3]?.toUpperCase();
+
+        if (period === 'PM' && hours < 12) {
+            hours += 12;
         }
-      }
+        if (period === 'AM' && hours === 12) {
+            hours = 0;
+        }
+
+        const newDate = new Date(referenceDate);
+        newDate.setHours(hours, minutes, 0, 0);
+        return newDate;
     }
-    
-    return {
-      events,
-      summary: parsed.summary || '日程解析完成',
-      confidence: parsed.confidence || 0.8,
-      rawResponse: responseText,
-    };
-    
-  } catch (error) {
-    console.error('响应解析失败:', error);
-    console.error('原始响应:', responseText);
-    
-    // 降级处理：尝试从文本中提取基本信息
-    const fallbackEvent = extractBasicEventInfo(responseText);
-    if (fallbackEvent) {
-      return {
-        events: [fallbackEvent],
-        summary: '使用基础解析方式提取事件信息',
-        confidence: 0.6,
-        rawResponse: responseText,
-      };
-    }
-    
-    // 最终降级：返回基本结构
-    return {
-      events: [],
-      summary: `解析失败: ${error instanceof Error ? error.message : '格式错误'}`,
-      confidence: 0.1,
-      rawResponse: responseText,
-    };
-  }
+
+    return null;
 }
+
+function parseDuration(durationStr: string): { hours: number, minutes: number } {
+    if (!durationStr) return { hours: 1, minutes: 0 }; // 默认1小时
+
+    const hoursMatch = durationStr.match(/(\d+)\s*hour/i);
+    const minutesMatch = durationStr.match(/(\d+)\s*minute/i);
+
+    const hours = hoursMatch ? parseInt(hoursMatch[1], 10) : 0;
+    const minutes = minutesMatch ? parseInt(minutesMatch[1], 10) : 0;
+    
+    if (hours === 0 && minutes === 0) return { hours: 1, minutes: 0 };
+    return { hours, minutes };
+}
+
+
+function parseCalendarResult(
+  content: string
+): ParsedCalendarResult {
+    console.log("Raw content for parsing:", content);
+
+    const jsonRegex = /```json\s*([\s\S]*?)\s*```|({[\s\S]*})/;
+    const match = content.match(jsonRegex);
+
+    if (!match) {
+        console.error("No JSON found in response:", content);
+        throw new Error("未能从AI响应中解析出有效的JSON。");
+    }
+    
+    // 优先使用 ```json ``` 块的内容，其次是独立的 {}
+    const jsonString = match[1] || match[2];
+
+    try {
+        let parsedData = JSON.parse(jsonString);
+
+        // 处理整个结果被包裹在一个 "event" key下的情况
+        if (parsedData.event && typeof parsedData.event === 'object' && !Array.isArray(parsedData.event)) {
+             parsedData = { events: [parsedData.event], ...parsedData };
+             delete parsedData.event;
+        }
+
+        const normalizedEvents = (parsedData.events || []).map((rawEvent: any) => {
+             let event = normalizeEventKeys(rawEvent);
+
+             // 处理时间
+             const referenceDate = new Date(); // 使用当前时间作为基准
+             const startTime = parseTime(event.startTime, referenceDate);
+             let endTime = parseTime(event.endTime, referenceDate);
+             
+             // 如果只有 startTime 和 duration
+             if (startTime && !endTime && event.duration) {
+                 const { hours, minutes } = parseDuration(event.duration);
+                 endTime = new Date(startTime.getTime() + hours * 60 * 60 * 1000 + minutes * 60 * 1000);
+             }
+
+             // 如果开始时间是范围，例如 "09:00 - 17:00"
+             if (typeof event.startTime === 'string' && event.startTime.includes('-')) {
+                 const [startStr, endStr] = event.startTime.split('-').map((s: string) => s.trim());
+                 const parsedStart = parseTime(startStr, referenceDate);
+                 const parsedEnd = parseTime(endStr, referenceDate);
+                 if (parsedStart) event.startTime = parsedStart;
+                 if (parsedEnd) event.endTime = parsedEnd;
+             } else {
+                 event.startTime = startTime;
+                 event.endTime = endTime;
+             }
+
+             // 如果 endTime 仍然无效, 设置一个默认时长
+             if (event.startTime && !event.endTime) {
+                 event.endTime = new Date(event.startTime.getTime() + 60 * 60 * 1000); // 默认1小时
+             }
+
+            return {
+                ...event,
+                id: generateEventId(),
+                startTime: event.startTime,
+                endTime: event.endTime,
+                confidence: event.confidence || parsedData.confidence || 0.85,
+            };
+        });
+        
+        const finalEvents = normalizedEvents.filter((e: any) => e.title && e.startTime && e.endTime && e.startTime < e.endTime);
+        
+        // Allow for cases where no events are found, do not throw an error.
+        if (finalEvents.length === 0 && parsedData.events && parsedData.events.length > 0) {
+           // This case means events were present but failed validation (e.g., bad dates)
+           console.warn("解析到的事件缺少必要信息或起止时间不正确。", parsedData.events);
+        }
+
+        return {
+            events: finalEvents,
+            summary: parsedData.summary || '日程已解析',
+            confidence: parsedData.confidence || 0.85,
+            rawResponse: content,
+        };
+    } catch (e) {
+        console.error("Failed to parse JSON:", e);
+        console.error("Original JSON string:", jsonString);
+        throw new Error(`JSON解析失败: ${e instanceof Error ? e.message : "未知错误"}`);
+    }
+}
+
 
 // 降级解析：从文本中提取基本事件信息
 function extractBasicEventInfo(text: string): CalendarEvent | null {
