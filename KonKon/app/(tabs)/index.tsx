@@ -9,6 +9,7 @@ import {
   ScrollView,
   Dimensions,
   Alert,
+  Modal,
 } from 'react-native';
 import { Calendar, DateData } from 'react-native-calendars';
 import { useAuth } from '../../contexts/AuthContext';
@@ -21,9 +22,12 @@ import { useEvents } from '@/hooks/useEvents';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import CalendarService from '@/lib/calendarService';
 import { processVoiceToCalendar, processImageToCalendar, ParsedCalendarResult } from '@/lib/bailian_omni_calendar';
+import { useRecurringEvents } from '@/hooks/useRecurringEvents';
+import { parseNaturalLanguageRecurrence } from '@/lib/recurrenceEngine';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import LoadingModal from '@/components/LoadingModal';
+import RecurringEventManager from '@/components/RecurringEventManager';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -41,6 +45,9 @@ export default function HomeScreen() {
   const [currentMonth, setCurrentMonth] = useState(new Date().toISOString().slice(0, 7));
   const [isProcessingImage, setIsProcessingImage] = useState(false);
   const [loadingText, setLoadingText] = useState('');
+  const [showRecurringEventManager, setShowRecurringEventManager] = useState(false);
+  const [selectedParentEventId, setSelectedParentEventId] = useState<string | null>(null);
+  const [processedEvents, setProcessedEvents] = useState<any[]>([]);
   
   // 事件管理
   const { 
@@ -55,6 +62,14 @@ export default function HomeScreen() {
     getMonthEvents,
     fetchEvents
   } = useEvents();
+
+  // 重複事件管理
+  const {
+    loading: recurringLoading,
+    error: recurringError,
+    createRecurringEvent,
+    getRecurringEventInstances,
+  } = useRecurringEvents();
 
   // 语音录制
   const {
@@ -85,6 +100,47 @@ export default function HomeScreen() {
   useEffect(() => {
     initializeCalendarPermissions();
   }, []);
+
+  useEffect(() => {
+    const expandRecurringEvents = async () => {
+      if (eventsLoading || recurringLoading) return;
+
+      const singleEvents = events.filter(e => !e.recurrence_rule);
+      const recurringParents = events.filter(e => e.recurrence_rule);
+      
+      const [year, month] = currentMonth.split('-').map(Number);
+      const viewStartDate = new Date(year, month - 1, 1);
+      // 获取当前月份前后各一个月的数据，确保视图边缘的重复事件也能正确显示
+      viewStartDate.setMonth(viewStartDate.getMonth() - 1);
+      const viewEndDate = new Date(year, month, 0);
+      viewEndDate.setMonth(viewEndDate.getMonth() + 1);
+
+      let allInstances: any[] = [];
+
+      for (const parent of recurringParents) {
+        // 确保父事件的开始时间是Date对象
+        const parentStartDate = new Date(parent.start_ts * 1000);
+        // 如果父事件的开始时间在视图结束日期之后，则跳过
+        if(parentStartDate > viewEndDate) continue;
+
+        const instances = await getRecurringEventInstances(parent.id, viewStartDate, viewEndDate);
+        const instancesWithDetails = instances.map(inst => ({
+          ...parent,
+          id: `${parent.id}_${inst.start.toISOString()}`, // 为实例创建唯一ID
+          start_ts: Math.floor(inst.start.getTime() / 1000),
+          end_ts: Math.floor(inst.end.getTime() / 1000),
+          recurrence_rule: null, // 实例本身没有重复规则
+          parent_event_id: parent.id, // 链接回父事件
+          is_instance: true,
+        }));
+        allInstances = allInstances.concat(instancesWithDetails);
+      }
+      
+      setProcessedEvents([...singleEvents, ...allInstances]);
+    };
+
+    expandRecurringEvents();
+  }, [events, currentMonth, eventsLoading, recurringLoading, getRecurringEventInstances]);
 
   const initializeCalendarPermissions = async () => {
     try {
@@ -345,17 +401,112 @@ export default function HomeScreen() {
         return;
       }
       
-      const eventData = {
-        title: event.title,
-        description: event.description || '',
-        date: startDate,
-        startTime: startDate.toTimeString().substring(0, 5),
-        endTime: endDate.toTimeString().substring(0, 5),
-        location: event.location || '',
-        color: '#007AFF', // 添加颜色
-      };
-      
-      await createAndRefresh(eventData);
+      // 檢查是否為重複事件
+      if (event.isRecurring && event.recurrenceRule) {
+        console.log('Creating recurring event with rule:', event.recurrenceRule);
+        
+        // 確保 recurrenceRule 有必需的字段
+        if (!event.recurrenceRule.frequency) {
+          Alert.alert('重複規則錯誤', 'AI 解析的重複規則缺少頻率信息');
+          return;
+        }
+        
+        // 創建重複事件
+        const recurringEventData = {
+          title: event.title,
+          description: event.description || '',
+          startDate: startDate,
+          endDate: endDate,
+          location: event.location || '',
+          color: '#007AFF',
+          recurrenceRule: event.recurrenceRule,
+          familyId: userFamilyDetails?.[0]?.id || undefined,
+        };
+        
+        console.log('Recurring event data:', recurringEventData);
+        const parentEventId = await createRecurringEvent(recurringEventData);
+        
+        if (parentEventId) {
+          Alert.alert(
+            '✅ 重複事件創建成功', 
+            `重複日程"${event.title}"已添加到您的日历`,
+            [{ text: '好的', style: 'default' }]
+          );
+          const newEventDate = new Date(startDate);
+          await fetchEvents(newEventDate.getFullYear(), newEventDate.getMonth() + 1);
+        } else {
+          const errorMessage = recurringError || '創建重複日程時發生錯誤，請重試';
+          Alert.alert('❌ 創建失敗', errorMessage);
+        }
+      } else if (event.isRecurring && event.recurringPattern) {
+        // 嘗試解析自然語言重複模式
+        const recurrenceRule = parseNaturalLanguageRecurrence(event.recurringPattern);
+        
+        if (recurrenceRule) {
+          const recurringEventData = {
+            title: event.title,
+            description: event.description || '',
+            startDate: startDate,
+            endDate: endDate,
+            location: event.location || '',
+            color: '#007AFF',
+            recurrenceRule: recurrenceRule,
+            familyId: userFamilyDetails?.[0]?.id || undefined,
+          };
+          
+          const parentEventId = await createRecurringEvent(recurringEventData);
+          
+          if (parentEventId) {
+            Alert.alert(
+              '✅ 重複事件創建成功', 
+              `重複日程"${event.title}"已添加到您的日历`,
+              [{ text: '好的', style: 'default' }]
+            );
+            const newEventDate = new Date(startDate);
+            await fetchEvents(newEventDate.getFullYear(), newEventDate.getMonth() + 1);
+          } else {
+            const errorMessage = recurringError || '創建重複日程時發生錯誤，請重試';
+            Alert.alert('❌ 創建失敗', errorMessage);
+          }
+        } else {
+          // 無法解析重複模式，創建普通事件
+          Alert.alert(
+            '重複模式識別失敗',
+            '無法識別重複模式，將創建為普通事件。是否繼續？',
+            [
+              { text: '取消', style: 'cancel' },
+              { 
+                text: '繼續', 
+                onPress: async () => {
+                  const eventData = {
+                    title: event.title,
+                    description: event.description || '',
+                    date: startDate,
+                    startTime: startDate.toTimeString().substring(0, 5),
+                    endTime: endDate.toTimeString().substring(0, 5),
+                    location: event.location || '',
+                    color: '#007AFF',
+                  };
+                  await createAndRefresh(eventData);
+                }
+              }
+            ]
+          );
+        }
+      } else {
+        // 創建普通事件
+        const eventData = {
+          title: event.title,
+          description: event.description || '',
+          date: startDate,
+          startTime: startDate.toTimeString().substring(0, 5),
+          endTime: endDate.toTimeString().substring(0, 5),
+          location: event.location || '',
+          color: '#007AFF',
+        };
+        
+        await createAndRefresh(eventData);
+      }
 
     } catch (error) {
       // console.error('创建AI事件失败:', error);
@@ -468,8 +619,15 @@ export default function HomeScreen() {
 
   // 处理打开编辑事件
   const handleEditEvent = (event: any) => {
-    setEditingEvent(event);
-    setShowAddEventModal(true);
+    const parentId = event.parent_event_id || (event.recurrence_rule ? event.id : null);
+
+    if (parentId) {
+      setSelectedParentEventId(parentId);
+      setShowRecurringEventManager(true);
+    } else {
+      setEditingEvent(event);
+      setShowAddEventModal(true);
+    }
   };
 
   // 处理关闭编辑事件
@@ -484,7 +642,7 @@ export default function HomeScreen() {
     setSelectedDate(clickedDate);
     
     // 显示该日期的事件
-    const dayEvents = getEventsByDate(clickedDate);
+    const dayEvents = getProcessedEventsByDate(clickedDate);
     if (dayEvents.length > 0) {
       setShowEventListModal(true);
     } else {
@@ -504,6 +662,17 @@ export default function HomeScreen() {
         ]
       );
     }
+  };
+
+  const getProcessedEventsByDate = (date: Date) => {
+    const targetDayStart = new Date(date);
+    targetDayStart.setHours(0, 0, 0, 0);
+    
+    return processedEvents.filter(event => {
+      const eventStartDate = new Date(event.start_ts * 1000);
+      eventStartDate.setHours(0,0,0,0);
+      return eventStartDate.getTime() === targetDayStart.getTime();
+    });
   };
 
   if (loading) {
@@ -535,7 +704,7 @@ export default function HomeScreen() {
     };
     
     // 标记有事件的日期
-    events.forEach(event => {
+    processedEvents.forEach(event => {
       const eventDate = new Date(event.start_ts * 1000).toISOString().split('T')[0];
       if (markedDates[eventDate]) {
         markedDates[eventDate] = {
@@ -646,7 +815,7 @@ export default function HomeScreen() {
           
           {/* 显示今天的事件，并应用过滤 */}
           {(() => {
-            const todayEvents = getEventsByDate(new Date());
+            const todayEvents = getProcessedEventsByDate(new Date());
             
             // 根据 selectedFilter 过滤事件
             const filteredEvents = selectedFilter === 'all'
@@ -800,7 +969,7 @@ export default function HomeScreen() {
       <EventListModal
         visible={showEventListModal}
         onClose={() => setShowEventListModal(false)}
-        events={selectedDate ? getEventsByDate(selectedDate) : []}
+        events={selectedDate ? getProcessedEventsByDate(selectedDate) : []}
         date={selectedDate || new Date()}
         onDeleteEvent={async (eventId: string) => {
           const success = await deleteEvent(eventId);
@@ -812,6 +981,24 @@ export default function HomeScreen() {
           }
         }}
       />
+      
+      <Modal
+        visible={showRecurringEventManager}
+        animationType="slide"
+        onRequestClose={() => setShowRecurringEventManager(false)}
+      >
+        {selectedParentEventId && (
+          <RecurringEventManager
+            parentEventId={selectedParentEventId}
+            onClose={() => {
+              setShowRecurringEventManager(false);
+              setSelectedParentEventId(null);
+              const currentDate = new Date();
+              fetchEvents(currentDate.getFullYear(), currentDate.getMonth() + 1);
+            }}
+          />
+        )}
+      </Modal>
       
       {/* 语音转日程模态框 */}
       <VoiceToCalendar

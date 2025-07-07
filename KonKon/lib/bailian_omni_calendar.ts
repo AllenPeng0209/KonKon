@@ -232,6 +232,12 @@ export async function processTextToCalendar(
       "location": "地点（可选）",
       "isRecurring": false,
       "recurringPattern": "重复模式（可选）",
+      "recurrenceRule": {
+        "frequency": "WEEKLY",
+        "interval": 1,
+        "byDay": ["TU"],
+        "until": "YYYY-MM-DD"
+      },
       "confidence": 0.9
     }
   ],
@@ -246,10 +252,25 @@ export async function processTextToCalendar(
 4. 如果没有明确的结束时间，根据事件类型估算（如会议1小时，吃饭1小时等）
 5. confidence表示解析的置信度（0-1之间）
 6. 必须返回有效的JSON格式，不要包含其他解释文字
-7. 相对时间参考：今天=${today}，明天=${tomorrow}`;
+7. 相对时间参考：今天=${today}，明天=${tomorrow}
+8. 重复事件处理：
+   - 如果用户提到"每天"、"每周"、"每月"等重复词汇，请设置 isRecurring: true
+   - recurringPattern 是用户原始描述，如"每周二"
+   - recurrenceRule 是结构化的重复规则：
+     * frequency: "DAILY"(每天) | "WEEKLY"(每周) | "MONTHLY"(每月) | "YEARLY"(每年)
+     * interval: 间隔数，默认1
+     * byDay: 星期几，如["MO","TU","WE","TH","FR","SA","SU"]
+     * byMonthDay: 月份中的第几天，如[1,15,31]
+     * count: 重复次数
+     * until: 结束日期"YYYY-MM-DD"
+   - 示例：
+     * "每周二" -> {"frequency":"WEEKLY","interval":1,"byDay":["TU"]}
+     * "每两周" -> {"frequency":"WEEKLY","interval":2}
+     * "每月15号" -> {"frequency":"MONTHLY","interval":1,"byMonthDay":[15]}
+     * "工作日" -> {"frequency":"WEEKLY","interval":1,"byDay":["MO","TU","WE","TH","FR"]}`;
           })()
         }, {
-          role: "user",
+          role: "user", 
           content: text
         }]
       },
@@ -326,6 +347,12 @@ export async function processImageToCalendar(
       "location": "地点（可选）",
       "isRecurring": false,
       "recurringPattern": "重复模式（可选）",
+      "recurrenceRule": {
+        "frequency": "WEEKLY",
+        "interval": 1,
+        "byDay": ["TU"],
+        "until": "YYYY-MM-DD"
+      },
       "confidence": 0.9
     }
   ],
@@ -340,7 +367,22 @@ export async function processImageToCalendar(
 4. 如果没有明确的结束时间，根据事件类型估算（如会议1小时，吃饭1小时等）
 5. confidence表示解析的置信度（0-1之间）
 6. 必须返回有效的JSON格式，不要包含其他解释文字
-7. 相对时间参考：今天=${today}，明天=${tomorrow}`;
+7. 相对时间参考：今天=${today}，明天=${tomorrow}
+8. 重复事件处理：
+   - 如果图片中提到"每天"、"每周"、"每月"等重复词汇，请设置 isRecurring: true
+   - recurringPattern 是原始描述，如"每周二"
+   - recurrenceRule 是结构化的重复规则：
+     * frequency: "DAILY"(每天) | "WEEKLY"(每周) | "MONTHLY"(每月) | "YEARLY"(每年)
+     * interval: 间隔数，默认1
+     * byDay: 星期几，如["MO","TU","WE","TH","FR","SA","SU"]
+     * byMonthDay: 月份中的第几天，如[1,15,31]
+     * count: 重复次数
+     * until: 结束日期"YYYY-MM-DD"
+   - 示例：
+     * "每周二" -> {"frequency":"WEEKLY","interval":1,"byDay":["TU"]}
+     * "每两周" -> {"frequency":"WEEKLY","interval":2}
+     * "每月15号" -> {"frequency":"MONTHLY","interval":1,"byMonthDay":[15]}
+     * "工作日" -> {"frequency":"WEEKLY","interval":1,"byDay":["MO","TU","WE","TH","FR"]}`;
                 })()
               }
             ]
@@ -508,6 +550,18 @@ function parseCalendarResult(
              // If endTime is still invalid, set a default duration
              if (startTime && !endTime) {
                  endTime = new Date(startTime.getTime() + 60 * 60 * 1000); // Default 1 hour
+             }
+
+             // Ensure recurrenceRule.until is a Date object if it exists
+             if (event.recurrenceRule && event.recurrenceRule.until && typeof event.recurrenceRule.until === 'string') {
+                const untilDate = new Date(event.recurrenceRule.until);
+                // Check for invalid date
+                if (!isNaN(untilDate.getTime())) {
+                  event.recurrenceRule.until = untilDate;
+                } else {
+                  console.warn(`Could not parse until date string: "${event.recurrenceRule.until}"`);
+                  delete event.recurrenceRule.until; // Remove invalid date
+                }
              }
 
             return {

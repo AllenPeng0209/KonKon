@@ -3,7 +3,9 @@
     "allow": [
       "Bash(echo $SHELL)",
       "Bash(ls:*)",
-      "Bash(source:*)"
+      "Bash(source:*)",
+      "Bash(npx expo start:*)",
+      "Bash(pkill:*)"
     ],
     "deny": []
   }

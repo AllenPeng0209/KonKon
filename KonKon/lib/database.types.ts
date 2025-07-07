@@ -138,6 +138,9 @@ export type Database = {
           id: string
           location: string | null
           recurrence_rule: string | null
+          recurrence_end_date: string | null
+          recurrence_count: number | null
+          parent_event_id: string | null
           source: string | null
           start_ts: number
           title: string
@@ -154,6 +157,9 @@ export type Database = {
           id?: string
           location?: string | null
           recurrence_rule?: string | null
+          recurrence_end_date?: string | null
+          recurrence_count?: number | null
+          parent_event_id?: string | null
           source?: string | null
           start_ts: number
           title: string
@@ -170,6 +176,9 @@ export type Database = {
           id?: string
           location?: string | null
           recurrence_rule?: string | null
+          recurrence_end_date?: string | null
+          recurrence_count?: number | null
+          parent_event_id?: string | null
           source?: string | null
           start_ts?: number
           title?: string
@@ -191,6 +200,48 @@ export type Database = {
             referencedRelation: "families"
             referencedColumns: ["id"]
           },
+        ]
+      }
+      event_exceptions: {
+        Row: {
+          id: string
+          parent_event_id: string
+          exception_date: string
+          exception_type: string
+          modified_event_id: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          parent_event_id: string
+          exception_date: string
+          exception_type: string
+          modified_event_id?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          parent_event_id?: string
+          exception_date?: string
+          exception_type?: string
+          modified_event_id?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_exceptions_parent_event_id_fkey"
+            columns: ["parent_event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_exceptions_modified_event_id_fkey"
+            columns: ["modified_event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          }
         ]
       }
       families: {
