@@ -9,7 +9,7 @@ interface ChatContainerProps {
 export function ChatContainer({ children, style }: ChatContainerProps) {
   return (
     <View style={[styles.container, style]}>
-      <View style={styles.content}>{children}</View>
+      {children}
     </View>
   );
 }
@@ -17,10 +17,6 @@ export function ChatContainer({ children, style }: ChatContainerProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'stretch',
-  },
-  content: {
-    flex: 1,
-    flexGrow: 1,
+    justifyContent: 'flex-end',
   },
 }); 

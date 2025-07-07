@@ -103,51 +103,33 @@ export default function ExploreScreen() {
 
       {/* 聊天界面 */}
       <ChatContainer>
-        {/* 消息滚动区域 */}
         <KeyboardFriendlyScrollView
           style={styles.messagesContainer}
-          contentInsetAdjustmentBehavior="automatic"
-          keyboardDismissMode="interactive"
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={[
-            styles.messagesContentContainer,
-            {
-              paddingTop: 24,
-              paddingBottom: 40, // 进一步减少到40，让消息更贴近输入框
-              flex: messages.length === 0 ? 1 : undefined,
-            },
-          ]}
+          contentContainerStyle={styles.messagesContentContainer}
         >
-          {/* 消息列表 */}
-          {messages.map((message) => (
-            <View key={message.id} style={styles.messageWrapper}>
-              {message.type === 'user' ? (
-                <UserMessage>{message.content}</UserMessage>
-              ) : (
-                <AssistantMessage isLoading={message.isLoading}>
-                  {message.content}
-                </AssistantMessage>
-              )}
+          {messages.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <AnimatedLogo />
             </View>
-          ))}
+          ) : (
+            messages.map((message) => (
+              <View key={message.id} style={styles.messageWrapper}>
+                {message.type === 'user' ? (
+                  <UserMessage>{message.content}</UserMessage>
+                ) : (
+                  <AssistantMessage isLoading={message.isLoading}>
+                    {message.content}
+                  </AssistantMessage>
+                )}
+              </View>
+            ))
+          )}
         </KeyboardFriendlyScrollView>
 
-        {/* 空状态 - 显示动画 Logo */}
-        {messages.length === 0 && (
-          <View style={{ flex: 4, justifyContent: 'center', alignItems: 'center' }}>
-            <AnimatedLogo />
-          </View>
-        )}
-
-        {/* 底部输入区域 */}
         <View style={styles.toolbarContainer}>
-          {/* 首次建议（仅在没有消息时显示） */}
-          {messages.length === 0 && (
+          {messages.length === 0 && !isLoading && (
             <FirstSuggestions onSuggestionPress={handleSuggestionPress} />
           )}
-          
-          {/* 输入工具栏 */}
           <ChatToolbar 
             onSendMessage={handleSendMessage}
             disabled={isLoading}
@@ -238,12 +220,24 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   messagesContentContainer: {
+    flexGrow: 1,
+    paddingHorizontal: 16,
+    paddingTop: 24,
+    paddingBottom: 16,
+    justifyContent: 'flex-end',
     gap: 16,
   },
   messageWrapper: {
     // 消息包装器样式
   },
+  emptyContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   toolbarContainer: {
-    // 工具栏容器样式
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    paddingTop: 8,
   },
 });

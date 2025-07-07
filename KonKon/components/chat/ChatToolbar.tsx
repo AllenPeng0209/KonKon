@@ -27,22 +27,7 @@ interface ChatToolbarProps {
 export function ChatToolbar({ onSendMessage, disabled = false }: ChatToolbarProps) {
   const [inputValue, setInputValue] = useState('');
   const textInput = useRef<TextInput>(null);
-  const { bottom } = useSafeAreaInsets();
-  const keyboard = useAnimatedKeyboard();
   const theme = useColorScheme();
-
-  const translateStyle = useAnimatedStyle(
-    () => ({
-      transform: [{ translateY: -keyboard.height.value }],
-    }),
-    []
-  );
-
-  const blurStyle = useAnimatedStyle(() => {
-    return {
-      paddingBottom: keyboard.height.value > 0 ? 0 : bottom,
-    };
-  }, [bottom]);
 
   const onSubmitMessage = useCallback(
     (value: string) => {
@@ -73,61 +58,52 @@ export function ChatToolbar({ onSendMessage, disabled = false }: ChatToolbarProp
   );
 
   return (
-    <Animated.View style={[styles.container, translateStyle]}>
-      <AnimatedBlurView
-        tint={theme === 'light' ? 'systemChromeMaterial' : 'systemChromeMaterialDark'}
-        style={[styles.blurContainer, blurStyle]}
-      >
-        <View style={styles.inputContainer}>
-          <TextInput
-            ref={textInput}
-            onChangeText={setInputValue}
-            keyboardAppearance={theme ?? 'light'}
-            returnKeyType="send"
-            blurOnSubmit={false}
-            style={[
-              styles.textInput,
-              {
-                pointerEvents: disabled ? 'none' : 'auto',
-                color: theme === 'light' ? '#000' : '#fff',
-              },
-            ]}
-            placeholder="有什么想问我的吗？"
-            autoCapitalize="sentences"
-            autoCorrect
-            placeholderTextColor={theme === 'light' ? '#999' : '#666'}
-            onSubmitEditing={onSubmitEditing}
-            multiline
-          />
+    <BlurView
+      tint={theme === 'light' ? 'systemChromeMaterial' : 'systemChromeMaterialDark'}
+      style={styles.blurContainer}
+    >
+      <View style={styles.inputContainer}>
+        <TextInput
+          ref={textInput}
+          onChangeText={setInputValue}
+          keyboardAppearance={theme ?? 'light'}
+          returnKeyType="send"
+          blurOnSubmit={false}
+          style={[
+            styles.textInput,
+            {
+              pointerEvents: disabled ? 'none' : 'auto',
+              color: theme === 'light' ? '#000' : '#fff',
+            },
+          ]}
+          placeholder="有什么想问我的吗？"
+          autoCapitalize="sentences"
+          autoCorrect
+          placeholderTextColor={theme === 'light' ? '#999' : '#666'}
+          onSubmitEditing={onSubmitEditing}
+          multiline
+        />
 
-          <TouchableOpacity
-            disabled={!inputValue.length || disabled}
-            onPress={() => onSubmitMessage(inputValue)}
-            style={[
-              styles.sendButton,
-              (!inputValue.length || disabled) && styles.sendButtonDisabled,
-            ]}
-          >
-            <Ionicons
-              name="arrow-up"
-              size={20}
-              color={inputValue.length && !disabled ? '#fff' : '#999'}
-            />
-          </TouchableOpacity>
-        </View>
-      </AnimatedBlurView>
-    </Animated.View>
+        <TouchableOpacity
+          disabled={!inputValue.length || disabled}
+          onPress={() => onSubmitMessage(inputValue)}
+          style={[
+            styles.sendButton,
+            (!inputValue.length || disabled) && styles.sendButtonDisabled,
+          ]}
+        >
+          <Ionicons
+            name="arrow-up"
+            size={20}
+            color={inputValue.length && !disabled ? '#fff' : '#999'}
+          />
+        </TouchableOpacity>
+      </View>
+    </BlurView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: 'transparent',
-  },
   blurContainer: {
     paddingTop: 4,
     paddingBottom: 0,

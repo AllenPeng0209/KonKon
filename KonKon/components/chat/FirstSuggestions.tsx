@@ -45,7 +45,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     paddingHorizontal: 16,
-    paddingBottom: 50,
+    paddingVertical: 8, // 使用垂直内边距替代固定的底部内边距
   },
   suggestionButton: {
     minWidth: 140,
