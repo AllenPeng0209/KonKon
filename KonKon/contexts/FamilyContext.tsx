@@ -53,7 +53,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
 
   const fetchUserFamily = async () => {
     if (!user) {
-      console.log('fetchUserFamily: 用户未登录');
+      // console.log('fetchUserFamily: 用户未登录');
       return;
     }
     
@@ -61,7 +61,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       setLoading(true);
       setError(null);
 
-      console.log('fetchUserFamily: 开始获取家庭信息，用户ID:', user.id);
+      // console.log('fetchUserFamily: 开始获取家庭信息，用户ID:', user.id);
 
       // 先获取用户的家庭成员记录（获取最新的一个）
       const { data: memberData, error: memberError } = await supabase
@@ -72,17 +72,17 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
         .limit(1)
         .single();
 
-      console.log('fetchUserFamily: 家庭成员查询结果:', { memberData, memberError });
+      // console.log('fetchUserFamily: 家庭成员查询结果:', { memberData, memberError });
 
       if (memberError && memberError.code !== 'PGRST116') {
-        console.error('获取家庭成员信息失败:', memberError);
+        // console.error('获取家庭成员信息失败:', memberError);
         setUserFamily(null);
         setFamilyMembers([]);
         return;
       }
 
       if (memberData) {
-        console.log('fetchUserFamily: 找到家庭成员记录，家庭ID:', memberData.family_id);
+        // console.log('fetchUserFamily: 找到家庭成员记录，家庭ID:', memberData.family_id);
         
         // 获取家庭详细信息
         const { data: familyData, error: familyError } = await supabase
@@ -91,10 +91,10 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
           .eq('id', memberData.family_id)
           .single();
 
-        console.log('fetchUserFamily: 家庭信息查询结果:', { familyData, familyError });
+        // console.log('fetchUserFamily: 家庭信息查询结果:', { familyData, familyError });
 
         if (familyError) {
-          console.error('获取家庭信息失败:', familyError);
+          // console.error('获取家庭信息失败:', familyError);
           setUserFamily(null);
           setFamilyMembers([]);
           return;
@@ -103,12 +103,12 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
         setUserFamily(familyData as Family);
         await fetchFamilyMembers(memberData.family_id);
       } else {
-        console.log('fetchUserFamily: 用户没有加入任何家庭');
+        // console.log('fetchUserFamily: 用户没有加入任何家庭');
         setUserFamily(null);
         setFamilyMembers([]);
       }
     } catch (err) {
-      console.error('获取家庭信息异常:', err);
+      // console.error('获取家庭信息异常:', err);
       setError('获取家庭信息失败');
     } finally {
       setLoading(false);
@@ -135,7 +135,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
         .order('joined_at', { ascending: true });
 
       if (error) {
-        console.error('获取家庭成员失败:', error);
+        // console.error('获取家庭成员失败:', error);
         return;
       }
 
@@ -144,7 +144,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
         user: member.users
       })) as FamilyMember[]);
     } catch (err) {
-      console.error('获取家庭成员异常:', err);
+      // console.error('获取家庭成员异常:', err);
     }
   };
 
@@ -169,7 +169,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
         .single();
 
       if (familyError) {
-        console.error('创建家庭失败:', familyError);
+        // console.error('创建家庭失败:', familyError);
         setError(`创建家庭失败: ${familyError.message}`);
         return null;
       }
@@ -183,7 +183,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
         });
 
       if (memberError) {
-        console.error('添加家庭成员失败:', memberError);
+        // console.error('添加家庭成员失败:', memberError);
         setError(`添加家庭成员失败: ${memberError.message}`);
         return null;
       }
@@ -191,7 +191,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       await fetchUserFamily();
       return familyData as Family;
     } catch (err) {
-      console.error('创建家庭异常:', err);
+      // console.error('创建家庭异常:', err);
       setError('创建家庭失败');
       return null;
     } finally {
@@ -235,7 +235,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       await fetchUserFamily();
       return true;
     } catch (err) {
-      console.error('加入家庭异常:', err);
+      // console.error('加入家庭异常:', err);
       setError('加入家庭失败');
       return false;
     } finally {
@@ -260,7 +260,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
         .eq('id', memberId);
 
       if (error) {
-        console.error('移除成员失败:', error);
+        // console.error('移除成员失败:', error);
         setError('移除成员失败');
         return false;
       }
@@ -268,7 +268,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       await fetchUserFamily();
       return true;
     } catch (err) {
-      console.error('移除成员异常:', err);
+      // console.error('移除成员异常:', err);
       setError('移除成员失败');
       return false;
     } finally {
@@ -290,7 +290,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
         .eq('family_id', userFamily.id);
 
       if (error) {
-        console.error('离开家庭失败:', error);
+        // console.error('离开家庭失败:', error);
         setError('离开家庭失败');
         return false;
       }
@@ -299,7 +299,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       setFamilyMembers([]);
       return true;
     } catch (err) {
-      console.error('离开家庭异常:', err);
+      // console.error('离开家庭异常:', err);
       setError('离开家庭失败');
       return false;
     } finally {
@@ -321,7 +321,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
         .eq('family_id', userFamily.id);
 
       if (membersError) {
-        console.error('删除家庭成员失败:', membersError);
+        // console.error('删除家庭成员失败:', membersError);
         setError('解散家庭失败');
         return false;
       }
@@ -333,7 +333,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
         .eq('id', userFamily.id);
 
       if (familyError) {
-        console.error('删除家庭失败:', familyError);
+        // console.error('删除家庭失败:', familyError);
         setError('解散家庭失败');
         return false;
       }
@@ -342,7 +342,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       setFamilyMembers([]);
       return true;
     } catch (err) {
-      console.error('解散家庭异常:', err);
+      // console.error('解散家庭异常:', err);
       setError('解散家庭失败');
       return false;
     } finally {
@@ -359,11 +359,11 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
 
       // 这里可以实现邮箱邀请逻辑
       // 暂时返回成功，可以后续完善
-      console.log('邀请邮箱:', email);
+      // console.log('邀请邮箱:', email);
       setError('邮箱邀请功能开发中');
       return false;
     } catch (err) {
-      console.error('邮箱邀请异常:', err);
+      // console.error('邮箱邀请异常:', err);
       setError('邮箱邀请失败');
       return false;
     } finally {

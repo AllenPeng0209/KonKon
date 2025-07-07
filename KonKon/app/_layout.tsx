@@ -2,9 +2,6 @@ import { LogBox } from 'react-native';
 
 // 抑制 Reanimated 警告 - 必须在最开始执行
 LogBox.ignoreLogs([
-  'It looks like you might be using shared value\'s .value inside reanimated inline style',
-  'It looks like you might be using shared value',
-  'reanimated inline style',
   'Non-serializable values were found in the navigation state',
   'VirtualizedLists should never be nested',
 ]);
@@ -17,12 +14,18 @@ import 'react-native-reanimated';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { AuthProvider } from '../contexts/AuthContext';
 import { FamilyProvider } from '../contexts/FamilyContext';
+import { useEffect } from 'react';
+import { registerForPushNotificationsAsync } from '../lib/notifications';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const [loaded] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
+
+  useEffect(() => {
+    registerForPushNotificationsAsync();
+  }, []);
 
   if (!loaded) {
     // Async font loading only occurs in development.

@@ -112,7 +112,7 @@ export default function HomeScreen() {
         );
       }
     } catch (error) {
-      console.error('初始化日历权限失败:', error);
+      // console.error('初始化日历权限失败:', error);
     }
   };
 
@@ -162,7 +162,7 @@ export default function HomeScreen() {
           );
         }
       } catch (error) {
-        console.error('停止录制失败:', error);
+        // console.error('停止录制失败:', error);
         Alert.alert('错误', '录制失败，请重试');
       }
     } else {
@@ -170,7 +170,7 @@ export default function HomeScreen() {
       try {
         await startRecording();
       } catch (error) {
-        console.error('开始录制失败:', error);
+        // console.error('开始录制失败:', error);
         Alert.alert('错误', '无法开始录制，请检查麦克风权限');
       }
     }
@@ -218,7 +218,7 @@ export default function HomeScreen() {
         const result = await processImageToCalendar(base64Image);
         handleAIResult(result);
       } catch (error) {
-        console.error('图片处理失败:', error);
+        // console.error('图片处理失败:', error);
         Alert.alert('处理失败', `无法从图片创建日程: ${error instanceof Error ? error.message : '未知错误'}`);
       } finally {
         setIsProcessingImage(false);
@@ -241,7 +241,7 @@ export default function HomeScreen() {
       const result = await processVoiceToCalendar(base64Data);
       handleAIResult(result);
     } catch (error) {
-      console.error('语音处理失败:', error);
+      // console.error('语音处理失败:', error);
       Alert.alert('处理失败', '语音解析失败，请重试');
     } finally {
       clearRecording();
@@ -255,7 +255,7 @@ export default function HomeScreen() {
 
   // 统一处理AI解析结果
   const handleAIResult = (result: ParsedCalendarResult) => {
-    console.log('AI result:', result);
+    // console.log('AI result:', result);
     
     if (result.events && result.events.length > 0) {
       // Always take the first event for simplicity, even if multiple are returned.
@@ -358,18 +358,18 @@ export default function HomeScreen() {
       await createAndRefresh(eventData);
 
     } catch (error) {
-      console.error('创建AI事件失败:', error);
+      // console.error('创建AI事件失败:', error);
       Alert.alert('创建失败', `创建日程时发生未知错误: ${error instanceof Error ? error.message : ''}`);
     }
   };
 
   // Helper function to create event and refresh list
   const createAndRefresh = async (eventData: any) => {
-      console.log('创建事件数据:', eventData);
+      // console.log('创建事件数据:', eventData);
       
       const createdEvent = await createEvent(eventData);
       if (createdEvent) {
-        console.log('事件创建成功:', createdEvent);
+        // console.log('事件创建成功:', createdEvent);
         Alert.alert(
           '✅ 创建成功', 
           `日程"${eventData.title}"已添加到您的日历`,
@@ -378,7 +378,7 @@ export default function HomeScreen() {
         const newEventDate = new Date(eventData.date);
         await fetchEvents(newEventDate.getFullYear(), newEventDate.getMonth() + 1);
       } else {
-        console.error('事件创建失败: createEvent 返回 null');
+        // console.error('事件创建失败: createEvent 返回 null');
         const errorMessage = eventsError || '创建日程时发生错误，请重试';
         Alert.alert('❌ 创建失败', errorMessage);
       }
@@ -387,7 +387,7 @@ export default function HomeScreen() {
 
   // 处理文字输入错误
   const handleTextError = (error: string) => {
-    console.error('Text input error:', error);
+    // console.error('Text input error:', error);
     Alert.alert('处理失败', error);
   };
 
@@ -423,7 +423,7 @@ export default function HomeScreen() {
               allDay: eventData.allDay,
             });
           } catch (calendarError) {
-            console.log('系统日历同步失败:', calendarError);
+            // console.log('系统日历同步失败:', calendarError);
             // 不影响主要功能，只记录错误
           }
         }
@@ -438,7 +438,7 @@ export default function HomeScreen() {
         Alert.alert('错误', errorMessage);
       }
     } catch (error) {
-      console.error('创建事件异常:', error);
+      // console.error('创建事件异常:', error);
       const errorMessage = error instanceof Error ? error.message : '创建事件失败';
       Alert.alert('错误', errorMessage);
     }
@@ -460,7 +460,7 @@ export default function HomeScreen() {
         Alert.alert('错误', errorMessage);
       }
     } catch (error) {
-      console.error('更新事件异常:', error);
+      // console.error('更新事件异常:', error);
       const errorMessage = error instanceof Error ? error.message : '更新事件失败';
       Alert.alert('错误', errorMessage);
     }
@@ -738,7 +738,9 @@ export default function HomeScreen() {
           `录制中... ${Math.floor(voiceState.duration / 1000)}s` : 
           '长按说话，快速记录'
         }
-        onTextInputPress={() => console.log('Text input pressed')}
+        onTextInputPress={() => {
+          // console.log('Text input pressed')
+        }}
         onTextResult={handleTextResult}
         onError={handleTextError}
         onManualAddPress={handleManualAdd}

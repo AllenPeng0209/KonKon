@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Database } from '../lib/database.types';
+import { scheduleNotificationForEvent, cancelNotificationForEvent } from '../lib/notifications';
 
 type Event = Database['public']['Tables']['events']['Row'];
 type EventInsert = Database['public']['Tables']['events']['Insert'];
@@ -54,7 +55,7 @@ export const useEvents = () => {
         .eq('user_id', user.id);
       
       if (error) {
-        console.error('获取家庭列表失败:', error);
+        // console.error('获取家庭列表失败:', error);
         return;
       }
       
@@ -67,7 +68,7 @@ export const useEvents = () => {
       setUserFamilies(familyIds);
       setUserFamilyDetails(familyDetails);
     } catch (err) {
-      console.error('获取家庭列表时出错:', err);
+      // console.error('获取家庭列表时出错:', err);
     }
   };
 
@@ -75,7 +76,7 @@ export const useEvents = () => {
   const fetchEvents = async (year?: number, month?: number) => {
     if (!user) return;
     
-    console.log('🔄 开始获取事件...', { userId: user.id, year, month, userFamilies });
+    // console.log('🔄 开始获取事件...', { userId: user.id, year, month, userFamilies });
     
     try {
       setLoading(true);
@@ -119,12 +120,12 @@ export const useEvents = () => {
       ]);
 
       if (personalResult.error) {
-        console.error('获取个人事件失败:', personalResult.error);
+        // console.error('获取个人事件失败:', personalResult.error);
         throw personalResult.error;
       }
 
       if (sharedResult.error) {
-        console.error('获取分享事件失败:', sharedResult.error);
+        // console.error('获取分享事件失败:', sharedResult.error);
         throw sharedResult.error;
       }
 
@@ -179,16 +180,18 @@ export const useEvents = () => {
       });
 
       const allEvents = Array.from(eventMap.values()).sort((a, b) => a.start_ts - b.start_ts);
+      /*
       console.log('✅ 获取事件成功:', { 
         totalEvents: allEvents.length, 
         personalEvents: personalEvents.length, 
         sharedEvents: sharedEvents.length,
         events: allEvents.map(e => ({ id: e.id, title: e.title, start_ts: e.start_ts }))
       });
+      */
       setEvents(allEvents);
 
     } catch (err) {
-      console.error('获取事件失败:', err);
+      // console.error('获取事件失败:', err);
       setError(err instanceof Error ? err.message : '获取事件失败');
     } finally {
       setLoading(false);
@@ -196,152 +199,117 @@ export const useEvents = () => {
   };
 
   // 创建事件
-  const createEvent = async (eventData: CreateEventData): Promise<Event | null> => {
+  const createEvent = async (eventData: CreateEventData): Promise<string | null> => {
     if (!user) {
       setError('用户未登录');
       return null;
     }
 
-    console.log('📝 开始创建事件...', eventData);
+    setLoading(true);
+    setError(null);
 
     try {
-      // 计算时间戳 - 修复时区和年份问题
-      const startTime = eventData.startTime || '09:00';
-      const endTime = eventData.endTime || '10:00';
-      
-      // 确保使用正确的日期，避免时区混乱
-      let baseDate: Date;
-      if (eventData.date instanceof Date) {
-        // 如果是Date对象，使用本地时区的年月日
-        baseDate = new Date(eventData.date.getFullYear(), eventData.date.getMonth(), eventData.date.getDate());
-      } else {
-        // 如果是其他格式，先转换
-        const tempDate = new Date(eventData.date);
-        baseDate = new Date(tempDate.getFullYear(), tempDate.getMonth(), tempDate.getDate());
+      const { title, description, date, startTime, endTime, location, color, shareToFamilies, type } = eventData;
+
+      // 1. 转换日期和时间为时间戳
+      const eventDate = new Date(date);
+      if (startTime) {
+        const [hours, minutes] = startTime.split(':');
+        eventDate.setHours(parseInt(hours, 10), parseInt(minutes, 10));
       }
-      
-      const [startHour, startMinute] = startTime.split(':').map(Number);
-      const [endHour, endMinute] = endTime.split(':').map(Number);
-      
-      const startDateTime = new Date(baseDate);
-      startDateTime.setHours(startHour, startMinute, 0, 0);
-      
-      const endDateTime = new Date(baseDate);
-      endDateTime.setHours(endHour, endMinute, 0, 0);
+      const start_ts = Math.floor(eventDate.getTime() / 1000);
 
-      const startTs = Math.floor(startDateTime.getTime() / 1000);
-      const endTs = Math.floor(endDateTime.getTime() / 1000);
-      
-      console.log('⏰ 时间计算:', { 
-        originalDate: eventData.date,
-        startTime, endTime,
-        startDateTime: startDateTime.toISOString(),
-        endDateTime: endDateTime.toISOString(),
-        startTs, endTs
-      });
-
-      // 创建个人事件（family_id 为 null）
-      const newEvent: EventInsert = {
-        title: eventData.title,
-        description: eventData.description || null,
-        start_ts: startTs,
-        end_ts: endTs,
-        family_id: null, // 个人事件
+      // 2. 准备要插入的数据
+      const eventToInsert: Omit<EventInsert, 'end_ts'> & { end_ts?: number | null } = {
         creator_id: user.id,
-        location: eventData.location || null,
-        color: eventData.color || '#007AFF',
-        type: eventData.type || 'calendar',
-        source: 'manual',
+        title,
+        description,
+        start_ts,
+        location,
+        color,
+        type,
+        // family_id 先设置为 null，如果是家庭事件则在后面处理
+        family_id: null,
       };
 
-      console.log('💾 准备插入事件到Supabase:', newEvent);
+      if (endTime) {
+        const endDate = new Date(date);
+        const [hours, minutes] = endTime.split(':');
+        endDate.setHours(parseInt(hours, 10), parseInt(minutes, 10));
+        eventToInsert.end_ts = Math.floor(endDate.getTime() / 1000);
+      }
 
-      const { data, error } = await supabase
+      // 3. 插入事件
+      const { data: newEvent, error: eventError } = await supabase
         .from('events')
-        .insert([newEvent])
+        .insert(eventToInsert as EventInsert)
         .select()
         .single();
 
-      if (error) {
-        console.error('❌ Supabase 插入错误:', error);
-        throw error;
+      if (eventError) {
+        throw eventError;
       }
-
-      console.log('✅ 事件已成功保存到Supabase:', data);
-
-      // 如果需要分享到群组，创建分享记录
-      if (eventData.shareToFamilies && eventData.shareToFamilies.length > 0) {
-        const shares = eventData.shareToFamilies.map(familyId => ({
-          event_id: data.id,
-          family_id: familyId,
-          shared_by: user.id
-        }));
-
+      
+      // 4. 如果是分享事件，更新 family_id 或 event_shares 表
+      if (shareToFamilies && shareToFamilies.length > 0) {
+        // 假设一次只分享给一个家庭
+        const familyId = shareToFamilies[0];
         const { error: shareError } = await supabase
           .from('event_shares')
-          .insert(shares);
-
+          .insert({ event_id: newEvent.id, family_id: familyId, shared_by: user.id });
+        
         if (shareError) {
-          console.error('分享事件失败:', shareError);
-          // 分享失败不影响事件创建，只记录错误
+          // console.error('分享事件失败:', shareError);
+          // 即使分享失败，事件本身已创建，可以考虑回滚或提示
         }
       }
 
-      // 添加到本地状态
-      const newEventWithShares: EventWithShares = {
-        ...data,
-        is_shared: (eventData.shareToFamilies?.length || 0) > 0,
-        shared_families: eventData.shareToFamilies || []
-      };
+      await fetchEvents();
       
-      console.log('🔄 添加事件到本地状态:', newEventWithShares);
-      setEvents(prev => {
-        const updated = [...prev, newEventWithShares];
-        console.log('📊 本地事件列表更新:', { 
-          previousCount: prev.length, 
-          newCount: updated.length,
-          newEvent: { id: newEventWithShares.id, title: newEventWithShares.title }
+      // Schedule notification
+      if (newEvent) {
+        await scheduleNotificationForEvent({
+          id: newEvent.id,
+          title: newEvent.title,
+          date: eventDate,
+          startTime: startTime,
         });
-        return updated;
-      });
-      return data;
+      }
+
+      return newEvent.id;
 
     } catch (err) {
-      console.error('创建事件失败:', err);
-      const errorMessage = err instanceof Error ? err.message : '创建事件失败';
-      setError(errorMessage);
+      // console.error('创建事件失败:', err);
+      setError(err instanceof Error ? err.message : '创建事件失败');
       return null;
+    } finally {
+      setLoading(false);
     }
   };
 
   // 删除事件
   const deleteEvent = async (eventId: string): Promise<boolean> => {
-    if (!user) {
-      setError('用户未登录');
-      return false;
-    }
-
+    setLoading(true);
+    setError(null);
     try {
-      // 删除事件（级联删除会自动删除相关的分享记录）
-      const { error } = await supabase
-        .from('events')
-        .delete()
-        .eq('id', eventId)
-        .eq('creator_id', user.id); // 确保只能删除自己的事件
+      // 首先删除相关的分享记录
+      await supabase.from('event_shares').delete().eq('event_id', eventId);
+      
+      // 然后删除事件本身
+      const { error } = await supabase.from('events').delete().eq('id', eventId);
+      if (error) throw error;
 
-      if (error) {
-        console.error('删除事件失败:', error);
-        throw error;
-      }
+      await cancelNotificationForEvent(eventId);
 
-      // 更新本地状态
-      setEvents(prev => prev.filter(event => event.id !== eventId));
+      // 从本地状态中移除
+      setEvents(prev => prev.filter(e => e.id !== eventId));
       return true;
-
     } catch (err) {
-      console.error('删除事件失败:', err);
+      // console.error('删除事件失败:', err);
       setError(err instanceof Error ? err.message : '删除事件失败');
       return false;
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -386,7 +354,7 @@ export const useEvents = () => {
         .single();
 
       if (error) {
-        console.error('更新事件失败:', error);
+        // console.error('更新事件失败:', error);
         throw error;
       }
 
@@ -410,7 +378,7 @@ export const useEvents = () => {
           .insert(shareData);
 
         if (shareError) {
-          console.error('更新分享失败:', shareError);
+          // console.error('更新分享失败:', shareError);
           // 继续执行，不抛出错误
         }
       } else {
@@ -436,7 +404,7 @@ export const useEvents = () => {
       return true;
 
     } catch (err) {
-      console.error('更新事件失败:', err);
+      // console.error('更新事件失败:', err);
       setError(err instanceof Error ? err.message : '更新事件失败');
       return false;
     }
@@ -459,7 +427,7 @@ export const useEvents = () => {
         }]);
 
       if (error) {
-        console.error('分享事件失败:', error);
+        // console.error('分享事件失败:', error);
         throw error;
       }
 
@@ -478,7 +446,7 @@ export const useEvents = () => {
       return true;
 
     } catch (err) {
-      console.error('分享事件失败:', err);
+      // console.error('分享事件失败:', err);
       setError(err instanceof Error ? err.message : '分享事件失败');
       return false;
     }
@@ -500,7 +468,7 @@ export const useEvents = () => {
         .eq('shared_by', user.id);
 
       if (error) {
-        console.error('取消分享失败:', error);
+        // console.error('取消分享失败:', error);
         throw error;
       }
 
@@ -520,7 +488,7 @@ export const useEvents = () => {
       return true;
 
     } catch (err) {
-      console.error('取消分享失败:', err);
+      // console.error('取消分享失败:', err);
       setError(err instanceof Error ? err.message : '取消分享失败');
       return false;
     }
@@ -534,7 +502,7 @@ export const useEvents = () => {
 
     const startTs = Math.floor(startOfDay.getTime() / 1000);
     const endTs = Math.floor(endOfDay.getTime() / 1000);
-
+    /*
     console.log('🔍 getEventsByDate调试:', {
       inputDate: date.toISOString(),
       localDate: `${date.getFullYear()}-${(date.getMonth()+1).toString().padStart(2,'0')}-${date.getDate().toString().padStart(2,'0')}`,
@@ -552,16 +520,17 @@ export const useEvents = () => {
         isInRange: e.start_ts >= startTs && e.start_ts <= endTs
       }))
     });
+    */
 
     const filteredEvents = events.filter(event => 
       event.start_ts >= startTs && event.start_ts <= endTs
     );
-
+    /*
     console.log('📅 过滤结果:', {
       matchedEvents: filteredEvents.length,
       events: filteredEvents.map(e => ({ id: e.id, title: e.title }))
     });
-
+    */
     return filteredEvents;
   };
 
@@ -587,7 +556,7 @@ export const useEvents = () => {
   // 当用户信息获取到后，立即获取个人事件
   useEffect(() => {
     if (user) {
-      console.log('用户登录，开始获取事件...');
+      // console.log('用户登录，开始获取事件...');
       fetchEvents();
     }
   }, [user]);
@@ -595,7 +564,7 @@ export const useEvents = () => {
   // 当家庭列表变化时，重新获取所有事件（包括群组事件和个人事件）
   useEffect(() => {
     if (user) {
-      console.log('家庭列表更新，重新获取事件...', userFamilies);
+      // console.log('家庭列表更新，重新获取事件...', userFamilies);
       fetchEvents();
     }
   }, [userFamilies]);

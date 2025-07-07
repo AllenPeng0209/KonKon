@@ -34,16 +34,15 @@ export function ChatToolbar({ onSendMessage, disabled = false }: ChatToolbarProp
   const translateStyle = useAnimatedStyle(
     () => ({
       transform: [{ translateY: -keyboard.height.value }],
-      marginBottom: keyboard.height.value > 0 ? 0 : 0, // 键盘关闭时用负margin抵消安全区域
     }),
-    [bottom]
+    []
   );
 
   const blurStyle = useAnimatedStyle(() => {
     return {
-      paddingBottom: 0, // 完全移除底部padding，不考虑安全区域
+      paddingBottom: keyboard.height.value > 0 ? 0 : bottom,
     };
-  }, []);
+  }, [bottom]);
 
   const onSubmitMessage = useCallback(
     (value: string) => {
