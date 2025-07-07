@@ -73,22 +73,80 @@ async function performDashScopeASR(
   audioBase64: string,
   onRealtimeText?: (text: string) => void
 ): Promise<string> {
-  try {
-    const config = await getOmniConfig();
-    
-    if (onRealtimeText) {
-      onRealtimeText('正在连接 Qwen-Audio...');
-    }
-    
-    // 使用 DashScope OpenAI 兼容的 Qwen-Audio API
-    const response = await fetch(`${config.baseURL}/compatible-mode/v1/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${config.apiKey}`,
-      },
-      body: JSON.stringify({
+  return new Promise(async (resolve, reject) => {
+    try {
+      const config = await getOmniConfig();
+      
+      if (onRealtimeText) {
+        onRealtimeText('正在连接 Qwen-Audio...');
+      }
+
+      const url = `${config.baseURL}/compatible-mode/v1/chat/completions`;
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', url, true);
+
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.setRequestHeader('Authorization', `Bearer ${config.apiKey}`);
+      xhr.setRequestHeader('Accept', 'text/event-stream');
+
+      let fullTranscript = '';
+      let lastProcessedPosition = 0;
+
+      xhr.onprogress = () => {
+        const chunk = xhr.responseText.substring(lastProcessedPosition);
+        lastProcessedPosition = xhr.responseText.length;
+        
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+            if (line.trim() === '' || !line.startsWith('data: ')) continue;
+            
+            const data = line.slice(6);
+            if (data.trim() === '[DONE]') {
+                // The stream is done, but we'll let onreadystatechange handle the final state.
+                return;
+            }
+
+            try {
+                const parsed = JSON.parse(data);
+                const textChunk = parsed.choices?.[0]?.delta?.content || '';
+                if (textChunk) {
+                    fullTranscript += textChunk;
+                    if (onRealtimeText) {
+                        onRealtimeText(fullTranscript);
+                    }
+                }
+            } catch (e) {
+                console.warn('解析流数据失败 (onprogress):', data, e);
+            }
+        }
+      };
+
+      xhr.onreadystatechange = () => {
+        if (xhr.readyState === 4) {
+          if (xhr.status === 200) {
+            if (onRealtimeText) {
+              onRealtimeText('语音识别完成');
+            }
+            if (!fullTranscript) {
+              console.warn('语音识别结果为空');
+            }
+            resolve(fullTranscript.trim());
+          } else {
+            console.error('Qwen-Audio 错误:', xhr.status, xhr.responseText);
+            reject(new Error(`Qwen-Audio API 错误: ${xhr.status} - ${xhr.responseText}`));
+          }
+        }
+      };
+      
+      xhr.onerror = () => {
+        console.error('Qwen-Audio 请求失败');
+        reject(new Error('Qwen-Audio 请求失败: 网络错误'));
+      };
+
+      const body = JSON.stringify({
         model: 'qwen2.5-omni-7b',
+        stream: true,
         messages: [
           {
             role: 'user',
@@ -106,36 +164,15 @@ async function performDashScopeASR(
             ]
           }
         ],
-        modalities: ['text']
-      }),
-    });
+      });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Qwen-Audio 错误:', response.status, errorText);
-      throw new Error(`Qwen-Audio API 错误: ${response.status} - ${errorText}`);
-    }
+      xhr.send(body);
 
-    const data = await response.json();
-    console.log('Qwen-Audio 响应:', data);
-    
-    if (onRealtimeText) {
-      onRealtimeText('语音识别完成');
+    } catch (error) {
+      console.error('Qwen-Audio 失败:', error);
+      reject(error);
     }
-    
-    // 解析响应获取识别结果
-    const transcript = data.choices?.[0]?.message?.content || '';
-    
-    if (!transcript) {
-      throw new Error('语音识别结果为空');
-    }
-    
-    return transcript.trim();
-    
-  } catch (error) {
-    console.error('Qwen-Audio 失败:', error);
-    throw error;
-  }
+  });
 }
 
 
