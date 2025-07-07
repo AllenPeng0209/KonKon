@@ -331,6 +331,81 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      },
+      conversations: {
+        Row: {
+          id: string;
+          content: Json;
+          created_by: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          content: Json;
+          created_by: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          content?: Json;
+          created_by?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "conversations_created_by_fkey",
+            columns: ["created_by"],
+            isOneToOne: false,
+            referencedRelation: "users",
+            referencedColumns: ["id"]
+          }
+        ];
+      },
+      conversation_shares: {
+        Row: {
+          id: string;
+          conversation_id: string;
+          family_id: string;
+          shared_by: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          conversation_id: string;
+          family_id: string;
+          shared_by: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          conversation_id?: string;
+          family_id?: string;
+          shared_by?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "conversation_shares_conversation_id_fkey",
+            columns: ["conversation_id"],
+            isOneToOne: false,
+            referencedRelation: "conversations",
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversation_shares_family_id_fkey",
+            columns: ["family_id"],
+            isOneToOne: false,
+            referencedRelation: "families",
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversation_shares_shared_by_fkey",
+            columns: ["shared_by"],
+            isOneToOne: false,
+            referencedRelation: "users",
+            referencedColumns: ["id"]
+          }
+        ];
       }
     }
     Views: {
