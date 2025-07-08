@@ -9,7 +9,14 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.agenthub.konkon",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSLocationWhenInUseUsageDescription": "KonKon需要您的位置来提供本地化的事件推荐和服务。",
+        "NSCameraUsageDescription": "KonKon需要访问您的相机，以便您拍照并将其转换为日历事件。",
+        "NSPhotoLibraryUsageDescription": "KonKon需要访问您的相册，以便您选择图片并将其转换为日历事件。"
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -47,7 +54,8 @@
           "remindersPermission": "KonKon 需要访问您的提醒来创建提醒通知"
         }
       ],
-      "expo-audio"
+      "expo-audio",
+      "expo-image-picker"
     ],
     "experiments": {
       "typedRoutes": true

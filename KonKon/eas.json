@@ -1,0 +1,22 @@
+{
+  "cli": {
+    "version": ">= 9.0.0"
+  },
+  "build": {
+    "production": {
+      "ios": {
+        "image": "latest",
+        "resourceClass": "m1-medium"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "appleId": "allenpeng0209@icloud.com",
+        "ascAppId": "6748345165",
+        "appleTeamId": "GADMK54SCU"
+      }
+    }
+  }
+} 
