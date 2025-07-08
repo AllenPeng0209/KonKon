@@ -7,8 +7,88 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instanciate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "12.2.3 (519615d)"
+  }
   public: {
     Tables: {
+      conversation_shares: {
+        Row: {
+          conversation_id: string
+          created_at: string
+          family_id: string
+          id: string
+          shared_by: string
+        }
+        Insert: {
+          conversation_id: string
+          created_at?: string
+          family_id: string
+          id?: string
+          shared_by: string
+        }
+        Update: {
+          conversation_id?: string
+          created_at?: string
+          family_id?: string
+          id?: string
+          shared_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_shares_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversation_shares_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversation_shares_shared_by_fkey"
+            columns: ["shared_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversations: {
+        Row: {
+          content: Json
+          created_at: string
+          created_by: string
+          id: string
+        }
+        Insert: {
+          content: Json
+          created_at?: string
+          created_by: string
+          id?: string
+        }
+        Update: {
+          content?: Json
+          created_at?: string
+          created_by?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_attendees: {
         Row: {
           created_at: string | null
@@ -44,6 +124,48 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_exceptions: {
+        Row: {
+          created_at: string | null
+          exception_date: string
+          exception_type: string
+          id: string
+          modified_event_id: string | null
+          parent_event_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          exception_date: string
+          exception_type: string
+          id?: string
+          modified_event_id?: string | null
+          parent_event_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          exception_date?: string
+          exception_type?: string
+          id?: string
+          modified_event_id?: string | null
+          parent_event_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_exceptions_modified_event_id_fkey"
+            columns: ["modified_event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_exceptions_parent_event_id_fkey"
+            columns: ["parent_event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
             referencedColumns: ["id"]
           },
         ]
@@ -137,10 +259,10 @@ export type Database = {
           family_id: string | null
           id: string
           location: string | null
-          recurrence_rule: string | null
-          recurrence_end_date: string | null
-          recurrence_count: number | null
           parent_event_id: string | null
+          recurrence_count: number | null
+          recurrence_end_date: string | null
+          recurrence_rule: string | null
           source: string | null
           start_ts: number
           title: string
@@ -156,10 +278,10 @@ export type Database = {
           family_id?: string | null
           id?: string
           location?: string | null
-          recurrence_rule?: string | null
-          recurrence_end_date?: string | null
-          recurrence_count?: number | null
           parent_event_id?: string | null
+          recurrence_count?: number | null
+          recurrence_end_date?: string | null
+          recurrence_rule?: string | null
           source?: string | null
           start_ts: number
           title: string
@@ -175,10 +297,10 @@ export type Database = {
           family_id?: string | null
           id?: string
           location?: string | null
-          recurrence_rule?: string | null
-          recurrence_end_date?: string | null
-          recurrence_count?: number | null
           parent_event_id?: string | null
+          recurrence_count?: number | null
+          recurrence_end_date?: string | null
+          recurrence_rule?: string | null
           source?: string | null
           start_ts?: number
           title?: string
@@ -200,78 +322,96 @@ export type Database = {
             referencedRelation: "families"
             referencedColumns: ["id"]
           },
-        ]
-      }
-      event_exceptions: {
-        Row: {
-          id: string
-          parent_event_id: string
-          exception_date: string
-          exception_type: string
-          modified_event_id: string | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          parent_event_id: string
-          exception_date: string
-          exception_type: string
-          modified_event_id?: string | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          parent_event_id?: string
-          exception_date?: string
-          exception_type?: string
-          modified_event_id?: string | null
-          created_at?: string
-        }
-        Relationships: [
           {
-            foreignKeyName: "event_exceptions_parent_event_id_fkey"
+            foreignKeyName: "events_parent_event_id_fkey"
             columns: ["parent_event_id"]
             isOneToOne: false
             referencedRelation: "events"
             referencedColumns: ["id"]
           },
+        ]
+      }
+      expenses: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          date: string
+          description: string | null
+          family_id: string | null
+          id: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          category: string
+          created_at?: string
+          date: string
+          description?: string | null
+          family_id?: string | null
+          id?: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          date?: string
+          description?: string | null
+          family_id?: string | null
+          id?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
           {
-            foreignKeyName: "event_exceptions_modified_event_id_fkey"
-            columns: ["modified_event_id"]
+            foreignKeyName: "expenses_family_id_fkey"
+            columns: ["family_id"]
             isOneToOne: false
-            referencedRelation: "events"
+            referencedRelation: "families"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       families: {
         Row: {
+          avatar_url: string | null
           created_at: string | null
           description: string | null
+          enabled_features: string[] | null
           id: string
           invite_code: string | null
           name: string
           owner_id: string
+          settings: Json | null
           timezone: string | null
           updated_at: string | null
         }
         Insert: {
+          avatar_url?: string | null
           created_at?: string | null
           description?: string | null
+          enabled_features?: string[] | null
           id?: string
           invite_code?: string | null
           name: string
           owner_id: string
+          settings?: Json | null
           timezone?: string | null
           updated_at?: string | null
         }
         Update: {
+          avatar_url?: string | null
           created_at?: string | null
           description?: string | null
+          enabled_features?: string[] | null
           id?: string
           invite_code?: string | null
           name?: string
           owner_id?: string
+          settings?: Json | null
           timezone?: string | null
           updated_at?: string | null
         }
@@ -279,6 +419,70 @@ export type Database = {
           {
             foreignKeyName: "families_owner_id_fkey"
             columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      family_invitations: {
+        Row: {
+          created_at: string | null
+          expires_at: string | null
+          family_id: string
+          id: string
+          invited_email: string
+          invited_user_id: string | null
+          inviter_id: string
+          message: string | null
+          role: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at?: string | null
+          family_id: string
+          id?: string
+          invited_email: string
+          invited_user_id?: string | null
+          inviter_id: string
+          message?: string | null
+          role?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string | null
+          family_id?: string
+          id?: string
+          invited_email?: string
+          invited_user_id?: string | null
+          inviter_id?: string
+          message?: string | null
+          role?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "family_invitations_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "family_invitations_invited_user_id_fkey"
+            columns: ["invited_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "family_invitations_inviter_id_fkey"
+            columns: ["inviter_id"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
@@ -385,81 +589,6 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
-      },
-      conversations: {
-        Row: {
-          id: string;
-          content: Json;
-          created_by: string;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          content: Json;
-          created_by: string;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          content?: Json;
-          created_by?: string;
-          created_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "conversations_created_by_fkey",
-            columns: ["created_by"],
-            isOneToOne: false,
-            referencedRelation: "users",
-            referencedColumns: ["id"]
-          }
-        ];
-      },
-      conversation_shares: {
-        Row: {
-          id: string;
-          conversation_id: string;
-          family_id: string;
-          shared_by: string;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          conversation_id: string;
-          family_id: string;
-          shared_by: string;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          conversation_id?: string;
-          family_id?: string;
-          shared_by?: string;
-          created_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "conversation_shares_conversation_id_fkey",
-            columns: ["conversation_id"],
-            isOneToOne: false,
-            referencedRelation: "conversations",
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "conversation_shares_family_id_fkey",
-            columns: ["family_id"],
-            isOneToOne: false,
-            referencedRelation: "families",
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "conversation_shares_shared_by_fkey",
-            columns: ["shared_by"],
-            isOneToOne: false,
-            referencedRelation: "users",
-            referencedColumns: ["id"]
-          }
-        ];
       }
     }
     Views: {
@@ -477,21 +606,25 @@ export type Database = {
   }
 }
 
-type DefaultSchema = Database[Extract<keyof Database, "public">]
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
@@ -509,14 +642,16 @@ export type Tables<
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
@@ -532,14 +667,16 @@ export type TablesInsert<
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
@@ -555,14 +692,16 @@ export type TablesUpdate<
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
-> = DefaultSchemaEnumNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
@@ -570,14 +709,16 @@ export type Enums<
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
     : never = never,
-> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
@@ -586,4 +727,4 @@ export const Constants = {
   public: {
     Enums: {},
   },
-} as const 
+} as const

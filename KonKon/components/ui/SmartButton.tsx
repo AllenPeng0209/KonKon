@@ -11,13 +11,12 @@ import {
 } from 'react-native';
 import { Audio } from 'expo-av';
 import * as FileSystem from 'expo-file-system';
-import { processTextToCalendar, ParsedCalendarResult, speechToText } from '../../lib/bailian_omni_calendar';
+import { speechToText } from '../../lib/bailian_omni_calendar';
 
 interface SmartButtonProps {
   onPress?: () => void;
   onTextInputPress?: () => void;
-  onSendText?: (text: string) => void;
-  onTextResult?: (result: ParsedCalendarResult) => void;
+  onTextResult?: (text: string) => void;
   onError?: (error: string) => void;
   onPhotoPress?: () => void;
   onAlbumPress?: () => void;
@@ -30,7 +29,6 @@ interface SmartButtonProps {
 export default function SmartButton({
   onPress,
   onTextInputPress,
-  onSendText,
   onTextResult,
   onError,
   onPhotoPress,
@@ -113,37 +111,13 @@ export default function SmartButton({
     }
   };
 
-  const handleSendText = async () => {
+  const handleSendText = () => {
     if (!inputText.trim()) return;
-    
     const textToProcess = inputText.trim();
-    
-    // 如果有简单的文字回调，先调用它
-    if (onSendText) {
-      onSendText(textToProcess);
-    }
-    
-    // 如果有文字转日程回调，进行AI处理
     if (onTextResult) {
-      setIsProcessing(true);
-      try {
-        const result = await processTextToCalendar(textToProcess);
-        onTextResult(result);
-        setInputText('');
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : '处理失败';
-        if (onError) {
-          onError(errorMessage);
-        } else {
-          Alert.alert('处理失败', errorMessage);
-        }
-      } finally {
-        setIsProcessing(false);
-      }
-    } else {
-      // 如果没有AI处理回调，只是清空输入
-      setInputText('');
+      onTextResult(textToProcess);
     }
+    setInputText('');
   };
 
   const handleBackToVoice = () => {
@@ -265,8 +239,7 @@ export default function SmartButton({
         // 调用文字转日程接口
         if (onTextResult) {
           setIsProcessing(true);
-          const result = await processTextToCalendar(transcribedText);
-          onTextResult(result);
+          onTextResult(transcribedText); // Pass the raw text to the parent
           setRealTimeText('');
         }
         

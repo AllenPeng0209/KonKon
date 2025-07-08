@@ -21,13 +21,25 @@ import { VoiceToCalendar } from '@/components/VoiceToCalendar';
 import { useEvents } from '@/hooks/useEvents';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import CalendarService from '@/lib/calendarService';
-import { processVoiceToCalendar, processImageToCalendar, ParsedCalendarResult } from '@/lib/bailian_omni_calendar';
+import { 
+  processVoiceToCalendar, 
+  processImageToCalendar, 
+  ParsedCalendarResult,
+  processVoiceToExpense,
+  processImageToExpense,
+  processTextToExpense,
+  ParsedExpenseResult,
+  processTextToCalendar
+} from '@/lib/bailian_omni_calendar';
 import { useRecurringEvents } from '@/hooks/useRecurringEvents';
 import { parseNaturalLanguageRecurrence } from '@/lib/recurrenceEngine';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import LoadingModal from '@/components/LoadingModal';
 import RecurringEventManager from '@/components/RecurringEventManager';
+import AddExpenseModal from '@/components/AddExpenseModal';
+import { TablesInsert } from '@/lib/database.types';
+import { supabase } from '@/lib/supabase';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -37,6 +49,8 @@ export default function HomeScreen() {
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState('all'); // 默认值为 'all'
   const [showAddEventModal, setShowAddEventModal] = useState(false);
+  const [showAddExpenseModal, setShowAddExpenseModal] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<any>(null);
   const [showEventListModal, setShowEventListModal] = useState(false);
   const [showVoiceToCalendar, setShowVoiceToCalendar] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -48,6 +62,7 @@ export default function HomeScreen() {
   const [showRecurringEventManager, setShowRecurringEventManager] = useState(false);
   const [selectedParentEventId, setSelectedParentEventId] = useState<string | null>(null);
   const [processedEvents, setProcessedEvents] = useState<any[]>([]);
+  const [expenses, setExpenses] = useState<any[]>([]);
   
   // 事件管理
   const { 
@@ -86,13 +101,17 @@ export default function HomeScreen() {
   const filterOptions = [
     { label: '全部', value: 'all', icon: '📊', color: '#8E8E93', bgColor: '#F2F2F7' },
     { label: '日曆', value: 'calendar', icon: '🔔', color: '#FF9500', bgColor: '#FFF3E0' },
+    { label: '记账', value: 'expense', icon: '💰', color: '#4CAF50', bgColor: '#E8F5E9' },
     { label: '想法', value: 'idea', icon: '💡', color: '#9C27B0', bgColor: '#F3E5F5' },
     { label: '心情', value: 'mood', icon: '❤️', color: '#E91E63', bgColor: '#FCE4EC' },
+  
   ];
 
   useEffect(() => {
     if (!loading && !user) {
       router.replace('/login');
+    } else if (user) {
+      fetchExpenses();
     }
   }, [user, loading, router]);
 
@@ -141,6 +160,21 @@ export default function HomeScreen() {
 
     expandRecurringEvents();
   }, [events, currentMonth, eventsLoading, recurringLoading, getRecurringEventInstances]);
+
+  const fetchExpenses = async () => {
+    if (!user) return;
+    const { data, error } = await supabase
+      .from('expenses')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('date', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching expenses:', error);
+    } else {
+      setExpenses(data);
+    }
+  };
 
   const initializeCalendarPermissions = async () => {
     try {
@@ -191,11 +225,16 @@ export default function HomeScreen() {
     setShowFilterMenu(!showFilterMenu);
   };
 
-  // 处理手动添加事件
+  // 处理手动添加
   const handleManualAdd = () => {
     setSelectedDate(new Date());
-    setEditingEvent(null); // 清空编辑状态
-    setShowAddEventModal(true);
+    if (selectedFilter === 'expense') {
+      setEditingExpense(null);
+      setShowAddExpenseModal(true);
+    } else {
+      setEditingEvent(null);
+      setShowAddEventModal(true);
+    }
   };
 
   // 处理语音录制按钮点击
@@ -212,7 +251,13 @@ export default function HomeScreen() {
               { text: '取消', onPress: () => clearRecording() },
               { 
                 text: '转换', 
-                onPress: () => handleVoiceToCalendar(base64Data)
+                onPress: () => {
+                  if (selectedFilter === 'expense') {
+                    handleVoiceToExpense(base64Data);
+                  } else {
+                    handleVoiceToCalendar(base64Data);
+                  }
+                }
               }
             ]
           );
@@ -271,8 +316,14 @@ export default function HomeScreen() {
         const base64Image = await FileSystem.readAsStringAsync(imageUri, {
           encoding: FileSystem.EncodingType.Base64,
         });
-        const result = await processImageToCalendar(base64Image);
-        handleAIResult(result);
+        
+        if (selectedFilter === 'expense') {
+          const result = await processImageToExpense(base64Image);
+          handleAIExpenseResult(result);
+        } else {
+          const result = await processImageToCalendar(base64Image);
+          handleAIResult(result);
+        }
       } catch (error) {
         // console.error('图片处理失败:', error);
         Alert.alert('处理失败', `无法从图片创建日程: ${error instanceof Error ? error.message : '未知错误'}`);
@@ -304,9 +355,70 @@ export default function HomeScreen() {
     }
   };
 
+  // 新增：处理语音转记账
+  const handleVoiceToExpense = async (base64Data: string) => {
+    try {
+      const result = await processVoiceToExpense(base64Data);
+      handleAIExpenseResult(result);
+    } catch (error) {
+      Alert.alert('处理失败', '语音解析记账失败，请重试');
+    } finally {
+      clearRecording();
+    }
+  };
+
   // 处理文字输入转日程的结果（兼容原有逻辑）
-  const handleTextResult = (result: ParsedCalendarResult) => {
-    handleAIResult(result);
+  const handleTextResult = async (result: string) => {
+    if (selectedFilter === 'expense') {
+      try {
+        const expenseResult = await processTextToExpense(result);
+        handleAIExpenseResult(expenseResult);
+      } catch (error) {
+        Alert.alert('处理失败', '文字解析记账失败，请重试');
+      }
+    } else {
+      try {
+        const calendarResult = await processTextToCalendar(result);
+        handleAIResult(calendarResult);
+      } catch (error) {
+        handleTextError('文字解析日程失败，请重试');
+      }
+    }
+  };
+
+  // 新增：统一处理AI记账结果
+  const handleAIExpenseResult = (result: ParsedExpenseResult) => {
+    if (!user) {
+      Alert.alert('错误', '用户未登录，无法保存记录。');
+      return;
+    }
+    if (result.expenses && result.expenses.length > 0) {
+      const expense = result.expenses[0];
+      const confidence = Math.round(result.confidence * 100);
+      
+      const typeText = expense.type === 'income' ? '收入' : '支出';
+      
+      Alert.alert(
+        '🎯 记账解析成功',
+        `请确认以下信息：\n\n💰 金额：${expense.amount} 元\n📂 类别：${expense.category}\n✍️ 类型：${typeText}\n${expense.description ? `📝 备注：${expense.description}\n` : ''}🎯 置信度：${confidence}%`,
+        [
+          { text: '取消', style: 'cancel' },
+          { 
+            text: '✅ 确认保存', 
+            onPress: () => handleSaveExpense({
+              amount: expense.amount,
+              category: expense.category,
+              description: expense.description || null,
+              date: expense.date.toISOString().split('T')[0],
+              type: expense.type,
+              user_id: user.id, // 修复：添加 user_id
+            })
+          }
+        ]
+      );
+    } else {
+      Alert.alert('解析失败', '未能识别到有效的记账信息，请重新输入');
+    }
   };
 
   // 统一处理AI解析结果
@@ -540,6 +652,19 @@ export default function HomeScreen() {
   const handleTextError = (error: string) => {
     // console.error('Text input error:', error);
     Alert.alert('处理失败', error);
+  };
+
+  // 处理记账保存
+  const handleSaveExpense = async (expenseData: TablesInsert<'expenses'>) => {
+    const { data, error } = await supabase.from('expenses').insert(expenseData).select();
+    if (error) {
+      Alert.alert('错误', '保存记账失败');
+      console.error(error);
+    } else if (data) {
+      Alert.alert('成功', '记账已保存');
+      setShowAddExpenseModal(false);
+      setExpenses(prev => [data[0], ...prev]);
+    }
   };
 
   // 处理事件创建
@@ -863,6 +988,31 @@ export default function HomeScreen() {
                   ))}
                 </View>
               );
+            } else if (selectedFilter === 'expense' && expenses.length > 0) {
+              return (
+                <View style={styles.eventsContainer}>
+                  <View style={styles.eventsTitleContainer}>
+                    <Text style={styles.eventsTitle}>💰 最近记账</Text>
+                    <View style={styles.eventsCountBadge}>
+                      <Text style={styles.eventsCountText}>{expenses.length}</Text>
+                    </View>
+                  </View>
+                  {expenses.map((expense) => (
+                    <View key={expense.id} style={styles.eventItem}>
+                      <View style={[styles.eventColor, { backgroundColor: expense.type === 'income' ? '#4CAF50' : '#F44336' }]} />
+                      <View style={styles.eventContent}>
+                        <Text style={styles.eventTitle}>{expense.category}: {expense.amount}元</Text>
+                        <Text style={styles.eventDescription}>{expense.description}</Text>
+                        <View style={styles.eventMeta}>
+                          <Text style={styles.eventTime}>
+                            📅 {new Date(expense.date).toLocaleDateString()}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              )
             } else {
               return (
                 <View style={styles.aiAssistant}>
@@ -963,6 +1113,14 @@ export default function HomeScreen() {
         initialDate={selectedDate || new Date()}
         userFamilies={userFamilyDetails}
         editingEvent={editingEvent}
+      />
+
+      <AddExpenseModal
+        isVisible={showAddExpenseModal}
+        onClose={() => setShowAddExpenseModal(false)}
+        onSave={handleSaveExpense}
+        editingExpense={editingExpense}
+        selectedDate={selectedDate}
       />
       
       {/* 事件列表模态框 */}

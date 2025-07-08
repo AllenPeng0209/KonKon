@@ -21,6 +21,25 @@ export interface ParsedCalendarResult {
   rawResponse: string;
 }
 
+// 新增：记账数据结构
+export interface Expense {
+  id: string;
+  amount: number;
+  category: string;
+  description?: string;
+  date: Date;
+  type: 'income' | 'expense';
+  confidence: number;
+}
+
+// 新增：记账解析结果接口
+export interface ParsedExpenseResult {
+  expenses: Expense[];
+  summary: string;
+  confidence: number;
+  rawResponse: string;
+}
+
 // 配置接口
 interface OmniConfig {
   apiKey: string;
@@ -176,6 +195,81 @@ async function performDashScopeASR(
 }
 
 
+// 提取出的通用 Bailian API 调用函数
+async function fetchFromBailian(
+  requestBody: object,
+  onProgress?: (chunk: string) => void
+): Promise<string> {
+  const config = await getOmniConfig();
+  
+  // 注意：这里使用的是v1的text-generation接口，可能需要根据模型调整
+  const response = await fetch(`${config.baseURL}/api/v1/services/aigc/text-generation/generation`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${config.apiKey}`,
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.text();
+    throw new Error(`API请求失败: ${response.status} - ${errorData}`);
+  }
+
+  const data = await response.json();
+  return data.output?.text || '';
+}
+
+// 提取出的通用图片理解函数
+async function visionToText(
+  base64Image: string,
+  prompt: string
+): Promise<string> {
+  const config = await getOmniConfig();
+  const requestBody = {
+    model: "qwen-vl-max",
+    input: {
+      messages: [
+        {
+          role: "user",
+          content: [
+            { image: `data:image/jpeg;base64,${base64Image}` },
+            { text: prompt }
+          ]
+        }
+      ]
+    },
+    parameters: {
+      "max_tokens": 2000,
+      "temperature": 0.1,
+      "top_p": 0.8
+    }
+  };
+  
+  const response = await fetch(`${config.baseURL}/api/v1/services/aigc/multimodal-generation/generation`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${config.apiKey}`,
+    },
+    body: JSON.stringify(requestBody)
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`图片理解API请求失败: ${response.status} - ${errorText}`);
+  }
+
+  const data = await response.json();
+  const responseText = data.output?.choices?.[0]?.message?.content?.[0]?.text || '';
+  if (!responseText) {
+     throw new Error('从图片解析文本失败: AI未返回有效内容。');
+  }
+  return responseText;
+}
+
+
 // 语音输入处理 - 完整流程
 export async function processVoiceToCalendar(
   audioBase64: string,
@@ -197,6 +291,102 @@ export async function processVoiceToCalendar(
     throw error;
   }
 }
+
+// 新增：语音转记账处理
+export async function processVoiceToExpense(
+  audioBase64: string,
+  onProgress?: (chunk: string) => void
+): Promise<ParsedExpenseResult> {
+  try {
+    const transcribedText = await speechToText(audioBase64, onProgress);
+    if (!transcribedText || transcribedText.trim() === '') {
+      throw new Error('语音识别结果为空');
+    }
+    return await processTextToExpense(transcribedText, onProgress);
+  } catch (error) {
+    console.error('语音转记账失败:', error);
+    throw error;
+  }
+}
+
+// 新增：图片转记账处理
+export async function processImageToExpense(
+  base64Image: string
+): Promise<ParsedExpenseResult> {
+  try {
+    const textFromImage = await visionToText(base64Image, '请描述图片中的内容，特别是与消费、账单、发票相关的信息。');
+    if (!textFromImage || textFromImage.trim() === '') {
+      throw new Error('图片识别结果为空');
+    }
+    return await processTextToExpense(textFromImage);
+  } catch (error) {
+    console.error('图片转记账失败:', error);
+    throw error;
+  }
+}
+
+// 新增：文本转记账处理
+export async function processTextToExpense(
+  text: string,
+  onProgress?: (chunk: string) => void
+): Promise<ParsedExpenseResult> {
+  try {
+    const config = await getOmniConfig();
+    
+    const requestBody = {
+      model: config.model,
+      input: {
+        messages: [{
+          role: "system",
+          content: (() => {
+            const now = new Date();
+            const today = now.toISOString().split('T')[0];
+            
+            return `你是一个智能记账助手。请分析用户的文本输入，提取其中的收支信息，并返回JSON格式的结构化数据。
+
+返回格式：
+{
+  "expenses": [
+    {
+      "amount": 100.50,
+      "category": "餐饮",
+      "description": "和朋友吃午饭",
+      "date": "YYYY-MM-DD",
+      "type": "expense",
+      "confidence": 0.95
+    }
+  ],
+  "summary": "解析摘要",
+  "confidence": 0.9
+}
+
+注意：
+1. 'type' 必须是 'income' (收入) 或 'expense' (支出)。
+2. 'category' 应该是一个简洁的分类，例如: 餐饮, 交通, 购物, 工资, 投资等。
+3. 'date' 格式必须是 YYYY-MM-DD。如果用户没有明确说明日期，就使用今天的日期: ${today}。
+4. 'amount' 必须是一个数字。
+5. 如果文本中包含多个记账项目，请在 "expenses" 数组中返回所有项目。
+6. 如果无法解析出任何记账信息，返回一个空的 "expenses" 数组。`;
+          })()
+        }, {
+          role: "user",
+          content: text
+        }]
+      },
+      parameters: {
+        result_format: "json_object"
+      }
+    };
+    
+    const responseText = await fetchFromBailian(requestBody, onProgress);
+    return parseExpenseResult(responseText);
+    
+  } catch (error) {
+    console.error('文本转记账失败:', error);
+    throw error;
+  }
+}
+
 
 // 文本输入处理 - 使用与洞察页面相同的API调用方式
 export async function processTextToCalendar(
@@ -592,6 +782,39 @@ function parseCalendarResult(
         console.error("Original JSON string:", jsonString);
         throw new Error(`JSON解析失败: ${e instanceof Error ? e.message : "未知错误"}`);
     }
+}
+
+// 新增：解析记账结果
+function parseExpenseResult(
+  content: string
+): ParsedExpenseResult {
+  try {
+    const parsedData = JSON.parse(content);
+    const expenses: Expense[] = (parsedData.expenses || []).map((e: any) => {
+      return {
+        ...e,
+        id: generateEventId(),
+        date: e.date ? new Date(e.date) : new Date(),
+      };
+    });
+    
+    expenses.forEach(exp => {
+      if (typeof exp.confidence !== 'number' || exp.confidence < 0 || exp.confidence > 1) {
+        exp.confidence = 0.8;
+      }
+    });
+
+    return {
+      expenses,
+      summary: parsedData.summary || '未提供摘要',
+      confidence: parsedData.confidence || 0.8,
+      rawResponse: content,
+    };
+  } catch (error) {
+    console.error('解析记账结果失败:', error);
+    console.log('原始响应:', content);
+    throw new Error('无法解析AI模型的响应');
+  }
 }
 
 
