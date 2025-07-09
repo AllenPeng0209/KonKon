@@ -8,6 +8,8 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Audio } from 'expo-av';
 import * as FileSystem from 'expo-file-system';
@@ -276,58 +278,62 @@ export default function SmartButton({
   // 文字输入模式
   if (isTextMode) {
     return (
-      <View style={styles.bottomBar}>
-        <View style={styles.textModeContainer}>
-          {/* 返回语音模式按钮 */}
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={handleBackToVoice}
-            disabled={isProcessing}
-          >
-            <Text style={styles.backIcon}>🎤</Text>
-          </TouchableOpacity>
-          
-          {/* 文字输入框 */}
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.textInput}
-              placeholder="输入日程描述，如：明天下午3点开会..."
-              value={inputText}
-              onChangeText={setInputText}
-              multiline
-              maxLength={1000}
-              autoFocus
-              editable={!isProcessing}
-            />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <View style={styles.bottomBar}>
+          <View style={styles.textModeContainer}>
+            {/* 返回语音模式按钮 */}
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={handleBackToVoice}
+              disabled={isProcessing}
+            >
+              <Text style={styles.backIcon}>🎤</Text>
+            </TouchableOpacity>
+            
+            {/* 文字输入框 */}
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={styles.textInput}
+                placeholder="输入日程描述，如：明天下午3点开会..."
+                value={inputText}
+                onChangeText={setInputText}
+                multiline
+                maxLength={1000}
+                autoFocus
+                editable={!isProcessing}
+              />
+            </View>
+            
+            {/* 发送按钮 */}
+            <TouchableOpacity 
+              style={[
+                styles.sendButton,
+                inputText.trim() ? styles.sendButtonActive : styles.sendButtonInactive
+              ]}
+              onPress={handleSendText}
+              disabled={!inputText.trim() || isProcessing}
+            >
+              {isProcessing ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={[
+                  styles.sendIcon,
+                  inputText.trim() ? styles.sendIconActive : styles.sendIconInactive
+                ]}>➤</Text>
+              )}
+            </TouchableOpacity>
           </View>
           
-          {/* 发送按钮 */}
-          <TouchableOpacity 
-            style={[
-              styles.sendButton,
-              inputText.trim() ? styles.sendButtonActive : styles.sendButtonInactive
-            ]}
-            onPress={handleSendText}
-            disabled={!inputText.trim() || isProcessing}
-          >
-            {isProcessing ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <Text style={[
-                styles.sendIcon,
-                inputText.trim() ? styles.sendIconActive : styles.sendIconInactive
-              ]}>➤</Text>
-            )}
-          </TouchableOpacity>
+          {/* 处理状态提示 */}
+          {isProcessing && (
+            <View style={styles.processingContainer}>
+              <Text style={styles.processingText}>正在智能解析日程...</Text>
+            </View>
+          )}
         </View>
-        
-        {/* 处理状态提示 */}
-        {isProcessing && (
-          <View style={styles.processingContainer}>
-            <Text style={styles.processingText}>正在智能解析日程...</Text>
-          </View>
-        )}
-      </View>
+      </KeyboardAvoidingView>
     );
   }
 

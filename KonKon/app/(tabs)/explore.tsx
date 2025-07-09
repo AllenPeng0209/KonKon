@@ -114,7 +114,7 @@ export default function ExploreScreen() {
       <KeyboardAvoidingView 
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? top + 0 : 0}
+        keyboardVerticalOffset={0}
       >
         <ChatContainer>
           <ScrollView
