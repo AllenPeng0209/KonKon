@@ -1,10 +1,13 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRouter } from 'expo-router';
@@ -12,7 +15,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // 聊天组件
 import { ChatContainer } from '../../components/chat/ChatContainer';
-import { KeyboardFriendlyScrollView } from '../../components/chat/KeyboardFriendlyScrollView';
 import { ChatToolbar } from '../../components/chat/ChatToolbar';
 import { FirstSuggestions } from '../../components/chat/FirstSuggestions';
 import { UserMessage } from '../../components/chat/UserMessage';
@@ -27,6 +29,7 @@ export default function ExploreScreen() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const { top } = useSafeAreaInsets();
+  const scrollViewRef = useRef<ScrollView>(null);
   
   // 聊天功能
   const { messages, isLoading, sendMessage, clearMessages } = useChat();
@@ -36,6 +39,12 @@ export default function ExploreScreen() {
       router.replace('/login');
     }
   }, [user, loading, router]);
+
+  useEffect(() => {
+    if (scrollViewRef.current) {
+      scrollViewRef.current.scrollToEnd({ animated: true });
+    }
+  }, [messages]);
 
   const handleSendMessage = async (message: string) => {
     await sendMessage(message);
@@ -102,40 +111,49 @@ export default function ExploreScreen() {
       <BailianConfig />
 
       {/* 聊天界面 */}
-      <ChatContainer>
-        <KeyboardFriendlyScrollView
-          style={styles.messagesContainer}
-          contentContainerStyle={styles.messagesContentContainer}
-        >
-          {messages.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <AnimatedLogo />
-            </View>
-          ) : (
-            messages.map((message) => (
-              <View key={message.id} style={styles.messageWrapper}>
-                {message.type === 'user' ? (
-                  <UserMessage>{message.content}</UserMessage>
-                ) : (
-                  <AssistantMessage isLoading={message.isLoading}>
-                    {message.content}
-                  </AssistantMessage>
-                )}
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? top + 0 : 0}
+      >
+        <ChatContainer>
+          <ScrollView
+            ref={scrollViewRef}
+            style={styles.messagesContainer}
+            contentContainerStyle={styles.messagesContentContainer}
+            onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+            onLayout={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+          >
+            {messages.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <AnimatedLogo />
               </View>
-            ))
-          )}
-        </KeyboardFriendlyScrollView>
+            ) : (
+              messages.map((message) => (
+                <View key={message.id} style={styles.messageWrapper}>
+                  {message.type === 'user' ? (
+                    <UserMessage>{message.content}</UserMessage>
+                  ) : (
+                    <AssistantMessage isLoading={message.isLoading}>
+                      {message.content}
+                    </AssistantMessage>
+                  )}
+                </View>
+              ))
+            )}
+          </ScrollView>
 
-        <View style={styles.toolbarContainer}>
-          {messages.length === 0 && !isLoading && (
-            <FirstSuggestions onSuggestionPress={handleSuggestionPress} />
-          )}
-          <ChatToolbar 
-            onSendMessage={handleSendMessage}
-            disabled={isLoading}
-          />
-        </View>
-      </ChatContainer>
+          <View style={styles.toolbarContainer}>
+            {messages.length === 0 && !isLoading && (
+              <FirstSuggestions onSuggestionPress={handleSuggestionPress} />
+            )}
+            <ChatToolbar 
+              onSendMessage={handleSendMessage}
+              disabled={isLoading}
+            />
+          </View>
+        </ChatContainer>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

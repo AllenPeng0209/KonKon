@@ -223,6 +223,7 @@ export default function AddEventModal({
       <KeyboardAvoidingView 
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}
       >
         {/* 顶部装饰条 */}
         <View style={styles.topIndicator} />
@@ -526,8 +527,15 @@ export default function AddEventModal({
 
 const styles = StyleSheet.create({
   container: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 5,
     flex: 1,
-    backgroundColor: '#f8fafc',
   },
   topIndicator: {
     width: 40,

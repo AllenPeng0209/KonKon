@@ -110,6 +110,7 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.centeredView}
+          keyboardVerticalOffset={20}
         >
           <View style={styles.modalView}>
             <TouchableOpacity style={styles.closeButton} onPress={onClose}>
