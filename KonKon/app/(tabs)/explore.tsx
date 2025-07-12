@@ -1,28 +1,29 @@
-import React, { useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
-import { useAuth } from '../../contexts/AuthContext';
 import { useRouter } from 'expo-router';
+import { useEffect, useRef } from 'react';
+import {
+    KeyboardAvoidingView,
+    Platform,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAuth } from '../../contexts/AuthContext';
 
 // 聊天组件
+import { AnimatedLogo } from '../../components/chat/AnimatedLogo';
+import { AssistantMessage } from '../../components/chat/AssistantMessage';
+import { BailianConfig } from '../../components/chat/BailianConfig';
 import { ChatContainer } from '../../components/chat/ChatContainer';
 import { ChatToolbar } from '../../components/chat/ChatToolbar';
 import { FirstSuggestions } from '../../components/chat/FirstSuggestions';
 import { UserMessage } from '../../components/chat/UserMessage';
-import { AssistantMessage } from '../../components/chat/AssistantMessage';
-import { AnimatedLogo } from '../../components/chat/AnimatedLogo';
-import { BailianConfig } from '../../components/chat/BailianConfig';
 
 // 自定义 Hook
+import { t } from '@/lib/i18n';
 import { useChat } from '../../hooks/useChat';
 
 export default function ExploreScreen() {
@@ -69,7 +70,7 @@ export default function ExploreScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>加载中...</Text>
+        <Text style={styles.loadingText}>{t('explore.loading')}</Text>
       </SafeAreaView>
     );
   }
@@ -84,9 +85,9 @@ export default function ExploreScreen() {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <TouchableOpacity onPress={navigateToHome}>
-            <Text style={styles.headerTitle}>记录</Text>
+            <Text style={styles.headerTitle}>{t('tabs.record')}</Text>
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, styles.activeTab]}>洞察</Text>
+          <Text style={[styles.headerTitle, styles.activeTab]}>{t('tabs.explore')}</Text>
         </View>
         <View style={styles.headerRight}>
           <View style={styles.clearButtonContainer}>
@@ -95,7 +96,7 @@ export default function ExploreScreen() {
                 style={styles.clearButton}
                 onPress={handleClearChat}
               >
-                <Text style={styles.clearButtonText}>清空</Text>
+                <Text style={styles.clearButtonText}>{t('explore.clear')}</Text>
               </TouchableOpacity>
             )}
           </View>

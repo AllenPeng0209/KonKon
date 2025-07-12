@@ -1,22 +1,23 @@
-import React, { useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Alert,
-  Modal,
-} from 'react-native';
+import { t } from '@/lib/i18n';
 import { Ionicons } from '@expo/vector-icons';
-import SmartButton from './ui/SmartButton';
-import { 
-  ParsedCalendarResult, 
-  CalendarEvent,
-  testOmniConnection,
-  testSpeechConnection
-} from '../lib/bailian_omni_calendar';
+import React, { useCallback, useState } from 'react';
+import {
+    Alert,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 import { useEvents } from '../hooks/useEvents';
+import {
+    CalendarEvent,
+    ParsedCalendarResult,
+    testOmniConnection,
+    testSpeechConnection
+} from '../lib/bailian_omni_calendar';
+import SmartButton from './ui/SmartButton';
 
 interface VoiceToCalendarProps {
   isVisible: boolean;
@@ -51,18 +52,18 @@ export const VoiceToCalendar: React.FC<VoiceToCalendarProps> = ({
       setConnectionStatus(isConnected ? 'connected' : 'failed');
       
       if (isConnected) {
-        Alert.alert('连接成功', '百炼文字和语音识别API连接正常');
+        Alert.alert(t('voiceToCalendar.connectionSuccess'), t('voiceToCalendar.connectionNormal'));
       } else {
-        let message = '连接失败：\n';
-        if (!textConnected) message += '- 文字处理API连接失败\n';
-        if (!speechConnected) message += '- 语音识别API连接失败\n';
-        message += '请检查网络连接和API密钥配置';
-        Alert.alert('连接失败', message);
+        let message = `${t('voiceToCalendar.connectionFailed')}:\n`;
+        if (!textConnected) message += `${t('voiceToCalendar.textProcessingFailed')}\n`;
+        if (!speechConnected) message += `${t('voiceToCalendar.speechRecognitionFailed')}\n`;
+        message += t('voiceToCalendar.checkNetworkAndApiKey');
+        Alert.alert(t('voiceToCalendar.connectionFailed'), message);
       }
     } catch (error) {
       console.error('连接测试失败:', error);
       setConnectionStatus('failed');
-      Alert.alert('连接测试失败', '请检查网络连接和API密钥配置');
+      Alert.alert(t('voiceToCalendar.connectionTestFailed'), t('voiceToCalendar.checkNetworkAndApiKey'));
     } finally {
       setIsConnecting(false);
     }
@@ -80,7 +81,7 @@ export const VoiceToCalendar: React.FC<VoiceToCalendarProps> = ({
   // 处理错误
   const handleError = useCallback((error: string) => {
     console.error('语音处理错误:', error);
-    Alert.alert('处理失败', error);
+    Alert.alert(t('voiceToCalendar.processingFailed'), error);
   }, []);
 
   // 切换事件选择
@@ -122,15 +123,15 @@ export const VoiceToCalendar: React.FC<VoiceToCalendarProps> = ({
       onEventsCreated?.(eventsToCreate);
       
       Alert.alert(
-        '创建成功',
-        `已成功创建 ${eventsToCreate.length} 个日程事件`,
+        t('voiceToCalendar.creationSuccess'),
+        t('voiceToCalendar.creationSuccessMessage', { count: eventsToCreate.length }),
         [
-          { text: '确定', onPress: onClose }
+          { text: t('voiceToCalendar.ok'), onPress: onClose }
         ]
       );
     } catch (error) {
       console.error('创建事件失败:', error);
-      Alert.alert('创建失败', '创建日程事件时发生错误，请重试');
+      Alert.alert(t('voiceToCalendar.creationFailed'), t('voiceToCalendar.creationErrorMessage'));
     } finally {
       setIsCreatingEvents(false);
     }
@@ -138,7 +139,7 @@ export const VoiceToCalendar: React.FC<VoiceToCalendarProps> = ({
 
   // 格式化时间显示
   const formatTime = (date: Date): string => {
-    return new Intl.DateTimeFormat('zh-CN', {
+    return new Intl.DateTimeFormat(undefined, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -166,7 +167,7 @@ export const VoiceToCalendar: React.FC<VoiceToCalendarProps> = ({
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
             <Ionicons name="close" size={24} color="#007AFF" />
           </TouchableOpacity>
-          <Text style={styles.title}>语音创建日程</Text>
+          <Text style={styles.title}>{t('voiceToCalendar.voiceCreateSchedule')}</Text>
           <TouchableOpacity 
             onPress={handleTestConnection} 
             style={styles.testButton}
@@ -189,14 +190,14 @@ export const VoiceToCalendar: React.FC<VoiceToCalendarProps> = ({
         <ScrollView style={styles.content}>
           {/* 语音输入区域 */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>语音创建日程</Text>
+            <Text style={styles.sectionTitle}>{t('voiceToCalendar.voiceCreateSchedule')}</Text>
             <SmartButton
-              onTextResult={handleVoiceResult}
+              onParseResult={handleVoiceResult}
               onError={handleError}
-              text="长按说话，快速创建日程"
+              text={t('voiceToCalendar.longPressToSpeak')}
             />
             <Text style={styles.inputHint}>
-              💡 长按录音按钮说话，实时转录，松开后自动创建日程
+              {t('voiceToCalendar.inputHint')}
             </Text>
           </View>
 
@@ -204,20 +205,20 @@ export const VoiceToCalendar: React.FC<VoiceToCalendarProps> = ({
           {parseResult && (
             <View style={styles.section}>
               <View style={styles.resultHeader}>
-                <Text style={styles.sectionTitle}>解析结果</Text>
+                <Text style={styles.sectionTitle}>{t('voiceToCalendar.parsingResult')}</Text>
                 <TouchableOpacity 
                   onPress={handleReset}
                   style={styles.resetButton}
                 >
                   <Ionicons name="refresh" size={20} color="#007AFF" />
-                  <Text style={styles.resetText}>重置</Text>
+                  <Text style={styles.resetText}>{t('voiceToCalendar.reset')}</Text>
                 </TouchableOpacity>
               </View>
               
               <View style={styles.summaryContainer}>
                 <Text style={styles.summaryText}>{parseResult.summary}</Text>
                 <Text style={styles.confidenceText}>
-                  置信度: {Math.round(parseResult.confidence * 100)}%
+                  {t('voiceToCalendar.confidence', { confidence: Math.round(parseResult.confidence * 100) })}
                 </Text>
               </View>
 
@@ -225,7 +226,7 @@ export const VoiceToCalendar: React.FC<VoiceToCalendarProps> = ({
               {parseResult.events.length > 0 && (
                 <View style={styles.eventsContainer}>
                   <Text style={styles.eventsTitle}>
-                    检测到的事件 ({parseResult.events.length})
+                    {t('voiceToCalendar.detectedEvents', { count: parseResult.events.length })}
                   </Text>
                   
                   {parseResult.events.map((event, index) => (
@@ -247,7 +248,7 @@ export const VoiceToCalendar: React.FC<VoiceToCalendarProps> = ({
                           <Text style={styles.eventTitle}>{event.title}</Text>
                         </View>
                         <Text style={styles.eventConfidence}>
-                          {Math.round(event.confidence * 100)}%
+                          {t('voiceToCalendar.confidence', { confidence: Math.round(event.confidence * 100) })}
                         </Text>
                       </View>
                       
@@ -296,18 +297,15 @@ export const VoiceToCalendar: React.FC<VoiceToCalendarProps> = ({
         {parseResult && parseResult.events.length > 0 && (
           <View style={styles.bottomBar}>
             <Text style={styles.selectionText}>
-              已选择 {selectedEvents.size} / {parseResult.events.length} 个事件
+              {t('voiceToCalendar.selectedEvents', { selected: selectedEvents.size, total: parseResult.events.length })}
             </Text>
             <TouchableOpacity
-              style={[
-                styles.createButton,
-                selectedEvents.size === 0 && styles.createButtonDisabled
-              ]}
+              style={[styles.createButton, (isCreatingEvents || selectedEvents.size === 0) && styles.createButtonDisabled]}
               onPress={handleCreateEvents}
-              disabled={selectedEvents.size === 0 || isCreatingEvents}
+              disabled={isCreatingEvents || selectedEvents.size === 0}
             >
               <Text style={styles.createButtonText}>
-                {isCreatingEvents ? '创建中...' : '创建日程'}
+                {isCreatingEvents ? t('voiceToCalendar.processing') : `${t('voiceToCalendar.createEvents')} (${selectedEvents.size})`}
               </Text>
             </TouchableOpacity>
           </View>

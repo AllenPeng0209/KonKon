@@ -1,11 +1,12 @@
+import { t } from '@/lib/i18n';
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withTiming,
-  withSequence,
+    useAnimatedStyle,
+    useSharedValue,
+    withRepeat,
+    withSequence,
+    withTiming,
 } from 'react-native-reanimated';
 
 export function AnimatedLogo() {
@@ -45,8 +46,8 @@ export function AnimatedLogo() {
       <Animated.View style={[styles.logoContainer, animatedStyle]}>
         <Text style={styles.logoText}>🤖</Text>
       </Animated.View>
-      <Text style={styles.welcomeText}>你好！我是你的AI助手</Text>
-      <Text style={styles.subtitleText}>有什么可以帮助你的吗？</Text>
+      <Text style={styles.welcomeText}>{t('animatedLogo.welcome')}</Text>
+      <Text style={styles.subtitleText}>{t('animatedLogo.subtitle')}</Text>
     </View>
   );
 }

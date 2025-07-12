@@ -1,14 +1,14 @@
-import React from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Modal,
-  ScrollView,
-  Alert,
-} from 'react-native';
 import { Database } from '@/lib/database.types';
+import { t } from '@/lib/i18n';
+import {
+    Alert,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 
 type Event = Database['public']['Tables']['events']['Row'];
 
@@ -28,11 +28,11 @@ export default function EventListModal({
   onDeleteEvent,
 }: EventListModalProps) {
   const formatDate = (date: Date): string => {
-    return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
+    return date.toLocaleDateString();
   };
 
   const formatTime = (timestamp: number): string => {
-    return new Date(timestamp * 1000).toLocaleTimeString('zh-CN', {
+    return new Date(timestamp * 1000).toLocaleTimeString([], {
       hour: '2-digit',
       minute: '2-digit',
     });
@@ -40,12 +40,12 @@ export default function EventListModal({
 
   const handleDeleteEvent = async (eventId: string, eventTitle: string) => {
     Alert.alert(
-      '删除事件',
-      `确定要删除"${eventTitle}"吗？`,
+      t('eventListModal.deleteEvent'),
+      t('eventListModal.deleteConfirmation', { title: eventTitle }),
       [
-        { text: '取消', style: 'cancel' },
+        { text: t('eventListModal.cancel'), style: 'cancel' },
         {
-          text: '删除',
+          text: t('eventListModal.delete'),
           style: 'destructive',
           onPress: async () => {
             if (onDeleteEvent) {
@@ -67,7 +67,7 @@ export default function EventListModal({
         {/* 标题栏 */}
         <View style={styles.header}>
           <TouchableOpacity onPress={onClose}>
-            <Text style={styles.closeButton}>关闭</Text>
+            <Text style={styles.closeButton}>{t('eventListModal.close')}</Text>
           </TouchableOpacity>
           <Text style={styles.title}>{formatDate(date)}</Text>
           <View style={styles.placeholder} />
@@ -76,7 +76,7 @@ export default function EventListModal({
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           {events.length > 0 ? (
             <View style={styles.eventsContainer}>
-              <Text style={styles.eventsTitle}>共 {events.length} 个事件</Text>
+              <Text style={styles.eventsTitle}>{t('eventListModal.eventsTitle', { count: events.length })}</Text>
               {events.map((event) => (
                 <View key={event.id} style={styles.eventItem}>
                   <View style={[styles.eventColor, { backgroundColor: event.color || '#007AFF' }]} />
@@ -99,7 +99,7 @@ export default function EventListModal({
                       style={styles.deleteButton}
                       onPress={() => handleDeleteEvent(event.id, event.title)}
                     >
-                      <Text style={styles.deleteButtonText}>删除</Text>
+                      <Text style={styles.deleteButtonText}>{t('eventListModal.delete')}</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -108,9 +108,9 @@ export default function EventListModal({
           ) : (
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyIcon}>📅</Text>
-              <Text style={styles.emptyTitle}>这天没有事件</Text>
+              <Text style={styles.emptyTitle}>{t('eventListModal.noEvents')}</Text>
               <Text style={styles.emptyDescription}>
-                点击日历上的日期来查看或添加事件
+                {t('eventListModal.noEventsDescription')}
               </Text>
             </View>
           )}

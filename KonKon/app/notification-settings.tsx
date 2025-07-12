@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Switch } from 'react-native';
-import { useRouter } from 'expo-router';
+import { t } from '@/lib/i18n';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import { SafeAreaView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 
 export default function NotificationSettingsScreen() {
   const router = useRouter();
@@ -19,24 +20,24 @@ export default function NotificationSettingsScreen() {
         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#007AFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>通知设置</Text>
+        <Text style={styles.headerTitle}>{t('notificationSettings.title')}</Text>
         <View style={styles.headerRight} />
       </View>
 
       <View style={styles.settingsGroup}>
         <View style={styles.settingItem}>
-          <Text style={styles.settingText}>日程提醒</Text>
+          <Text style={styles.settingText}>{t('notificationSettings.eventReminders')}</Text>
           <Switch value={reminders} onValueChange={setReminders} />
         </View>
         <View style={styles.settingItem}>
-          <Text style={styles.settingText}>家务分配提醒</Text>
+          <Text style={styles.settingText}>{t('notificationSettings.choreAssignments')}</Text>
           <Switch value={assignments} onValueChange={setAssignments} />
         </View>
       </View>
 
       <View style={styles.settingsGroup}>
         <View style={styles.settingItem}>
-          <Text style={styles.settingText}>应用资讯</Text>
+          <Text style={styles.settingText}>{t('notificationSettings.appNews')}</Text>
           <Switch value={news} onValueChange={setNews} />
         </View>
       </View>

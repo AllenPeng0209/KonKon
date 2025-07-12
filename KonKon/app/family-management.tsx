@@ -1,19 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import { t } from '@/lib/i18n';
+import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
-  ScrollView,
-  Alert,
-  TextInput,
-  Modal,
-  Share,
+    Alert,
+    Modal,
+    SafeAreaView,
+    ScrollView,
+    Share,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
-import { useRouter, useFocusEffect } from 'expo-router';
-import { useFamily } from '../contexts/FamilyContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useFamily } from '../contexts/FamilyContext';
 
 export default function FamilyManagementScreen() {
   const router = useRouter();
@@ -48,29 +49,29 @@ export default function FamilyManagementScreen() {
     
     try {
       await Share.share({
-        message: `家族「${userFamily.name}」に招待されました！\n\n招待コード: ${userFamily.invite_code}\n\nKonKonアプリで招待コードを入力してください。`,
-        title: '家族への招待',
+        message: t('familyManagement.shareInviteMessage', { familyName: userFamily.name, inviteCode: userFamily.invite_code }),
+        title: t('familyManagement.shareInviteTitle'),
       });
     } catch (error) {
-      console.error('分享失败:', error);
+      console.error(t('familyManagement.shareFailed'), error);
     }
   };
 
   const handleRemoveMember = (memberId: string, memberName: string) => {
     Alert.alert(
-      'メンバーを削除',
-      `${memberName}を家族から削除しますか？`,
+      t('familyManagement.removeMemberTitle'),
+      t('familyManagement.removeMemberMessage', { memberName }),
       [
-        { text: 'キャンセル', style: 'cancel' },
+        { text: t('familyManagement.cancel'), style: 'cancel' },
         {
-          text: '削除',
+          text: t('familyManagement.remove'),
           style: 'destructive',
           onPress: async () => {
             const success = await removeMember(memberId);
             if (success) {
-              Alert.alert('成功', 'メンバーを削除しました');
+              Alert.alert(t('familyManagement.success'), t('familyManagement.memberRemoved'));
             } else {
-              Alert.alert('エラー', error || 'メンバーの削除に失敗しました');
+              Alert.alert('エラー', error || t('familyManagement.removeMemberFailed'));
             }
           },
         },
@@ -80,21 +81,21 @@ export default function FamilyManagementScreen() {
 
   const handleLeaveFamily = () => {
     Alert.alert(
-      '家族を退出',
-      '家族を退出しますか？',
+      t('familyManagement.leaveFamilyTitle'),
+      t('familyManagement.leaveFamilyMessage'),
       [
-        { text: 'キャンセル', style: 'cancel' },
+        { text: t('familyManagement.cancel'), style: 'cancel' },
         {
-          text: '退出',
+          text: t('familyManagement.leaveFamily'),
           style: 'destructive',
           onPress: async () => {
             const success = await leaveFamily();
             if (success) {
-              Alert.alert('成功', '家族を退出しました', [
-                { text: 'OK', onPress: () => router.replace('/profile') }
+              Alert.alert(t('familyManagement.success'), t('familyManagement.familyLeft'), [
+                { text: t('familyManagement.ok'), onPress: () => router.replace('/profile') }
               ]);
             } else {
-              Alert.alert('エラー', error || '家族の退出に失敗しました');
+              Alert.alert('エラー', error || t('familyManagement.leaveFamilyFailed'));
             }
           },
         },
@@ -104,21 +105,21 @@ export default function FamilyManagementScreen() {
 
   const handleDeleteFamily = () => {
     Alert.alert(
-      '家族を解散',
-      '家族を解散しますか？この操作は取り消せません。',
+      t('familyManagement.dissolveFamilyTitle'),
+      t('familyManagement.dissolveFamilyMessage'),
       [
-        { text: 'キャンセル', style: 'cancel' },
+        { text: t('familyManagement.cancel'), style: 'cancel' },
         {
-          text: '解散',
+          text: t('familyManagement.dissolved'),
           style: 'destructive',
           onPress: async () => {
             const success = await deleteFamily();
             if (success) {
-              Alert.alert('成功', '家族を解散しました', [
-                { text: 'OK', onPress: () => router.replace('/profile') }
+              Alert.alert(t('familyManagement.success'), t('familyManagement.familyDissolved'), [
+                { text: t('familyManagement.ok'), onPress: () => router.replace('/profile') }
               ]);
             } else {
-              Alert.alert('エラー', error || '家族の解散に失敗しました');
+              Alert.alert('エラー', error || t('familyManagement.dissolveFamilyFailed'));
             }
           },
         },
@@ -132,9 +133,9 @@ export default function FamilyManagementScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-          <Text style={styles.backIcon}>←</Text>
+          <Ionicons name="arrow-back" size={24} color="#007AFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>家族管理</Text>
+        <Text style={styles.headerTitle}>{t('familyManagement.title')}</Text>
         <View style={styles.headerRight} />
       </View>
 
@@ -144,15 +145,15 @@ export default function FamilyManagementScreen() {
             {/* 家族信息 */}
             <View style={styles.familyInfo}>
               <Text style={styles.familyName}>{userFamily.name}</Text>
-              <Text style={styles.memberCount}>メンバー: {familyMembers.length}人</Text>
+              <Text style={styles.memberCount}>{t('familyManagement.memberCount', { count: familyMembers.length })}</Text>
               {userFamily.invite_code && (
                 <View style={styles.inviteCodeContainer}>
-                  <Text style={styles.inviteCode}>招待コード: {userFamily.invite_code}</Text>
+                  <Text style={styles.inviteCode}>{t('familyManagement.inviteCode', { code: userFamily.invite_code })}</Text>
                   <TouchableOpacity 
                     style={styles.shareButton}
                     onPress={handleShareInviteCode}
                   >
-                    <Text style={styles.shareButtonText}>共有</Text>
+                    <Text style={styles.shareButtonText}>{t('familyManagement.share')}</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -160,23 +161,23 @@ export default function FamilyManagementScreen() {
 
             {/* 成员列表 */}
             <View style={styles.membersSection}>
-              <Text style={styles.sectionTitle}>メンバー</Text>
+              <Text style={styles.sectionTitle}>{t('familyManagement.members')}</Text>
               {familyMembers.map((member) => (
                 <View key={member.id} style={styles.memberItem}>
                   <View style={styles.memberInfo}>
                     <Text style={styles.memberName}>
-                      {member.user?.display_name || member.user?.email || '未知用户'}
+                      {member.user?.display_name || member.user?.email || t('familyManagement.unknownUser')}
                     </Text>
                     <Text style={styles.memberRole}>
-                      {member.role === 'owner' ? '管理者' : 'メンバー'}
+                      {member.role === 'owner' ? t('familyManagement.owner') : t('familyManagement.members')}
                     </Text>
                   </View>
                   {isOwner && member.user_id !== user.id && (
                     <TouchableOpacity
                       style={styles.removeButton}
-                      onPress={() => handleRemoveMember(member.id, member.user?.display_name || member.user?.email || '未知用户')}
+                      onPress={() => handleRemoveMember(member.id, member.user?.display_name || member.user?.email || t('familyManagement.unknownUser'))}
                     >
-                      <Text style={styles.removeButtonText}>削除</Text>
+                      <Text style={styles.removeButtonText}>{t('familyManagement.remove')}</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -188,7 +189,7 @@ export default function FamilyManagementScreen() {
                 onPress={() => setShowInviteModal(true)}
               >
                 <Text style={styles.addMemberIcon}>+</Text>
-                <Text style={styles.addMemberText}>メンバーを招待</Text>
+                <Text style={styles.addMemberText}>{t('familyManagement.inviteMember')}</Text>
               </TouchableOpacity>
             </View>
 
@@ -196,12 +197,12 @@ export default function FamilyManagementScreen() {
           </View>
         ) : (
           <View style={styles.noFamily}>
-            <Text style={styles.noFamilyText}>家族が見つかりません</Text>
+            <Text style={styles.noFamilyText}>{t('familyManagement.noFamilyFound')}</Text>
             <TouchableOpacity
               style={styles.createButton}
               onPress={() => router.push('/create-family')}
             >
-              <Text style={styles.createButtonText}>家族を作成</Text>
+              <Text style={styles.createButtonText}>{t('familyManagement.createFamily')}</Text>
             </TouchableOpacity>
           </View>
                   )}
@@ -215,14 +216,14 @@ export default function FamilyManagementScreen() {
                 style={[styles.actionButton, styles.deleteButton]}
                 onPress={handleDeleteFamily}
               >
-                <Text style={styles.deleteButtonText}>家族を解散</Text>
+                <Text style={styles.deleteButtonText}>{t('familyManagement.dissolveFamily')}</Text>
               </TouchableOpacity>
             ) : (
               <TouchableOpacity
                 style={[styles.actionButton, styles.leaveButton]}
                 onPress={handleLeaveFamily}
               >
-                <Text style={styles.leaveButtonText}>家族を退出</Text>
+                <Text style={styles.leaveButtonText}>{t('familyManagement.leaveFamily')}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -238,7 +239,7 @@ export default function FamilyManagementScreen() {
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>メンバーを招待</Text>
+                <Text style={styles.modalTitle}>{t('familyManagement.inviteModalTitle')}</Text>
                 <TouchableOpacity
                   style={styles.closeButton}
                   onPress={() => setShowInviteModal(false)}
@@ -249,50 +250,29 @@ export default function FamilyManagementScreen() {
 
               <View style={styles.inviteOptions}>
                 <TouchableOpacity 
-                  style={styles.inviteOption}
+                  style={styles.inviteOptionButton}
                   onPress={handleShareInviteCode}
                 >
-                  <Text style={styles.inviteOptionIcon}>📱</Text>
-                  <Text style={styles.inviteOptionText}>LINEで共有</Text>
+                  <Text style={styles.inviteOptionText}>{t('familyManagement.shareInviteCode')}</Text>
+                  <Text style={styles.inviteOptionSubtitle}>{t('familyManagement.byInviteCode')}</Text>
                 </TouchableOpacity>
 
+                <View style={styles.dividerContainer}>
+                  <View style={styles.dividerLine} />
+                  <Text style={styles.dividerText}>OR</Text>
+                  <View style={styles.dividerLine} />
+                </View>
+                
                 <TouchableOpacity 
-                  style={styles.inviteOption}
-                  onPress={() => {
-                    // QR Code 功能待实现
-                    Alert.alert('QRコード', 'QRコード機能は開発中です');
-                  }}
+                  style={styles.inviteOptionButton}
+                  onPress={() => router.push('/join-family')}
                 >
-                  <Text style={styles.inviteOptionIcon}>📷</Text>
-                  <Text style={styles.inviteOptionText}>QRコード</Text>
+                  <Text style={styles.inviteOptionText}>{t('familyManagement.enterInviteCode')}</Text>
+                  <Text style={styles.inviteOptionSubtitle}>{t('familyManagement.byInviteCode')}</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity 
-                  style={styles.inviteOption}
-                  onPress={() => {
-                    // 邮件功能待实现
-                    Alert.alert('メール', 'メール機能は開発中です');
-                  }}
-                >
-                  <Text style={styles.inviteOptionIcon}>✉️</Text>
-                  <Text style={styles.inviteOptionText}>メールで送信</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity 
-                  style={styles.inviteOption}
-                  onPress={() => {
-                    // 复制邀请链接
-                    if (userFamily?.invite_code) {
-                      const inviteLink = `konkon://join?code=${userFamily.invite_code}`;
-                      // 这里可以使用 Clipboard API 复制链接
-                      Alert.alert('成功', '招待リンクがコピーされました');
-                    }
-                  }}
-                >
-                  <Text style={styles.inviteOptionIcon}>🔗</Text>
-                  <Text style={styles.inviteOptionText}>リンクをコピー</Text>
-                </TouchableOpacity>
               </View>
+
             </View>
           </View>
         </Modal>
@@ -316,10 +296,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#f0f0f0',
   },
   backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
+    padding: 10,
   },
   backIcon: {
     fontSize: 24,
@@ -553,5 +530,34 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#2c3e50',
     fontWeight: '500',
+  },
+  inviteOptionButton: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    backgroundColor: '#f9fafb',
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  inviteOptionSubtitle: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginTop: 4,
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 16,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#e0e0e0',
+  },
+  dividerText: {
+    marginHorizontal: 10,
+    fontSize: 14,
+    color: '#6b7280',
   },
 }); 

@@ -1,16 +1,16 @@
-import { useState, useCallback } from 'react';
-import { supabase } from '../lib/supabase';
+import { useCallback, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Database } from '../lib/database.types';
-import { 
-  RecurrenceRule, 
-  RecurrenceInstance, 
-  RecurrenceException,
-  generateRecurrenceInstances,
-  parseRecurrenceRule,
-  generateRecurrenceRule,
-  validateRecurrenceRule
+import {
+    RecurrenceException,
+    RecurrenceInstance,
+    RecurrenceRule,
+    generateRecurrenceInstances,
+    generateRecurrenceRule,
+    parseRecurrenceRule,
+    validateRecurrenceRule
 } from '../lib/recurrenceEngine';
+import { supabase } from '../lib/supabase';
 
 type Event = Database['public']['Tables']['events']['Row'];
 type EventInsert = Database['public']['Tables']['events']['Insert'];
@@ -100,7 +100,7 @@ export const useRecurringEvents = () => {
     parentEventId: string,
     startDate: Date,
     endDate: Date
-  ): Promise<RecurrenceInstance[]> => {
+  ): Promise<{ instances: RecurrenceInstance[]; rule: RecurrenceRule | null }> => {
     try {
       // 获取父事件
       const { data: parentEvent, error: parentError } = await supabase
@@ -116,7 +116,7 @@ export const useRecurringEvents = () => {
       // 解析重复规则
       const recurrenceRule = parseRecurrenceRule(parentEvent.recurrence_rule || '');
       if (!recurrenceRule) {
-        throw new Error('无效的重复规则');
+        return { instances: [], rule: null };
       }
 
       // 获取异常记录
@@ -147,14 +147,16 @@ export const useRecurringEvents = () => {
       );
 
       // 过滤指定日期范围内的实例
-      return instances.filter(instance => 
+      const filteredInstances = instances.filter(instance => 
         instance.start >= startDate && instance.start <= endDate
       );
+
+      return { instances: filteredInstances, rule: recurrenceRule };
 
     } catch (err) {
       console.error('获取重复事件实例失败:', err);
       setError(err instanceof Error ? err.message : '获取重复事件实例失败');
-      return [];
+      return { instances: [], rule: null };
     }
   }, []);
 

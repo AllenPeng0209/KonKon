@@ -1,18 +1,19 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, FlatList } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { t } from '@/lib/i18n';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { FlatList, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const LANGUAGES = [
-  { code: 'zh-CN', name: '简体中文' },
-  { code: 'zh-TW', name: '繁體中文' },
-  { code: 'en-US', name: 'English' },
-  { code: 'ja-JP', name: '日本語' },
+  { code: 'zh-CN', name: t('languageSelection.languages.zh-CN') },
+  { code: 'zh-TW', name: t('languageSelection.languages.zh-TW') },
+  { code: 'en-US', name: t('languageSelection.languages.en-US') },
+  { code: 'ja-JP', name: t('languageSelection.languages.ja-JP') },
 ];
 
 export default function LanguageSelectionScreen() {
   const router = useRouter();
-  const [selectedLanguage, setSelectedLanguage] = useState('zh-CN');
+  const { locale, setLocale } = useLanguage();
 
   const handleBack = () => {
     router.back();
@@ -21,10 +22,10 @@ export default function LanguageSelectionScreen() {
   const renderItem = ({ item }: { item: { code: string; name: string } }) => (
     <TouchableOpacity 
       style={styles.settingItem} 
-      onPress={() => setSelectedLanguage(item.code)}
+      onPress={() => setLocale(item.code)}
     >
       <Text style={styles.settingText}>{item.name}</Text>
-      {selectedLanguage === item.code && <Ionicons name="checkmark" size={24} color="#007AFF" />}
+      {locale === item.code && <Ionicons name="checkmark" size={24} color="#007AFF" />}
     </TouchableOpacity>
   );
 
@@ -34,7 +35,7 @@ export default function LanguageSelectionScreen() {
         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#007AFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>语言选择</Text>
+        <Text style={styles.headerTitle}>{t('languageSelection.title')}</Text>
         <View style={styles.headerRight} />
       </View>
       

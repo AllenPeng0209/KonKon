@@ -1,45 +1,46 @@
-import React, { useEffect, useState } from 'react';
+import AddEventModal from '@/components/AddEventModal';
+import AddExpenseModal from '@/components/AddExpenseModal';
+import EventListModal from '@/components/EventListModal';
+import LoadingModal from '@/components/LoadingModal';
+import RecurringEventManager from '@/components/RecurringEventManager';
+import SmartButton from '@/components/ui/SmartButton';
+import { VoiceToCalendar } from '@/components/VoiceToCalendar';
+import { useEvents } from '@/hooks/useEvents';
+import { useRecurringEvents } from '@/hooks/useRecurringEvents';
+import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import {
-  View,
+  ParsedCalendarResult,
+  ParsedExpenseResult,
+  processImageToCalendar,
+  processImageToExpense,
+  processTextToCalendar,
+  processTextToExpense,
+  processVoiceToCalendar,
+  processVoiceToExpense
+} from '@/lib/bailian_omni_calendar';
+import CalendarService from '@/lib/calendarService';
+import { TablesInsert } from '@/lib/database.types';
+import { t } from '@/lib/i18n';
+import { parseNaturalLanguageRecurrence } from '@/lib/recurrenceEngine';
+import { supabase } from '@/lib/supabase';
+import * as FileSystem from 'expo-file-system';
+import * as ImagePicker from 'expo-image-picker';
+import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  Modal,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
   Text,
   TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
-  ActivityIndicator,
-  ScrollView,
-  Dimensions,
-  Alert,
-  Modal,
+  View,
 } from 'react-native';
 import { Calendar, DateData } from 'react-native-calendars';
 import { useAuth } from '../../contexts/AuthContext';
-import { useRouter } from 'expo-router';
-import SmartButton from '@/components/ui/SmartButton';
-import AddEventModal from '@/components/AddEventModal';
-import EventListModal from '@/components/EventListModal';
-import { VoiceToCalendar } from '@/components/VoiceToCalendar';
-import { useEvents } from '@/hooks/useEvents';
-import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
-import CalendarService from '@/lib/calendarService';
-import { 
-  processVoiceToCalendar, 
-  processImageToCalendar, 
-  ParsedCalendarResult,
-  processVoiceToExpense,
-  processImageToExpense,
-  processTextToExpense,
-  ParsedExpenseResult,
-  processTextToCalendar
-} from '@/lib/bailian_omni_calendar';
-import { useRecurringEvents } from '@/hooks/useRecurringEvents';
-import { parseNaturalLanguageRecurrence } from '@/lib/recurrenceEngine';
-import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system';
-import LoadingModal from '@/components/LoadingModal';
-import RecurringEventManager from '@/components/RecurringEventManager';
-import AddExpenseModal from '@/components/AddExpenseModal';
-import { TablesInsert } from '@/lib/database.types';
-import { supabase } from '@/lib/supabase';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -99,11 +100,11 @@ export default function HomeScreen() {
 
   // 过滤选项，增加 value 字段
   const filterOptions = [
-    { label: '全部', value: 'all', icon: '📊', color: '#8E8E93', bgColor: '#F2F2F7' },
-    { label: '日曆', value: 'calendar', icon: '🔔', color: '#FF9500', bgColor: '#FFF3E0' },
-    { label: '记账', value: 'expense', icon: '💰', color: '#4CAF50', bgColor: '#E8F5E9' },
-    { label: '想法', value: 'idea', icon: '💡', color: '#9C27B0', bgColor: '#F3E5F5' },
-    { label: '心情', value: 'mood', icon: '❤️', color: '#E91E63', bgColor: '#FCE4EC' },
+    { label: t('home.all'), value: 'all', icon: '📊', color: '#8E8E93', bgColor: '#F2F2F7' },
+    { label: t('home.calendar'), value: 'calendar', icon: '🔔', color: '#FF9500', bgColor: '#FFF3E0' },
+    { label: t('home.expense'), value: 'expense', icon: '💰', color: '#4CAF50', bgColor: '#E8F5E9' },
+    { label: t('home.idea'), value: 'idea', icon: '💡', color: '#9C27B0', bgColor: '#F3E5F5' },
+    { label: t('home.mood'), value: 'mood', icon: '❤️', color: '#E91E63', bgColor: '#FCE4EC' },
   
   ];
 
@@ -143,7 +144,8 @@ export default function HomeScreen() {
         if(parentStartDate > viewEndDate) continue;
 
         const instances = await getRecurringEventInstances(parent.id, viewStartDate, viewEndDate);
-        const instancesWithDetails = instances.map(inst => ({
+        if (!instances) continue;
+        const instancesWithDetails = instances.instances.map((inst: any) => ({
           ...parent,
           id: `${parent.id}_${inst.start.toISOString()}`, // 为实例创建唯一ID
           start_ts: Math.floor(inst.start.getTime() / 1000),
@@ -184,17 +186,17 @@ export default function HomeScreen() {
       if (!hasPermission) {
         // 显示权限说明对话框
         Alert.alert(
-          '日历权限',
-          'KonKon 可以与您的系统日历同步，让您的事件在所有应用中保持一致。',
+          t('home.calendarPermissionTitle'),
+          t('home.calendarPermissionMessage'),
           [
-            { text: '暂不开启', style: 'cancel' },
+            { text: t('home.notNow'), style: 'cancel' },
             {
-              text: '开启权限',
+              text: t('home.grantPermission'),
               onPress: async () => {
                 const granted = await CalendarService.requestPermissions();
                 setHasCalendarPermission(granted);
                 if (granted) {
-                  Alert.alert('成功', '日历权限已开启，现在可以与系统日历同步了！');
+                  Alert.alert(t('home.success'), t('home.permissionGranted'));
                 }
               },
             },
@@ -245,26 +247,30 @@ export default function HomeScreen() {
         const base64Data = await stopRecording();
         if (base64Data) {
           Alert.alert(
-            '处理语音',
-            '是否将录制的语音转换为日程？',
+            t('home.processVoiceTitle'),
+            t('home.processVoiceMessage'),
             [
-              { text: '取消', onPress: () => clearRecording() },
-              { 
-                text: '转换', 
+              {
+                text: t('home.cancel'),
+                onPress: () => clearRecording(),
+                style: 'cancel',
+              },
+              {
+                text: t('home.convert'),
                 onPress: () => {
                   if (selectedFilter === 'expense') {
                     handleVoiceToExpense(base64Data);
                   } else {
                     handleVoiceToCalendar(base64Data);
                   }
-                }
-              }
+                },
+              },
             ]
           );
         }
       } catch (error) {
         // console.error('停止录制失败:', error);
-        Alert.alert('错误', '录制失败，请重试');
+        Alert.alert(t('home.error'), t('home.recordingFailed'));
       }
     } else {
       // 开始录制
@@ -272,7 +278,7 @@ export default function HomeScreen() {
         await startRecording();
       } catch (error) {
         // console.error('开始录制失败:', error);
-        Alert.alert('错误', '无法开始录制，请检查麦克风权限');
+        Alert.alert(t('home.error'), t('home.micPermissionError'));
       }
     }
   };
@@ -287,7 +293,7 @@ export default function HomeScreen() {
     }
 
     if (permissionResult.granted === false) {
-      Alert.alert('权限不足', `需要${pickerFunction === 'camera' ? '相机' : '相册'}权限才能继续`);
+      Alert.alert(t('home.permissionDenied'), t('home.permissionRequired', { permission: pickerFunction === 'camera' ? t('home.camera') : t('home.photoLibrary') }));
       return;
     }
 
@@ -312,7 +318,7 @@ export default function HomeScreen() {
       const imageUri = pickerResult.assets[0].uri;
       try {
         setIsProcessingImage(true);
-        setLoadingText('我们正在分析图片内容并为您生成日程，请稍候...');
+        setLoadingText(t('home.processingImage'));
         const base64Image = await FileSystem.readAsStringAsync(imageUri, {
           encoding: FileSystem.EncodingType.Base64,
         });
@@ -326,7 +332,7 @@ export default function HomeScreen() {
         }
       } catch (error) {
         // console.error('图片处理失败:', error);
-        Alert.alert('处理失败', `无法从图片创建日程: ${error instanceof Error ? error.message : '未知错误'}`);
+        Alert.alert(t('home.error'), t('home.imageProcessingFailed', { error: error instanceof Error ? error.message : t('home.unknownError') }));
       } finally {
         setIsProcessingImage(false);
         setLoadingText('');
@@ -335,7 +341,16 @@ export default function HomeScreen() {
   };
 
   const handlePhotoPress = () => {
-    handleImageSelection('camera');
+    Alert.alert(
+      t('home.photo'),
+      '',
+      [
+        { text: t('home.photo'), onPress: () => handleImageSelection('camera') },
+        { text: t('home.album'), onPress: () => handleImageSelection('library') },
+        { text: t('home.cancel'), style: 'cancel' },
+      ],
+      { cancelable: true }
+    );
   };
 
   const handleAlbumPress = () => {
@@ -344,12 +359,13 @@ export default function HomeScreen() {
 
   // 处理语音转日程
   const handleVoiceToCalendar = async (base64Data: string) => {
+    setLoadingText(t('home.processingVoice'));
     try {
       const result = await processVoiceToCalendar(base64Data);
       handleAIResult(result);
     } catch (error) {
       // console.error('语音处理失败:', error);
-      Alert.alert('处理失败', '语音解析失败，请重试');
+      Alert.alert(t('home.error'), t('home.voiceProcessingFailed'));
     } finally {
       clearRecording();
     }
@@ -357,11 +373,12 @@ export default function HomeScreen() {
 
   // 新增：处理语音转记账
   const handleVoiceToExpense = async (base64Data: string) => {
+    setLoadingText(t('home.processingVoice'));
     try {
       const result = await processVoiceToExpense(base64Data);
       handleAIExpenseResult(result);
     } catch (error) {
-      Alert.alert('处理失败', '语音解析记账失败，请重试');
+      Alert.alert(t('home.error'), t('home.expenseVoiceProcessingFailed'));
     } finally {
       clearRecording();
     }
@@ -369,27 +386,33 @@ export default function HomeScreen() {
 
   // 处理文字输入转日程的结果（兼容原有逻辑）
   const handleTextResult = async (result: string) => {
-    if (selectedFilter === 'expense') {
-      try {
-        const expenseResult = await processTextToExpense(result);
-        handleAIExpenseResult(expenseResult);
-      } catch (error) {
-        Alert.alert('处理失败', '文字解析记账失败，请重试');
-      }
-    } else {
-      try {
-        const calendarResult = await processTextToCalendar(result);
+    setIsProcessingImage(true);
+    setLoadingText(t('home.processingVoice'));
+    try {
+      const calendarResult = await processTextToCalendar(result);
+      if (calendarResult.events && calendarResult.events.length > 0) {
         handleAIResult(calendarResult);
-      } catch (error) {
-        handleTextError('文字解析日程失败，请重试');
+      } else {
+        const expenseResult = await processTextToExpense(result);
+        if (expenseResult.expenses && expenseResult.expenses.length > 0) {
+          handleAIExpenseResult(expenseResult);
+        } else {
+          Alert.alert(t('home.parsingFailed'), t('home.noValidInfo'));
+        }
       }
+    } catch (error) {
+      // console.error('文本处理失败:', error);
+      Alert.alert(t('home.error'), t('home.textProcessingFailedWithReason'));
+    } finally {
+      setIsProcessingImage(false);
+      setLoadingText('');
     }
   };
 
   // 新增：统一处理AI记账结果
   const handleAIExpenseResult = (result: ParsedExpenseResult) => {
     if (!user) {
-      Alert.alert('错误', '用户未登录，无法保存记录。');
+      Alert.alert(t('home.error'), t('home.userNotLoggedIn'));
       return;
     }
     if (result.expenses && result.expenses.length > 0) {
@@ -398,15 +421,22 @@ export default function HomeScreen() {
       if (result.expenses.length === 1) {
         // 单个记账项目的情况
         const expense = result.expenses[0];
-        const typeText = expense.type === 'income' ? '收入' : '支出';
+        const typeText = expense.type === 'income' ? t('home.income') : t('home.expenseType');
+        const descriptionText = expense.description ? t('home.notes', { description: expense.description }) : '';
         
         Alert.alert(
-          '🎯 记账解析成功',
-          `请确认以下信息：\n\n💰 金额：${expense.amount} 元\n📂 类别：${expense.category}\n✍️ 类型：${typeText}\n${expense.description ? `📝 备注：${expense.description}\n` : ''}🎯 置信度：${confidence}%`,
+          t('home.parsingSuccess'),
+          t('home.expenseParsingSuccessMessage', {
+            amount: expense.amount,
+            category: expense.category,
+            type: typeText,
+            description: descriptionText,
+            confidence: confidence
+          }),
           [
-            { text: '取消', style: 'cancel' },
+            { text: t('home.cancel'), style: 'cancel' },
             { 
-              text: '✅ 确认保存', 
+              text: t('home.confirmSave'), 
               onPress: () => handleSaveExpense({
                 amount: expense.amount,
                 category: expense.category,
@@ -422,28 +452,32 @@ export default function HomeScreen() {
         // 多个记账项目的情况
         let expensesList = '';
         result.expenses.forEach((expense, index) => {
-          const typeText = expense.type === 'income' ? '收入' : '支出';
+          const typeText = expense.type === 'income' ? t('home.income') : t('home.expenseType');
           expensesList += `${index + 1}. ${expense.amount} 元 (${typeText})\n   📂 ${expense.category}\n`;
           if (expense.description) {
-            expensesList += `   📝 ${expense.description}\n`;
+            expensesList += `   ${t('home.notes', { description: expense.description })}`;
           }
           expensesList += '\n';
         });
         
         Alert.alert(
-          '🎯 记账解析成功',
-          `识别到 ${result.expenses.length} 个记账项目：\n\n${expensesList}🎯 置信度：${confidence}%\n\n确认保存所有记账项目吗？`,
+          t('home.parsingSuccess'),
+          t('home.multipleExpensesParsed', {
+            count: result.expenses.length,
+            list: expensesList,
+            confidence: confidence,
+          }),
           [
-            { text: '取消', style: 'cancel' },
+            { text: t('home.cancel'), style: 'cancel' },
             { 
-              text: '✅ 保存全部', 
+              text: t('home.saveAll'), 
               onPress: () => handleSaveMultipleExpenses(result.expenses)
             }
           ]
         );
       }
     } else {
-      Alert.alert('解析失败', '未能识别到有效的记账信息，请重新输入');
+      Alert.alert(t('home.parsingFailed'), t('home.noValidInfo'));
     }
   };
 
@@ -462,26 +496,23 @@ export default function HomeScreen() {
         const startTime = new Date(event.startTime);
         const endTime = new Date(event.endTime);
         const formatTime = (date: Date) => {
-          return `${date.getMonth() + 1}月${date.getDate()}日 ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+          return date.toLocaleString(undefined, { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
         };
-        
-        // 生成鼓励语言
-        const encouragements = [
-          '太棒了！又一个充实的安排！',
-          '很好的时间规划！',
-          '继续保持这种积极的生活态度！',
-          '规律的日程会让生活更有条理！',
-          '为你的时间管理点赞！'
-        ];
-        const encouragement = encouragements[Math.floor(Math.random() * encouragements.length)];
+        const timeRange = `${formatTime(startTime)} - ${formatTime(endTime)}`;
+        const locationText = event.location ? t('home.location', { location: event.location }) : '';
         
         Alert.alert(
-          '🎯 解析成功',
-          `${encouragement}\n\n📅 事件：${event.title}\n⏰ 时间：${formatTime(startTime)} - ${formatTime(endTime)}\n${event.location ? `📍 地点：${event.location}\n` : ''}🎯 置信度：${confidence}%\n\n确认创建这个日程吗？`,
+          t('home.parsingSuccess'),
+          t('home.eventParsingSuccessMessage', {
+            title: event.title,
+            timeRange: timeRange,
+            location: locationText,
+            confidence: confidence
+          }),
           [
-            { text: '取消', style: 'cancel' },
+            { text: t('home.cancel'), style: 'cancel' },
             { 
-              text: '✅ 创建', 
+              text: t('home.create'), 
               onPress: () => handleCreateAIEvent(event)
             }
           ]
@@ -489,34 +520,39 @@ export default function HomeScreen() {
       } else {
         // 多个事件的情况
         const formatTime = (date: Date) => {
-          return `${date.getMonth() + 1}月${date.getDate()}日 ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+          return date.toLocaleString(undefined, { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
         };
         
         let eventsList = '';
         result.events.forEach((event, index) => {
           const startTime = new Date(event.startTime);
           const endTime = new Date(event.endTime);
-          eventsList += `${index + 1}. ${event.title}\n   ⏰ ${formatTime(startTime)} - ${formatTime(endTime)}\n`;
+          const timeRange = `${formatTime(startTime)} - ${formatTime(endTime)}`;
+          eventsList += `${index + 1}. ${event.title}\n   ⏰ ${timeRange}\n`;
           if (event.location) {
-            eventsList += `   📍 ${event.location}\n`;
+            eventsList += `   ${t('home.location', { location: event.location })}`;
           }
           eventsList += '\n';
         });
         
         Alert.alert(
-          '🎯 解析成功',
-          `识别到 ${result.events.length} 个日程：\n\n${eventsList}🎯 置信度：${confidence}%\n\n确认创建所有日程吗？`,
+          t('home.parsingSuccess'),
+          t('home.multipleEventsParsed', {
+            count: result.events.length,
+            list: eventsList,
+            confidence: confidence
+          }),
           [
-            { text: '取消', style: 'cancel' },
+            { text: t('home.cancel'), style: 'cancel' },
             { 
-              text: '✅ 创建全部', 
+              text: t('home.createAll'), 
               onPress: () => handleCreateMultipleAIEvents(result.events)
             }
           ]
         );
       }
     } else {
-      Alert.alert('解析失败', '未能识别到有效的日程事件，请重新输入');
+      Alert.alert(t('home.parsingFailed'), t('home.noValidInfo'));
     }
   };
 
@@ -529,13 +565,13 @@ export default function HomeScreen() {
 
       // Defensively check for invalid date objects
       if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-        Alert.alert('时间解析错误', 'AI返回了无效的时间格式，无法创建日程。');
+        Alert.alert(t('home.error'), t('home.invalidTimeFormat'));
         return;
       }
       
       // Defensively check that start is before end
       if (startDate >= endDate) {
-        Alert.alert('时间顺序错误', 'AI解析出的开始时间晚于或等于结束时间，无法创建日程。');
+        Alert.alert(t('home.error'), t('home.timeSequenceError'));
         return;
       }
 
@@ -547,12 +583,12 @@ export default function HomeScreen() {
 
       if (startDay.getTime() !== endDay.getTime()) {
         Alert.alert(
-          '跨天事件提醒',
-          'AI解析出一个跨天的事件。当前版本的创建功能会将它作为一整天的事件（从开始日的00:00到结束日的23:59）来处理，您想继续吗？',
+          t('home.crossDayEventReminder'),
+          t('home.crossDayEventReminderMessage'),
           [
-            { text: '手动调整', style: 'cancel' },
+            { text: t('home.manualAdjust'), style: 'cancel' },
             {
-              text: '继续创建',
+              text: t('home.continueCreate'),
               onPress: async () => {
                 const eventData = {
                   title: event.title,
@@ -576,7 +612,7 @@ export default function HomeScreen() {
         
         // 確保 recurrenceRule 有必需的字段
         if (!event.recurrenceRule.frequency) {
-          Alert.alert('重複規則錯誤', 'AI 解析的重複規則缺少頻率信息');
+          Alert.alert(t('home.recurringRuleError'), t('home.recurringRuleFrequencyMissing'));
           return;
         }
         
@@ -597,15 +633,15 @@ export default function HomeScreen() {
         
         if (parentEventId) {
           Alert.alert(
-            '✅ 重複事件創建成功', 
-            `重複日程"${event.title}"已添加到您的日历`,
-            [{ text: '好的', style: 'default' }]
+            t('home.recurringEventCreationSuccess'), 
+            t('home.recurringEventCreationSuccessMessage', { title: event.title }),
+            [{ text: t('home.ok'), style: 'default' }]
           );
           const newEventDate = new Date(startDate);
           await fetchEvents(newEventDate.getFullYear(), newEventDate.getMonth() + 1);
         } else {
-          const errorMessage = recurringError || '創建重複日程時發生錯誤，請重試';
-          Alert.alert('❌ 創建失敗', errorMessage);
+          const errorMessage = recurringError || t('home.recurringEventCreationFailed');
+          Alert.alert(t('home.error'), errorMessage);
         }
       } else if (event.isRecurring && event.recurringPattern) {
         // 嘗試解析自然語言重複模式
@@ -627,25 +663,25 @@ export default function HomeScreen() {
           
           if (parentEventId) {
             Alert.alert(
-              '✅ 重複事件創建成功', 
-              `重複日程"${event.title}"已添加到您的日历`,
-              [{ text: '好的', style: 'default' }]
+              t('home.recurringEventCreationSuccess'), 
+              t('home.recurringEventCreationSuccessMessage', { title: event.title }),
+              [{ text: t('home.ok'), style: 'default' }]
             );
             const newEventDate = new Date(startDate);
             await fetchEvents(newEventDate.getFullYear(), newEventDate.getMonth() + 1);
           } else {
-            const errorMessage = recurringError || '創建重複日程時發生錯誤，請重試';
-            Alert.alert('❌ 創建失敗', errorMessage);
+            const errorMessage = recurringError || t('home.recurringEventCreationFailed');
+            Alert.alert(t('home.error'), errorMessage);
           }
         } else {
           // 無法解析重複模式，創建普通事件
           Alert.alert(
-            '重複模式識別失敗',
-            '無法識別重複模式，將創建為普通事件。是否繼續？',
+            t('home.parsingFailed'),
+            t('home.recurringPatternRecognitionFailed'),
             [
-              { text: '取消', style: 'cancel' },
+              { text: t('home.cancel'), style: 'cancel' },
               { 
-                text: '繼續', 
+                text: t('home.continue'), 
                 onPress: async () => {
                   const eventData = {
                     title: event.title,
@@ -679,7 +715,7 @@ export default function HomeScreen() {
 
     } catch (error) {
       // console.error('创建AI事件失败:', error);
-      Alert.alert('创建失败', `创建日程时发生未知错误: ${error instanceof Error ? error.message : ''}`);
+      Alert.alert(t('home.error'), t('home.createEventFailed', { error: error instanceof Error ? error.message : '' }));
     }
   };
 
@@ -691,21 +727,22 @@ export default function HomeScreen() {
       if (createdEvent) {
         // console.log('事件创建成功:', createdEvent);
         Alert.alert(
-          '✅ 创建成功', 
-          `日程"${eventData.title}"已添加到您的日历`,
-          [{ text: '好的', style: 'default' }]
+          t('home.eventCreationSuccess'), 
+          t('home.eventCreationSuccessMessage', { title: eventData.title }),
+          [{ text: t('home.ok'), style: 'default' }]
         );
         const newEventDate = new Date(eventData.date);
         await fetchEvents(newEventDate.getFullYear(), newEventDate.getMonth() + 1);
       } else {
         // console.error('事件创建失败: createEvent 返回 null');
-        const errorMessage = eventsError || '创建日程时发生错误，请重试';
-        Alert.alert('❌ 创建失败', errorMessage);
+        const errorMessage = eventsError || t('home.eventCreationFailed');
+        Alert.alert(t('home.error'), errorMessage);
       }
   }
 
   // 处理多个AI解析结果
   const handleCreateMultipleAIEvents = async (events: any[]) => {
+    setLoadingText(t('home.savingEvents'));
     try {
       let successCount = 0;
       let failCount = 0;
@@ -723,21 +760,21 @@ export default function HomeScreen() {
       // 显示结果
       if (successCount > 0 && failCount === 0) {
         Alert.alert(
-          '✅ 创建成功', 
-          `成功创建了 ${successCount} 个日程`,
-          [{ text: '好的', style: 'default' }]
+          t('home.success'), 
+          t('home.createMultipleEventsSuccess', { count: successCount }),
+          [{ text: t('home.ok'), style: 'default' }]
         );
       } else if (successCount > 0 && failCount > 0) {
         Alert.alert(
-          '⚠️ 部分成功', 
-          `成功创建了 ${successCount} 个日程，${failCount} 个失败`,
-          [{ text: '好的', style: 'default' }]
+          t('home.partialSuccess'), 
+          t('home.createMultipleEventsPartialSuccess', { success: successCount, failed: failCount }),
+          [{ text: t('home.ok'), style: 'default' }]
         );
       } else {
         Alert.alert(
-          '❌ 创建失败', 
-          '所有日程创建都失败了',
-          [{ text: '好的', style: 'default' }]
+          t('home.error'), 
+          t('home.createMultipleEventsFailed'),
+          [{ text: t('home.ok'), style: 'default' }]
         );
       }
       
@@ -746,81 +783,77 @@ export default function HomeScreen() {
       await fetchEvents(currentDate.getFullYear(), currentDate.getMonth() + 1);
     } catch (error) {
       console.error('批量创建事件失败:', error);
-      Alert.alert('错误', '批量创建日程时发生错误');
+      Alert.alert(t('home.error'), t('home.batchEventCreationFailed'));
     }
   };
 
   // 处理多个记账项目
   const handleSaveMultipleExpenses = async (expenses: any[]) => {
+    if (!user) {
+      Alert.alert(t('home.error'), t('home.userNotLoggedIn'));
+      return;
+    }
+    setLoadingText(t('home.savingExpenses'));
+    setIsProcessingImage(true);
     try {
-      let successCount = 0;
-      let failCount = 0;
-      
-      for (const expense of expenses) {
-        try {
-          await handleSaveExpense({
-            amount: expense.amount,
-            category: expense.category,
-            description: expense.description || null,
-            date: expense.date.toISOString().split('T')[0],
-            type: expense.type,
-            user_id: user.id,
-          });
-          successCount++;
-        } catch (error) {
-          console.error('保存记账项目失败:', error);
-          failCount++;
-        }
+      const expensesToSave = expenses.map(exp => ({
+        ...exp,
+        user_id: user.id,
+      }));
+
+      const { data: savedExpenses, error } = await supabase
+        .from('expenses')
+        .insert(expensesToSave)
+        .select();
+
+      if (error) throw error;
+
+      if (savedExpenses) {
+        setExpenses(prev => [...prev, ...savedExpenses]);
       }
       
-      // 显示结果
-      if (successCount > 0 && failCount === 0) {
-        Alert.alert(
-          '✅ 保存成功', 
-          `成功保存了 ${successCount} 个记账项目`,
-          [{ text: '好的', style: 'default' }]
-        );
-      } else if (successCount > 0 && failCount > 0) {
-        Alert.alert(
-          '⚠️ 部分成功', 
-          `成功保存了 ${successCount} 个记账项目，${failCount} 个失败`,
-          [{ text: '好的', style: 'default' }]
-        );
-      } else {
-        Alert.alert(
-          '❌ 保存失败', 
-          '所有记账项目保存都失败了',
-          [{ text: '好的', style: 'default' }]
-        );
-      }
-      
-      // 重新获取记账数据
-      await fetchExpenses();
-    } catch (error) {
-      console.error('批量保存记账项目失败:', error);
-      Alert.alert('错误', '批量保存记账项目时发生错误');
+      Alert.alert(t('home.saveSuccess'), t('home.saveExpensesSuccess', { count: savedExpenses?.length || 0 }));
+    } catch (error: any) {
+      console.error('保存费用失败:', error);
+      Alert.alert(t('home.error'), error.message || t('home.saveExpensesFailed'));
+    } finally {
+      setIsProcessingImage(false);
+      setLoadingText('');
+      setShowAddExpenseModal(false);
     }
   };
 
-
   // 处理文字输入错误
   const handleTextError = (error: string) => {
-    // console.error('Text input error:', error);
-    Alert.alert('处理失败', error);
+    let errorMessage = '';
+    switch (error) {
+      case 'image':
+        errorMessage = t('home.imageProcessingError');
+        break;
+      case 'voice':
+        errorMessage = t('home.voiceProcessingError');
+        break;
+      case 'text':
+        errorMessage = t('home.textProcessingError');
+        break;
+      default:
+        errorMessage = error;
+    }
+    Alert.alert(t('home.error'), errorMessage);
   };
 
   // 处理记账保存
   const handleSaveExpense = async (expenseData: TablesInsert<'expenses'>) => {
     // 确保用户已登录
     if (!user) {
-      Alert.alert('错误', '用户未登录，无法保存记账');
+      Alert.alert(t('home.error'), t('home.expenseSaveNotLoggedIn'));
       return;
     }
 
     // 使用类型守卫确保 user 不为 null
     const currentUser = user;
     if (!currentUser) {
-      Alert.alert('错误', '用户状态异常');
+      Alert.alert(t('home.error'), t('home.userStateError'));
       return;
     }
 
@@ -848,9 +881,9 @@ export default function HomeScreen() {
       .select();
     if (error) {
       console.error('保存记账失败:', error);
-      Alert.alert('错误', `保存记账失败: ${error.message}`);
+      Alert.alert(t('home.error'), t('home.expenseSaveFailed', { error: error.message }));
     } else if (data) {
-      Alert.alert('成功', '记账已保存');
+      Alert.alert(t('home.success'), t('home.expenseSaved'));
       setShowAddExpenseModal(false);
       setExpenses(prev => [data[0], ...prev]);
     }
@@ -893,19 +926,19 @@ export default function HomeScreen() {
           }
         }
         
-        Alert.alert('成功', '事件创建成功');
+        Alert.alert(t('home.success'), t('home.eventCreationSuccess'));
         // 重新获取当月事件
         const currentDate = new Date();
         fetchEvents(currentDate.getFullYear(), currentDate.getMonth() + 1);
       } else {
         // 显示 eventsError 中的具体错误信息
-        const errorMessage = eventsError || '创建事件失败，请检查网络连接和权限';
-        Alert.alert('错误', errorMessage);
+        const errorMessage = eventsError || t('home.eventCreationFailed');
+        Alert.alert(t('home.error'), errorMessage);
       }
     } catch (error) {
       // console.error('创建事件异常:', error);
-      const errorMessage = error instanceof Error ? error.message : '创建事件失败';
-      Alert.alert('错误', errorMessage);
+      const errorMessage = error instanceof Error ? error.message : t('home.eventCreationFailed');
+      Alert.alert(t('home.error'), errorMessage);
     }
   };
 
@@ -915,19 +948,19 @@ export default function HomeScreen() {
       const result = await updateEvent(eventId, eventData);
       
       if (result) {
-        Alert.alert('成功', '事件更新成功');
+        Alert.alert(t('home.success'), t('home.eventUpdateSuccess'));
         // 重新获取当月事件
         const currentDate = new Date();
         fetchEvents(currentDate.getFullYear(), currentDate.getMonth() + 1);
       } else {
         // 显示 eventsError 中的具体错误信息
-        const errorMessage = eventsError || '更新事件失败，请检查网络连接和权限';
-        Alert.alert('错误', errorMessage);
+        const errorMessage = eventsError || t('home.eventUpdateFailed');
+        Alert.alert(t('home.error'), errorMessage);
       }
     } catch (error) {
       // console.error('更新事件异常:', error);
-      const errorMessage = error instanceof Error ? error.message : '更新事件失败';
-      Alert.alert('错误', errorMessage);
+      const errorMessage = error instanceof Error ? error.message : t('home.eventUpdateFailed');
+      Alert.alert(t('home.error'), errorMessage);
     }
   };
 
@@ -962,12 +995,12 @@ export default function HomeScreen() {
     } else {
       // 如果没有事件，询问是否要添加新事件
       Alert.alert(
-        '这天没有事件',
-        '是否要为这天添加新事件？',
+        t('home.noEventThisDay'),
+        t('home.addEventPrompt'),
         [
-          { text: '取消', style: 'cancel' },
+          { text: t('home.cancel'), style: 'cancel' },
           {
-            text: '添加事件',
+            text: t('home.addEvent'),
             onPress: () => {
               setEditingEvent(null); // 清空编辑状态
               setShowAddEventModal(true);
@@ -993,7 +1026,7 @@ export default function HomeScreen() {
     return (
       <SafeAreaView style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={styles.loadingText}>加载中...</Text>
+        <Text style={styles.loadingText}>{t('home.loadingData')}</Text>
       </SafeAreaView>
     );
   }
@@ -1049,17 +1082,41 @@ export default function HomeScreen() {
       {/* 顶部标题栏 */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Text style={[styles.headerTitle, styles.activeTab]}>记录</Text>
+          <Text style={[styles.headerTitle, styles.activeTab]}>{t('home.recordTab')}</Text>
           <TouchableOpacity onPress={navigateToExplore}>
-            <Text style={styles.headerTitle}>洞察</Text>
+            <Text style={styles.headerTitle}>{t('home.exploreTab')}</Text>
           </TouchableOpacity>
         </View>
         <View style={styles.headerRight}>
           <TouchableOpacity style={styles.filterButton} onPress={toggleFilterMenu}>
             {/* 显示当前选中的过滤项的标签 */}
-            <Text style={styles.filterText}>{filterOptions.find(opt => opt.value === selectedFilter)?.label}</Text>
+            <Text style={styles.filterButtonText}>{filterOptions.find(opt => opt.value === selectedFilter)?.label}</Text>
             <Text style={styles.filterIcon}>▼</Text>
           </TouchableOpacity>
+          {showFilterMenu && (
+            <Modal
+              transparent={true}
+              visible={showFilterMenu}
+              onRequestClose={toggleFilterMenu}
+            >
+              <TouchableOpacity
+                style={styles.filterMenuOverlay}
+                onPress={toggleFilterMenu}
+              >
+                <View style={styles.filterMenu}>
+                  {filterOptions.map((option) => (
+                    <TouchableOpacity
+                      key={option.value}
+                      style={styles.filterMenuItem}
+                      onPress={() => handleFilterSelect(option.value)}
+                    >
+                      <Text style={styles.filterMenuText}>{option.label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </TouchableOpacity>
+            </Modal>
+          )}
           <TouchableOpacity style={styles.avatarButton} onPress={navigateToProfile}>
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>👤</Text>
@@ -1072,8 +1129,11 @@ export default function HomeScreen() {
         {/* 日历部分 */}
         <View style={styles.calendarContainer}>
           <View style={styles.calendarHeader}>
-            <Text style={styles.monthYear}>家庭日历</Text>
-            <Text style={styles.calendarNote}>记录家庭美好时光 {hasCalendarPermission && '📱 已连接系统日历'}</Text>
+            <Text style={styles.monthYear}>{t('home.familyCalendar')}</Text>
+            <Text style={styles.calendarNote}>
+              {t('home.recordFamilyTime')}{' '}
+              {hasCalendarPermission && `📱 ${t('home.connectedToSystemCalendar')}`}
+            </Text>
           </View>
           
           <Calendar
@@ -1124,7 +1184,7 @@ export default function HomeScreen() {
         <View style={styles.todaySection}>
           <View style={styles.todayHeader}>
             <Text style={styles.todayIcon}>📅</Text>
-            <Text style={styles.todayTitle}>今天 {new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric' })}</Text>
+            <Text style={styles.todayTitle}>{t('home.today')} {new Date().toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}</Text>
           </View>
           
           {/* 显示今天的事件，并应用过滤 */}
@@ -1140,7 +1200,7 @@ export default function HomeScreen() {
               return (
                 <View style={styles.eventsContainer}>
                   <View style={styles.eventsTitleContainer}>
-                    <Text style={styles.eventsTitle}>📋 今日事件</Text>
+                    <Text style={styles.eventsTitle}>📋 {t('home.todayEvents')}</Text>
                     <View style={styles.eventsCountBadge}>
                       <Text style={styles.eventsCountText}>{filteredEvents.length}</Text>
                     </View>
@@ -1160,7 +1220,7 @@ export default function HomeScreen() {
                         )}
                         <View style={styles.eventMeta}>
                           <Text style={styles.eventTime}>
-                            🕐 {new Date(event.start_ts * 1000).toLocaleTimeString('zh-CN', { 
+                            🕐 {new Date(event.start_ts * 1000).toLocaleTimeString(undefined, { 
                               hour: '2-digit', 
                               minute: '2-digit' 
                             })}
@@ -1181,7 +1241,7 @@ export default function HomeScreen() {
               return (
                 <View style={styles.eventsContainer}>
                   <View style={styles.eventsTitleContainer}>
-                    <Text style={styles.eventsTitle}>💰 最近记账</Text>
+                    <Text style={styles.eventsTitle}>💰 {t('home.recentExpenses')}</Text>
                     <View style={styles.eventsCountBadge}>
                       <Text style={styles.eventsCountText}>{expenses.length}</Text>
                     </View>
@@ -1209,8 +1269,8 @@ export default function HomeScreen() {
                     <Text style={styles.aiEmoji}>🦝</Text>
                   </View>
                   <View style={styles.aiContent}>
-                    <Text style={styles.aiGreeting}>今天还没有安排事件</Text>
-                    <Text style={styles.aiSuggestion}>点击下方&ldquo;手动添加&rdquo;来创建新事件</Text>
+                    <Text style={styles.aiGreeting}>{t('home.noEventsToday')}</Text>
+                    <Text style={styles.aiSuggestion}>{t('home.manualAddPrompt')}</Text>
                   </View>
                 </View>
               );
@@ -1218,22 +1278,22 @@ export default function HomeScreen() {
           })()}
           
           <TouchableOpacity style={styles.autoRecordButton}>
-            <Text style={styles.autoRecordText}>智能提醒家庭安排 点我设置 〉</Text>
+            <Text style={styles.autoRecordText}>{t('home.smartReminder')} 〉</Text>
           </TouchableOpacity>
           
           {/* 快捷功能 */}
           <View style={styles.quickActions}>
             <TouchableOpacity style={styles.quickAction}>
               <Text style={styles.quickActionIcon}>👶</Text>
-              <Text style={styles.quickActionText}>孩子日程</Text>
+              <Text style={styles.quickActionText}>{t('home.kidsSchedule')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.quickAction}>
               <Text style={styles.quickActionIcon}>🏠</Text>
-              <Text style={styles.quickActionText}>家务安排</Text>
+              <Text style={styles.quickActionText}>{t('home.choreSchedule')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.quickAction}>
               <Text style={styles.quickActionIcon}>🎂</Text>
-              <Text style={styles.quickActionText}>纪念日提醒</Text>
+              <Text style={styles.quickActionText}>{t('home.anniversaryReminder')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1243,8 +1303,8 @@ export default function HomeScreen() {
       <SmartButton 
         onPress={handleVoicePress}
         text={voiceState.isRecording ? 
-          `录制中... ${Math.floor(voiceState.duration / 1000)}s` : 
-          '长按说话，快速记录'
+          t('home.isRecording', { duration: Math.floor(voiceState.duration / 1000) }) : 
+          t('home.longPressToTalk')
         }
         onTextInputPress={() => {
           // console.log('Text input pressed')
@@ -1321,7 +1381,7 @@ export default function HomeScreen() {
         onDeleteEvent={async (eventId: string) => {
           const success = await deleteEvent(eventId);
           if (success) {
-            Alert.alert('成功', '事件已删除');
+            Alert.alert(t('home.success'), t('home.eventDeleted'));
             // 重新获取当月事件
             const currentDate = new Date();
             fetchEvents(currentDate.getFullYear(), currentDate.getMonth() + 1);
@@ -1418,14 +1478,40 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginRight: 12,
   },
-  filterText: {
+  filterButtonText: {
     fontSize: 14,
     color: '#333',
     marginRight: 4,
   },
   filterIcon: {
-    fontSize: 10,
-    color: '#666',
+    fontSize: 12,
+    color: '#8E8E93',
+  },
+  filterMenuOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-end',
+  },
+  filterMenu: {
+    marginTop: 110,
+    right: 60,
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 8,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  filterMenuItem: {
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+  },
+  filterMenuText: {
+    fontSize: 16,
+    color: '#333',
   },
   avatarButton: {
     padding: 2,
@@ -1800,31 +1886,6 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     zIndex: 1000,
-  },
-  filterMenuOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.1)',
-  },
-  filterMenu: {
-    position: 'absolute',
-    top: 105, // 往下调整更多，避免遮挡按钮
-    right: 16,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    paddingVertical: 12,
-    minWidth: 140,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
   },
   filterOption: {
     paddingHorizontal: 16,

@@ -1,5 +1,5 @@
-import React from 'react';
-import { ScrollView, Text, TouchableOpacity, StyleSheet, View } from 'react-native';
+import { t } from '@/lib/i18n';
+import { ScrollView, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 interface FirstSuggestionsProps {
@@ -8,11 +8,11 @@ interface FirstSuggestionsProps {
 
 export function FirstSuggestions({ onSuggestionPress }: FirstSuggestionsProps) {
   const suggestions = [
-    '帮我安排本周的家庭活动',
-    '提醒我家人的生日和重要纪念日',
-    '制定家庭购物清单',
-    '安排家务分工计划',
-    '推荐适合家庭的周末活动',
+    t('firstSuggestions.suggestion1'),
+    t('firstSuggestions.suggestion2'),
+    t('firstSuggestions.suggestion3'),
+    t('firstSuggestions.suggestion4'),
+    t('firstSuggestions.suggestion5'),
   ];
 
   return (

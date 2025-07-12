@@ -1,19 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import { t } from '@/lib/i18n';
+import { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  Switch,
-  TextInput,
-  Alert,
+    Alert,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
-import { 
-  RecurrenceRule, 
-  formatRecurrenceDescription,
-  validateRecurrenceRule,
-  parseNaturalLanguageRecurrence 
+import {
+    RecurrenceRule,
+    formatRecurrenceDescription,
+    parseNaturalLanguageRecurrence,
+    validateRecurrenceRule
 } from '../lib/recurrenceEngine';
 
 interface RecurrenceRuleEditorProps {
@@ -48,20 +49,20 @@ export default function RecurrenceRuleEditor({
   }, [rule]);
 
   const frequencies = [
-    { value: 'DAILY', label: '每天' },
-    { value: 'WEEKLY', label: '每周' },
-    { value: 'MONTHLY', label: '每月' },
-    { value: 'YEARLY', label: '每年' },
+    { value: 'DAILY', label: t('recurrenceRuleEditor.daily') },
+    { value: 'WEEKLY', label: t('recurrenceRuleEditor.weekly') },
+    { value: 'MONTHLY', label: t('recurrenceRuleEditor.monthly') },
+    { value: 'YEARLY', label: t('recurrenceRuleEditor.yearly') },
   ] as const;
 
   const weekDays = [
-    { value: 'MO', label: '周一' },
-    { value: 'TU', label: '周二' },
-    { value: 'WE', label: '周三' },
-    { value: 'TH', label: '周四' },
-    { value: 'FR', label: '周五' },
-    { value: 'SA', label: '周六' },
-    { value: 'SU', label: '周日' },
+    { value: 'MO', label: t('recurrenceRuleEditor.monday') },
+    { value: 'TU', label: t('recurrenceRuleEditor.tuesday') },
+    { value: 'WE', label: t('recurrenceRuleEditor.wednesday') },
+    { value: 'TH', label: t('recurrenceRuleEditor.thursday') },
+    { value: 'FR', label: t('recurrenceRuleEditor.friday') },
+    { value: 'SA', label: t('recurrenceRuleEditor.saturday') },
+    { value: 'SU', label: t('recurrenceRuleEditor.sunday') },
   ];
 
   const handleFrequencyChange = (frequency: RecurrenceRule['frequency']) => {
@@ -110,9 +111,9 @@ export default function RecurrenceRuleEditor({
       setRule(parsedRule);
       setIsEnabled(true);
       setNaturalLanguageInput('');
-      Alert.alert('解析成功', `已解析为: ${formatRecurrenceDescription(parsedRule)}`);
+      Alert.alert(t('recurrenceRuleEditor.parseSuccess'), t('recurrenceRuleEditor.parsedAs', { description: formatRecurrenceDescription(parsedRule) }));
     } else {
-      Alert.alert('解析失败', '无法理解输入的重复模式，请尝试其他表达方式');
+      Alert.alert(t('recurrenceRuleEditor.parseFailed'), t('recurrenceRuleEditor.parseFailedMessage'));
     }
   };
 
@@ -124,7 +125,7 @@ export default function RecurrenceRuleEditor({
 
     const validation = validateRecurrenceRule(rule);
     if (!validation.valid) {
-      Alert.alert('验证失败', validation.errors.join('\n'));
+      Alert.alert(t('recurrenceRuleEditor.validationFailed'), validation.errors.join('\n'));
       return;
     }
 
@@ -133,7 +134,7 @@ export default function RecurrenceRuleEditor({
 
   const renderFrequencyOptions = () => (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>重复频率</Text>
+      <Text style={styles.sectionTitle}>{t('recurrenceRuleEditor.frequency')}</Text>
       <View style={styles.optionRow}>
         {frequencies.map(freq => (
           <TouchableOpacity
@@ -158,9 +159,9 @@ export default function RecurrenceRuleEditor({
 
   const renderIntervalInput = () => (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>间隔</Text>
+      <Text style={styles.sectionTitle}>{t('recurrenceRuleEditor.interval')}</Text>
       <View style={styles.intervalRow}>
-        <Text style={styles.intervalLabel}>每</Text>
+        <Text style={styles.intervalLabel}>{t('recurrenceRuleEditor.every')}</Text>
         <TextInput
           style={styles.intervalInput}
           value={rule.interval?.toString() || '1'}
@@ -169,10 +170,10 @@ export default function RecurrenceRuleEditor({
           maxLength={2}
         />
         <Text style={styles.intervalLabel}>
-          {rule.frequency === 'DAILY' && '天'}
-          {rule.frequency === 'WEEKLY' && '周'}
-          {rule.frequency === 'MONTHLY' && '月'}
-          {rule.frequency === 'YEARLY' && '年'}
+          {rule.frequency === 'DAILY' && t('recurrenceRuleEditor.days')}
+          {rule.frequency === 'WEEKLY' && t('recurrenceRuleEditor.weeks')}
+          {rule.frequency === 'MONTHLY' && t('recurrenceRuleEditor.months')}
+          {rule.frequency === 'YEARLY' && t('recurrenceRuleEditor.years')}
         </Text>
       </View>
     </View>
@@ -183,7 +184,7 @@ export default function RecurrenceRuleEditor({
 
     return (
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>星期几</Text>
+        <Text style={styles.sectionTitle}>{t('recurrenceRuleEditor.onFollowingDays')}</Text>
         <View style={styles.weekDayRow}>
           {weekDays.map(day => (
             <TouchableOpacity
@@ -209,13 +210,13 @@ export default function RecurrenceRuleEditor({
 
   const renderEndOptions = () => (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>结束条件</Text>
+      <Text style={styles.sectionTitle}>{t('recurrenceRuleEditor.endDate')}</Text>
       
       <TouchableOpacity
         style={[styles.endOption, endType === 'never' && styles.endOptionActive]}
         onPress={() => handleEndTypeChange('never')}
       >
-        <Text style={styles.endOptionText}>永不结束</Text>
+        <Text style={styles.endOptionText}>{t('recurrenceRuleEditor.neverEnd')}</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -223,7 +224,7 @@ export default function RecurrenceRuleEditor({
         onPress={() => handleEndTypeChange('count')}
       >
         <View style={styles.endOptionRow}>
-          <Text style={styles.endOptionText}>重复</Text>
+          <Text style={styles.endOptionText}>{t('recurrenceRuleEditor.after_count')}</Text>
           {endType === 'count' && (
             <TextInput
               style={styles.countInput}
@@ -233,7 +234,7 @@ export default function RecurrenceRuleEditor({
               maxLength={3}
             />
           )}
-          <Text style={styles.endOptionText}>次</Text>
+          <Text style={styles.endOptionText}>{t('recurrenceRuleEditor.occurrences')}</Text>
         </View>
       </TouchableOpacity>
 
@@ -242,7 +243,7 @@ export default function RecurrenceRuleEditor({
         onPress={() => handleEndTypeChange('until')}
       >
         <Text style={styles.endOptionText}>
-          结束于 {rule.until?.toLocaleDateString('zh-CN')}
+          {t('recurrenceRuleEditor.until')} {rule.until?.toLocaleDateString(undefined)}
         </Text>
       </TouchableOpacity>
     </View>
@@ -250,67 +251,74 @@ export default function RecurrenceRuleEditor({
 
   const renderNaturalLanguageInput = () => (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>智能解析</Text>
+      <Text style={styles.sectionTitle}>{t('recurrenceRuleEditor.smartParsing')}</Text>
       <Text style={styles.sectionSubtitle}>
-        尝试用自然语言描述重复模式，如"每两周"、"工作日"、"每月15号"
+        {t('recurrenceRuleEditor.smartParsingSubtitle')}
       </Text>
       <View style={styles.naturalInputRow}>
         <TextInput
           style={styles.naturalInput}
           value={naturalLanguageInput}
           onChangeText={setNaturalLanguageInput}
-          placeholder="输入重复模式..."
+          placeholder={t('recurrenceRuleEditor.naturalLanguagePlaceholder')}
           placeholderTextColor="#999"
         />
         <TouchableOpacity
           style={styles.parseButton}
           onPress={handleNaturalLanguageInput}
         >
-          <Text style={styles.parseButtonText}>解析</Text>
+          <Text style={styles.parseButtonText}>{t('recurrenceRuleEditor.parse')}</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 
   const renderPreview = () => {
-    if (!isEnabled) return null;
+    if (!isEnabled) {
+      return (
+        <View style={styles.preview}>
+          <Text style={styles.previewTitle}>{t('recurrenceRuleEditor.preview')}</Text>
+          <Text style={styles.previewText}>
+            {t('recurrenceRuleEditor.noRecurrence')}
+          </Text>
+        </View>
+      );
+    }
 
     return (
-      <View style={styles.preview}>
-        <Text style={styles.previewTitle}>预览</Text>
-        <Text style={styles.previewText}>
-          {formatRecurrenceDescription(rule) || '无重复'}
-        </Text>
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>{t('recurrenceRuleEditor.preview')}</Text>
+        <Text style={styles.previewText}>{formatRecurrenceDescription(rule)}</Text>
       </View>
     );
   };
-
+  
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onCancel}>
-          <Text style={styles.cancelButton}>取消</Text>
+          <Text style={styles.cancelButton}>{t('recurrenceRuleEditor.cancel')}</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>重复设置</Text>
+        <Text style={styles.title}>{t('recurrenceRuleEditor.recurrenceSettings')}</Text>
         <TouchableOpacity onPress={handleSave}>
-          <Text style={styles.saveButton}>保存</Text>
+          <Text style={styles.saveButton}>{t('recurrenceRuleEditor.save')}</Text>
         </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content}>
         <View style={styles.enableSection}>
-          <Text style={styles.enableText}>启用重复</Text>
+          <Text style={styles.enableText}>{t('recurrenceRuleEditor.enableRecurrence')}</Text>
           <Switch
             value={isEnabled}
             onValueChange={setIsEnabled}
-            trackColor={{ false: '#E0E0E0', true: '#007AFF' }}
-            thumbColor={isEnabled ? '#fff' : '#f4f3f4'}
+            trackColor={{ false: '#767577', true: '#81b0ff' }}
+            thumbColor={isEnabled ? '#f5dd4b' : '#f4f3f4'}
           />
         </View>
-
         {isEnabled && (
           <>
             {renderNaturalLanguageInput()}
+            <View style={styles.divider} />
             {renderFrequencyOptions()}
             {renderIntervalInput()}
             {renderWeekDayOptions()}
@@ -332,28 +340,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    padding: 16,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
   title: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: 'bold',
   },
   cancelButton: {
     fontSize: 16,
-    color: '#666',
+    color: '#007AFF',
   },
   saveButton: {
     fontSize: 16,
     color: '#007AFF',
-    fontWeight: '600',
+    fontWeight: 'bold',
   },
   content: {
-    flex: 1,
     padding: 16,
   },
   enableSection: {
@@ -362,51 +367,39 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#fff',
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 8,
     marginBottom: 16,
   },
   enableText: {
     fontSize: 16,
-    color: '#333',
-    fontWeight: '500',
   },
   section: {
     backgroundColor: '#fff',
-    borderRadius: 12,
     padding: 16,
+    borderRadius: 8,
     marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 12,
-  },
-  sectionSubtitle: {
-    fontSize: 14,
-    color: '#666',
+    fontWeight: 'bold',
     marginBottom: 12,
   },
   optionRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+    justifyContent: 'space-between',
   },
   frequencyButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    backgroundColor: '#fff',
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 8,
+    backgroundColor: '#f0f0f0',
   },
   frequencyButtonActive: {
     backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
   },
   frequencyButtonText: {
     fontSize: 14,
-    color: '#666',
+    color: '#333',
   },
   frequencyButtonTextActive: {
     color: '#fff',
@@ -414,44 +407,38 @@ const styles = StyleSheet.create({
   intervalRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
   },
   intervalLabel: {
     fontSize: 16,
-    color: '#333',
+    marginHorizontal: 8,
   },
   intervalInput: {
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: '#ccc',
     borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontSize: 16,
-    color: '#333',
-    minWidth: 60,
+    padding: 10,
+    width: 60,
     textAlign: 'center',
+    fontSize: 16,
   },
   weekDayRow: {
     flexDirection: 'row',
-    gap: 8,
+    justifyContent: 'space-between',
   },
   weekDayButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    backgroundColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#f0f0f0',
   },
   weekDayButtonActive: {
     backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
   },
   weekDayButtonText: {
     fontSize: 14,
-    color: '#666',
+    color: '#333',
   },
   weekDayButtonTextActive: {
     color: '#fff',
@@ -460,75 +447,96 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
-    backgroundColor: '#fff',
+    borderColor: '#ccc',
     marginBottom: 8,
   },
   endOptionActive: {
-    backgroundColor: '#f0f8ff',
     borderColor: '#007AFF',
+    backgroundColor: '#e6f2ff',
   },
   endOptionText: {
     fontSize: 16,
-    color: '#333',
   },
   endOptionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
   },
   countInput: {
     borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    fontSize: 16,
-    color: '#333',
-    minWidth: 50,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    padding: 10,
+    width: 60,
     textAlign: 'center',
+    fontSize: 16,
+    marginHorizontal: 8,
+  },
+  preview: {
+    marginTop: 16,
+    padding: 16,
+    backgroundColor: '#f0f8ff',
+    borderRadius: 8,
+  },
+  previewTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  previewText: {
+    fontSize: 14,
+    fontStyle: 'italic',
+    color: '#333',
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+    backgroundColor: '#fff',
+  },
+  footerButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 8,
+  },
+  footerButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  saveButtonText: {
+    color: '#fff',
   },
   naturalInputRow: {
     flexDirection: 'row',
-    gap: 8,
   },
   naturalInput: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: '#ccc',
     borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    padding: 10,
     fontSize: 16,
-    color: '#333',
   },
   parseButton: {
+    marginLeft: 8,
     backgroundColor: '#007AFF',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
     justifyContent: 'center',
+    paddingHorizontal: 15,
+    borderRadius: 8,
   },
   parseButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '500',
   },
-  preview: {
-    backgroundColor: '#f0f8ff',
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#007AFF',
+  sectionSubtitle: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 8,
   },
-  previewTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#007AFF',
-    marginBottom: 4,
+  divider: {
+    height: 1,
+    backgroundColor: '#e0e0e0',
+    marginVertical: 16,
   },
-  previewText: {
-    fontSize: 16,
-    color: '#333',
-  },
-});
+}); 

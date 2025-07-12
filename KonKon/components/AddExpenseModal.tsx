@@ -1,22 +1,23 @@
-import React, { useState, useEffect } from 'react';
-import {
-  Modal,
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-  Alert,
-} from 'react-native';
-import { BlurView } from 'expo-blur';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { t } from '@/lib/i18n';
 import { Ionicons } from '@expo/vector-icons';
-import { Tables, TablesInsert } from '../lib/database.types';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { BlurView } from 'expo-blur';
+import React, { useEffect, useState } from 'react';
+import {
+    Alert,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { useFamily } from '../contexts/FamilyContext';
+import { Tables, TablesInsert } from '../lib/database.types';
 
 type Expense = Tables<'expenses'>;
 type ExpenseInsert = TablesInsert<'expenses'>;
@@ -71,11 +72,11 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
 
   const handleSave = () => {
     if (!amount || !category) {
-      Alert.alert('错误', '金额和类别不能为空');
+      Alert.alert(t('addExpenseModal.error'), t('addExpenseModal.amountCategoryRequired'));
       return;
     }
     if (!user || !user.id) {
-      Alert.alert('错误', '用户未登录或用户ID无效，请重新登录后再试。');
+      Alert.alert(t('addExpenseModal.error'), t('addExpenseModal.invalidUser'));
       return;
     }
 
@@ -117,7 +118,7 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
               <Ionicons name="close-circle" size={28} color="#999" />
             </TouchableOpacity>
             <Text style={styles.modalTitle}>
-              {editingExpense ? '编辑记账' : '添加记账'}
+              {editingExpense ? t('addExpenseModal.editExpense') : t('addExpenseModal.addExpense')}
             </Text>
             <ScrollView style={styles.formContainer}>
               <View style={styles.typeSelector}>
@@ -128,7 +129,7 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
                   ]}
                   onPress={() => setType('expense')}
                 >
-                  <Text style={[styles.typeButtonText, type === 'expense' && styles.typeButtonTextSelected]}>支出</Text>
+                  <Text style={[styles.typeButtonText, type === 'expense' && styles.typeButtonTextSelected]}>{t('addExpenseModal.expense')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[
@@ -137,26 +138,26 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
                   ]}
                   onPress={() => setType('income')}
                 >
-                  <Text style={[styles.typeButtonText, type === 'income' && styles.typeButtonTextSelected]}>收入</Text>
+                  <Text style={[styles.typeButtonText, type === 'income' && styles.typeButtonTextSelected]}>{t('addExpenseModal.income')}</Text>
                 </TouchableOpacity>
               </View>
 
               <TextInput
                 style={styles.input}
-                placeholder="金额"
+                placeholder={t('addExpenseModal.amount')}
                 value={amount}
                 onChangeText={setAmount}
                 keyboardType="numeric"
               />
               <TextInput
                 style={styles.input}
-                placeholder="类别 (例如: 餐饮, 交通)"
+                placeholder={t('addExpenseModal.categoryPlaceholder')}
                 value={category}
                 onChangeText={setCategory}
               />
               <TextInput
                 style={[styles.input, styles.descriptionInput]}
-                placeholder="描述 (可选)"
+                placeholder={t('addExpenseModal.description')}
                 value={description}
                 onChangeText={setDescription}
                 multiline
@@ -167,7 +168,7 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
                 onPress={() => setShowDatePicker(true)}
               >
                 <Text style={styles.datePickerText}>
-                  选择日期: {date.toLocaleDateString()}
+                  {t('addExpenseModal.selectDate', { date: date.toLocaleDateString() })}
                 </Text>
               </TouchableOpacity>
 
@@ -183,7 +184,7 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
               )}
             </ScrollView>
             <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-              <Text style={styles.saveButtonText}>保存</Text>
+              <Text style={styles.saveButtonText}>{t('addExpenseModal.save')}</Text>
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>

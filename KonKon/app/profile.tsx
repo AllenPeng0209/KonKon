@@ -1,16 +1,17 @@
-import React from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
-  ScrollView,
-  Image,
-  Dimensions,
-  Alert,
-} from 'react-native';
+import { t } from '@/lib/i18n';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import {
+    Alert,
+    Dimensions,
+    Image,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { useFamily } from '../contexts/FamilyContext';
 
@@ -32,16 +33,16 @@ export default function ProfileScreen() {
     } else {
       // 如果没有家族，显示选择对话框
       Alert.alert(
-        '家族を作成または参加',
-        '家族管理を開始するためのオプションを選択してください',
+        t('profile.createOrJoinFamilyTitle'),
+        t('profile.createOrJoinFamilyMessage'),
         [
-          { text: 'キャンセル', style: 'cancel' },
+          { text: t('profile.cancel'), style: 'cancel' },
           {
-            text: '家族を作成',
+            text: t('profile.createFamily'),
             onPress: () => router.push('/create-family'),
           },
           {
-            text: '家族に参加',
+            text: t('profile.joinFamily'),
             onPress: () => router.push('/join-family'),
           },
         ]
@@ -79,9 +80,9 @@ export default function ProfileScreen() {
       {/* 顶部标题栏 */}
       <View style={styles.header}>
         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-          <Text style={styles.backIcon}>←</Text>
+          <Ionicons name="arrow-back" size={24} color="#007AFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>个人中心</Text>
+        <Text style={styles.headerTitle}>{t('profile.title')}</Text>
         <View style={styles.headerRight} />
       </View>
 
@@ -105,7 +106,7 @@ export default function ProfileScreen() {
                 </View>
               </View>
               <Text style={styles.userId}>ID: TC7JNV34</Text>
-              <Text style={styles.recordDays}>你已经记录了<Text style={styles.daysNumber}>0</Text>天</Text>
+              <Text style={styles.recordDays}>{t('profile.recordedDays', { days: 0 })}</Text>
             </View>
             <TouchableOpacity style={styles.editButton}>
               <Text style={styles.editIcon}>✏️</Text>
@@ -117,12 +118,12 @@ export default function ProfileScreen() {
             <View style={styles.vipCardContent}>
               <Text style={styles.vipIcon}>🏡</Text>
               <Text style={styles.vipMessage}>
-                {userFamily ? `家族: ${userFamily.name}` : '家族を作成または参加'}
+                {userFamily ? t('profile.family', { familyName: userFamily.name }) : t('profile.createOrJoin')}
               </Text>
             </View>
             <TouchableOpacity style={styles.vipButton} onPress={handleVIPBenefits}>
               <Text style={styles.vipButtonText}>
-                {loading ? '読み込み中...' : userFamily ? '家族管理' : '家族作成'}
+                {loading ? t('profile.loading') : userFamily ? t('profile.manageFamily') : t('profile.createFamily')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -133,37 +134,37 @@ export default function ProfileScreen() {
           <View style={styles.functionsRow}>
             <TouchableOpacity style={styles.functionItem} onPress={() => handleFunction('familySchedule')}>
               <Text style={styles.functionIcon}>📅</Text>
-              <Text style={styles.functionText}>家庭日程</Text>
+              <Text style={styles.functionText}>{t('profile.familySchedule')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.functionItem} onPress={() => handleFunction('memberManagement')}>
               <Text style={styles.functionIcon}>👥</Text>
-              <Text style={styles.functionText}>成员管理</Text>
+              <Text style={styles.functionText}>{t('profile.memberManagement')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.functionItem} onPress={() => handleFunction('houseworkAssignment')}>
               <Text style={styles.functionIcon}>🏠</Text>
-              <Text style={styles.functionText}>家务分配</Text>
+              <Text style={styles.functionText}>{t('profile.choreAssignment')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.functionItem} onPress={() => handleFunction('birthdayReminder')}>
               <Text style={styles.functionIcon}>🎂</Text>
-              <Text style={styles.functionText}>生日提醒</Text>
+              <Text style={styles.functionText}>{t('profile.birthdayReminder')}</Text>
             </TouchableOpacity>
           </View>
           <View style={styles.functionsRow}>
             <TouchableOpacity style={styles.functionItem} onPress={() => handleFunction('familyAlbum')}>
               <Text style={styles.functionIcon}>📸</Text>
-              <Text style={styles.functionText}>家庭相册</Text>
+              <Text style={styles.functionText}>{t('profile.familyAlbum')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.functionItem} onPress={() => handleFunction('shoppingList')}>
               <Text style={styles.functionIcon}>🛒</Text>
-              <Text style={styles.functionText}>购物清单</Text>
+              <Text style={styles.functionText}>{t('profile.shoppingList')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.functionItem} onPress={() => handleFunction('familyBudget')}>
               <Text style={styles.functionIcon}>💰</Text>
-              <Text style={styles.functionText}>家庭预算</Text>
+              <Text style={styles.functionText}>{t('profile.familyBudget')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.functionItem} onPress={() => handleFunction('emergencyContact')}>
               <Text style={styles.functionIcon}>🚨</Text>
-              <Text style={styles.functionText}>紧急联系</Text>
+              <Text style={styles.functionText}>{t('profile.emergencyContact')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -171,19 +172,19 @@ export default function ProfileScreen() {
         {/* 设置选项 */}
         <View style={styles.settingsSection}>
           <TouchableOpacity style={styles.settingItem} onPress={() => handleSetting('settings')}>
-            <Text style={styles.settingText}>设置</Text>
+            <Text style={styles.settingText}>{t('profile.settings')}</Text>
             <Text style={styles.settingArrow}>{'>'}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.settingItem} onPress={() => handleSetting('userAgreement')}>
-            <Text style={styles.settingText}>用户协议</Text>
+            <Text style={styles.settingText}>{t('profile.userAgreement')}</Text>
             <Text style={styles.settingArrow}>{'>'}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.settingItem} onPress={() => handleSetting('privacyPolicy')}>
-            <Text style={styles.settingText}>隐私政策</Text>
+            <Text style={styles.settingText}>{t('profile.privacyPolicy')}</Text>
             <Text style={styles.settingArrow}>{'>'}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.settingItem} onPress={() => handleSetting('about')}>
-            <Text style={styles.settingText}>关于</Text>
+            <Text style={styles.settingText}>{t('profile.about')}</Text>
             <Text style={styles.settingArrow}>{'>'}</Text>
           </TouchableOpacity>
         </View>
