@@ -74,8 +74,8 @@ const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
       Alert.alert('错误', '金额和类别不能为空');
       return;
     }
-    if (!user) {
-      Alert.alert('错误', '用户未登录');
+    if (!user || !user.id) {
+      Alert.alert('错误', '用户未登录或用户ID无效，请重新登录后再试。');
       return;
     }
 

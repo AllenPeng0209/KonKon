@@ -393,29 +393,55 @@ export default function HomeScreen() {
       return;
     }
     if (result.expenses && result.expenses.length > 0) {
-      const expense = result.expenses[0];
       const confidence = Math.round(result.confidence * 100);
       
-      const typeText = expense.type === 'income' ? '收入' : '支出';
-      
-      Alert.alert(
-        '🎯 记账解析成功',
-        `请确认以下信息：\n\n💰 金额：${expense.amount} 元\n📂 类别：${expense.category}\n✍️ 类型：${typeText}\n${expense.description ? `📝 备注：${expense.description}\n` : ''}🎯 置信度：${confidence}%`,
-        [
-          { text: '取消', style: 'cancel' },
-          { 
-            text: '✅ 确认保存', 
-            onPress: () => handleSaveExpense({
-              amount: expense.amount,
-              category: expense.category,
-              description: expense.description || null,
-              date: expense.date.toISOString().split('T')[0],
-              type: expense.type,
-              user_id: user.id, // 修复：添加 user_id
-            })
+      if (result.expenses.length === 1) {
+        // 单个记账项目的情况
+        const expense = result.expenses[0];
+        const typeText = expense.type === 'income' ? '收入' : '支出';
+        
+        Alert.alert(
+          '🎯 记账解析成功',
+          `请确认以下信息：\n\n💰 金额：${expense.amount} 元\n📂 类别：${expense.category}\n✍️ 类型：${typeText}\n${expense.description ? `📝 备注：${expense.description}\n` : ''}🎯 置信度：${confidence}%`,
+          [
+            { text: '取消', style: 'cancel' },
+            { 
+              text: '✅ 确认保存', 
+              onPress: () => handleSaveExpense({
+                amount: expense.amount,
+                category: expense.category,
+                description: expense.description || null,
+                date: expense.date.toISOString().split('T')[0],
+                type: expense.type,
+                user_id: user.id,
+              })
+            }
+          ]
+        );
+      } else {
+        // 多个记账项目的情况
+        let expensesList = '';
+        result.expenses.forEach((expense, index) => {
+          const typeText = expense.type === 'income' ? '收入' : '支出';
+          expensesList += `${index + 1}. ${expense.amount} 元 (${typeText})\n   📂 ${expense.category}\n`;
+          if (expense.description) {
+            expensesList += `   📝 ${expense.description}\n`;
           }
-        ]
-      );
+          expensesList += '\n';
+        });
+        
+        Alert.alert(
+          '🎯 记账解析成功',
+          `识别到 ${result.expenses.length} 个记账项目：\n\n${expensesList}🎯 置信度：${confidence}%\n\n确认保存所有记账项目吗？`,
+          [
+            { text: '取消', style: 'cancel' },
+            { 
+              text: '✅ 保存全部', 
+              onPress: () => handleSaveMultipleExpenses(result.expenses)
+            }
+          ]
+        );
+      }
     } else {
       Alert.alert('解析失败', '未能识别到有效的记账信息，请重新输入');
     }
@@ -426,38 +452,69 @@ export default function HomeScreen() {
     // console.log('AI result:', result);
     
     if (result.events && result.events.length > 0) {
-      // Always take the first event for simplicity, even if multiple are returned.
-      const event = result.events[0];
       const confidence = Math.round(result.confidence * 100);
       
-      // 格式化时间显示
-      const startTime = new Date(event.startTime);
-      const endTime = new Date(event.endTime);
-      const formatTime = (date: Date) => {
-        return `${date.getMonth() + 1}月${date.getDate()}日 ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
-      };
-      
-      // 生成鼓励语言
-      const encouragements = [
-        '太棒了！又一个充实的安排！',
-        '很好的时间规划！',
-        '继续保持这种积极的生活态度！',
-        '规律的日程会让生活更有条理！',
-        '为你的时间管理点赞！'
-      ];
-      const encouragement = encouragements[Math.floor(Math.random() * encouragements.length)];
-      
-      Alert.alert(
-        '🎯 解析成功',
-        `${encouragement}\n\n📅 事件：${event.title}\n⏰ 时间：${formatTime(startTime)} - ${formatTime(endTime)}\n${event.location ? `📍 地点：${event.location}\n` : ''}🎯 置信度：${confidence}%\n\n确认创建这个日程吗？`,
-        [
-          { text: '取消', style: 'cancel' },
-          { 
-            text: '✅ 创建', 
-            onPress: () => handleCreateAIEvent(event)
+      if (result.events.length === 1) {
+        // 单个事件的情况
+        const event = result.events[0];
+        
+        // 格式化时间显示
+        const startTime = new Date(event.startTime);
+        const endTime = new Date(event.endTime);
+        const formatTime = (date: Date) => {
+          return `${date.getMonth() + 1}月${date.getDate()}日 ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+        };
+        
+        // 生成鼓励语言
+        const encouragements = [
+          '太棒了！又一个充实的安排！',
+          '很好的时间规划！',
+          '继续保持这种积极的生活态度！',
+          '规律的日程会让生活更有条理！',
+          '为你的时间管理点赞！'
+        ];
+        const encouragement = encouragements[Math.floor(Math.random() * encouragements.length)];
+        
+        Alert.alert(
+          '🎯 解析成功',
+          `${encouragement}\n\n📅 事件：${event.title}\n⏰ 时间：${formatTime(startTime)} - ${formatTime(endTime)}\n${event.location ? `📍 地点：${event.location}\n` : ''}🎯 置信度：${confidence}%\n\n确认创建这个日程吗？`,
+          [
+            { text: '取消', style: 'cancel' },
+            { 
+              text: '✅ 创建', 
+              onPress: () => handleCreateAIEvent(event)
+            }
+          ]
+        );
+      } else {
+        // 多个事件的情况
+        const formatTime = (date: Date) => {
+          return `${date.getMonth() + 1}月${date.getDate()}日 ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+        };
+        
+        let eventsList = '';
+        result.events.forEach((event, index) => {
+          const startTime = new Date(event.startTime);
+          const endTime = new Date(event.endTime);
+          eventsList += `${index + 1}. ${event.title}\n   ⏰ ${formatTime(startTime)} - ${formatTime(endTime)}\n`;
+          if (event.location) {
+            eventsList += `   📍 ${event.location}\n`;
           }
-        ]
-      );
+          eventsList += '\n';
+        });
+        
+        Alert.alert(
+          '🎯 解析成功',
+          `识别到 ${result.events.length} 个日程：\n\n${eventsList}🎯 置信度：${confidence}%\n\n确认创建所有日程吗？`,
+          [
+            { text: '取消', style: 'cancel' },
+            { 
+              text: '✅ 创建全部', 
+              onPress: () => handleCreateMultipleAIEvents(result.events)
+            }
+          ]
+        );
+      }
     } else {
       Alert.alert('解析失败', '未能识别到有效的日程事件，请重新输入');
     }
@@ -647,6 +704,104 @@ export default function HomeScreen() {
       }
   }
 
+  // 处理多个AI解析结果
+  const handleCreateMultipleAIEvents = async (events: any[]) => {
+    try {
+      let successCount = 0;
+      let failCount = 0;
+      
+      for (const event of events) {
+        try {
+          await handleCreateAIEvent(event);
+          successCount++;
+        } catch (error) {
+          console.error('创建事件失败:', error);
+          failCount++;
+        }
+      }
+      
+      // 显示结果
+      if (successCount > 0 && failCount === 0) {
+        Alert.alert(
+          '✅ 创建成功', 
+          `成功创建了 ${successCount} 个日程`,
+          [{ text: '好的', style: 'default' }]
+        );
+      } else if (successCount > 0 && failCount > 0) {
+        Alert.alert(
+          '⚠️ 部分成功', 
+          `成功创建了 ${successCount} 个日程，${failCount} 个失败`,
+          [{ text: '好的', style: 'default' }]
+        );
+      } else {
+        Alert.alert(
+          '❌ 创建失败', 
+          '所有日程创建都失败了',
+          [{ text: '好的', style: 'default' }]
+        );
+      }
+      
+      // 重新获取当月事件
+      const currentDate = new Date();
+      await fetchEvents(currentDate.getFullYear(), currentDate.getMonth() + 1);
+    } catch (error) {
+      console.error('批量创建事件失败:', error);
+      Alert.alert('错误', '批量创建日程时发生错误');
+    }
+  };
+
+  // 处理多个记账项目
+  const handleSaveMultipleExpenses = async (expenses: any[]) => {
+    try {
+      let successCount = 0;
+      let failCount = 0;
+      
+      for (const expense of expenses) {
+        try {
+          await handleSaveExpense({
+            amount: expense.amount,
+            category: expense.category,
+            description: expense.description || null,
+            date: expense.date.toISOString().split('T')[0],
+            type: expense.type,
+            user_id: user.id,
+          });
+          successCount++;
+        } catch (error) {
+          console.error('保存记账项目失败:', error);
+          failCount++;
+        }
+      }
+      
+      // 显示结果
+      if (successCount > 0 && failCount === 0) {
+        Alert.alert(
+          '✅ 保存成功', 
+          `成功保存了 ${successCount} 个记账项目`,
+          [{ text: '好的', style: 'default' }]
+        );
+      } else if (successCount > 0 && failCount > 0) {
+        Alert.alert(
+          '⚠️ 部分成功', 
+          `成功保存了 ${successCount} 个记账项目，${failCount} 个失败`,
+          [{ text: '好的', style: 'default' }]
+        );
+      } else {
+        Alert.alert(
+          '❌ 保存失败', 
+          '所有记账项目保存都失败了',
+          [{ text: '好的', style: 'default' }]
+        );
+      }
+      
+      // 重新获取记账数据
+      await fetchExpenses();
+    } catch (error) {
+      console.error('批量保存记账项目失败:', error);
+      Alert.alert('错误', '批量保存记账项目时发生错误');
+    }
+  };
+
 
   // 处理文字输入错误
   const handleTextError = (error: string) => {
@@ -656,10 +811,44 @@ export default function HomeScreen() {
 
   // 处理记账保存
   const handleSaveExpense = async (expenseData: TablesInsert<'expenses'>) => {
-    const { data, error } = await supabase.from('expenses').insert(expenseData).select();
+    // 确保用户已登录
+    if (!user) {
+      Alert.alert('错误', '用户未登录，无法保存记账');
+      return;
+    }
+
+    // 使用类型守卫确保 user 不为 null
+    const currentUser = user;
+    if (!currentUser) {
+      Alert.alert('错误', '用户状态异常');
+      return;
+    }
+
+    // 检查当前认证状态
+    const { data: { session } } = await supabase.auth.getSession();
+    console.log('当前会话:', session?.user?.id);
+    console.log('当前用户ID:', currentUser.id);
+
+    // 确保设置正确的 user_id
+    const expenseWithUserId = {
+      ...expenseData,
+      user_id: currentUser.id,
+    };
+
+    console.log('保存记账数据:', expenseWithUserId);
+
+    // 先测试认证状态
+    const { data: authTest } = await supabase.auth.getUser();
+    console.log('认证用户测试:', authTest);
+
+    // 尝试直接插入
+    const { data, error } = await supabase
+      .from('expenses')
+      .insert(expenseWithUserId)
+      .select();
     if (error) {
-      Alert.alert('错误', '保存记账失败');
-      console.error(error);
+      console.error('保存记账失败:', error);
+      Alert.alert('错误', `保存记账失败: ${error.message}`);
     } else if (data) {
       Alert.alert('成功', '记账已保存');
       setShowAddExpenseModal(false);
