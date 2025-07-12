@@ -1093,30 +1093,6 @@ export default function HomeScreen() {
             <Text style={styles.filterButtonText}>{filterOptions.find(opt => opt.value === selectedFilter)?.label}</Text>
             <Text style={styles.filterIcon}>▼</Text>
           </TouchableOpacity>
-          {showFilterMenu && (
-            <Modal
-              transparent={true}
-              visible={showFilterMenu}
-              onRequestClose={toggleFilterMenu}
-            >
-              <TouchableOpacity
-                style={styles.filterMenuOverlay}
-                onPress={toggleFilterMenu}
-              >
-                <View style={styles.filterMenu}>
-                  {filterOptions.map((option) => (
-                    <TouchableOpacity
-                      key={option.value}
-                      style={styles.filterMenuItem}
-                      onPress={() => handleFilterSelect(option.value)}
-                    >
-                      <Text style={styles.filterMenuText}>{option.label}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </TouchableOpacity>
-            </Modal>
-          )}
           <TouchableOpacity style={styles.avatarButton} onPress={navigateToProfile}>
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>👤</Text>
@@ -1124,6 +1100,20 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
       </View>
+
+      {showFilterMenu && (
+        <View style={styles.filterMenu}>
+          {filterOptions.map((option) => (
+            <TouchableOpacity
+              key={option.value}
+              style={styles.filterMenuItem}
+              onPress={() => handleFilterSelect(option.value)}
+            >
+              <Text style={styles.filterMenuText}>{option.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* 日历部分 */}
@@ -1317,42 +1307,6 @@ export default function HomeScreen() {
         disabled={voiceState.isLoading || isProcessingImage}
       />
 
-      {/* 过滤菜单 */}
-      {showFilterMenu && (
-        <View style={styles.filterMenuContainer}>
-          <TouchableOpacity 
-            style={styles.filterMenuOverlay} 
-            onPress={() => setShowFilterMenu(false)}
-          />
-          <View style={styles.filterMenu}>
-            {filterOptions.map((option, index) => (
-              <TouchableOpacity
-                key={index}
-                style={[
-                  styles.filterOption,
-                  selectedFilter === option.value && styles.selectedFilterOption
-                ]}
-                onPress={() => handleFilterSelect(option.value)}
-              >
-                                 <View style={styles.filterOptionContent}>
-                   <View style={[styles.filterOptionIconContainer, { backgroundColor: option.bgColor }]}>
-                     <Text style={[styles.filterOptionIcon, { color: option.color }]}>
-                       {option.icon}
-                     </Text>
-                   </View>
-                   <Text style={[
-                     styles.filterOptionText,
-                     selectedFilter === option.value && styles.selectedFilterOptionText
-                   ]}>
-                     {option.label}
-                   </Text>
-                 </View>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-      )}
-      
       {/* 添加事件模态框 */}
       <AddEventModal
         visible={showAddEventModal}
@@ -1494,8 +1448,9 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   filterMenu: {
-    marginTop: 110,
-    right: 60,
+    position: 'absolute',
+    top: 60, // Adjust this value to position the menu correctly below the button
+    right: 60, // Adjust this value to align with the button
     backgroundColor: 'white',
     borderRadius: 8,
     padding: 8,
@@ -1504,6 +1459,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
+    zIndex: 1000, // Make sure menu is on top
   },
   filterMenuItem: {
     paddingVertical: 10,
@@ -1878,44 +1834,5 @@ const styles = StyleSheet.create({
     fontWeight: '300',
   },
   
-  // 过滤菜单样式
-  filterMenuContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 1000,
-  },
-  filterOption: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  selectedFilterOption: {
-    backgroundColor: '#f0f8ff',
-  },
-  filterOptionContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  filterOptionIconContainer: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 8,
-  },
-  filterOptionIcon: {
-    fontSize: 14,
-  },
-  filterOptionText: {
-    fontSize: 16,
-    color: '#333',
-  },
-  selectedFilterOptionText: {
-    color: '#007AFF',
-    fontWeight: '600',
-  },
-
+  // No longer need filterMenuContainer or the complex structure inside it
 });
