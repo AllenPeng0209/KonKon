@@ -1,24 +1,24 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Modal,
-  TextInput,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Switch,
-} from 'react-native';
 import { CreateEventData } from '@/hooks/useEvents';
+import { t } from '@/lib/i18n';
+import { useEffect, useState } from 'react';
+import {
+    Alert,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 
-// 定义事件类型
 const eventTypes = [
-  { label: '日曆', value: 'calendar', icon: '🔔' },
-  { label: '想法', value: 'idea', icon: '💡' },
-  { label: '心情', value: 'mood', icon: '❤️' },
+  { label: t('addEventModal.eventType_calendar'), value: 'calendar', icon: '🔔' },
+  { label: t('addEventModal.eventType_idea'), value: 'idea', icon: '💡' },
+  { label: t('addEventModal.eventType_mood'), value: 'mood', icon: '❤️' },
 ];
 
 interface AddEventModalProps {
@@ -52,19 +52,18 @@ export default function AddEventModal({
   const [type, setType] = useState('calendar');
 
   const colorOptions = [
-    { name: '蓝色', value: '#007AFF' },
-    { name: '红色', value: '#FF3B30' },
-    { name: '绿色', value: '#34C759' },
-    { name: '橙色', value: '#FF9500' },
-    { name: '紫色', value: '#AF52DE' },
-    { name: '粉色', value: '#FF2D92' },
+    { name: t('addEventModal.color_blue'), value: '#007AFF' },
+    { name: t('addEventModal.color_red'), value: '#FF3B30' },
+    { name: t('addEventModal.color_green'), value: '#34C759' },
+    { name: t('addEventModal.color_orange'), value: '#FF9500' },
+    { name: t('addEventModal.color_purple'), value: '#AF52DE' },
+    { name: t('addEventModal.color_pink'), value: '#FF2D92' },
   ];
   const [selectedColor, setSelectedColor] = useState(colorOptions[0].value);
 
   useEffect(() => {
     if (visible) {
       if (editingEvent) {
-        // 编辑模式
         setTitle(editingEvent.title || '');
         setDescription(editingEvent.description || '');
         setLocation(editingEvent.location || '');
@@ -78,14 +77,12 @@ export default function AddEventModal({
         setStartTime(formatTime(new Date(editingEvent.start_ts * 1000)));
         setEndTime(formatTime(new Date(editingEvent.end_ts * 1000)));
         
-        // 其他字段...
         if (editingEvent.shared_families && editingEvent.shared_families.length > 0) {
           setSelectedCalendar(editingEvent.shared_families[0]);
         } else {
           setSelectedCalendar('personal');
         }
       } else {
-        // 新建模式
         resetForm();
       }
     }
@@ -105,19 +102,13 @@ export default function AddEventModal({
   };
 
   const formatTimeInput = (text: string): string => {
-    // 移除所有非数字字符
     const numbers = text.replace(/[^\d]/g, '');
-    
-    // 如果没有数字，返回空字符串
     if (numbers.length === 0) return '';
-    
-    // 根据数字长度自动添加冒号
     if (numbers.length <= 2) {
       return numbers;
     } else if (numbers.length <= 4) {
       return `${numbers.slice(0, 2)}:${numbers.slice(2)}`;
     } else {
-      // 限制最多4位数字
       return `${numbers.slice(0, 2)}:${numbers.slice(2, 4)}`;
     }
   };
@@ -134,27 +125,25 @@ export default function AddEventModal({
 
   const handleSave = async () => {
     if (!title.trim()) {
-      Alert.alert('错误', '请输入事件标题');
+      Alert.alert(t('addEventModal.error'), t('addEventModal.titleRequired'));
       return;
     }
 
-    // 验证时间格式
     if (!allDay && startTime && !isValidTime(startTime)) {
-      Alert.alert('错误', '请输入正确的开始时间格式 (HH:MM)');
+      Alert.alert(t('addEventModal.error'), t('addEventModal.invalidStartTime'));
       return;
     }
 
     if (!allDay && endTime && !isValidTime(endTime)) {
-      Alert.alert('错误', '请输入正确的结束时间格式 (HH:MM)');
+      Alert.alert(t('addEventModal.error'), t('addEventModal.invalidEndTime'));
       return;
     }
 
-    // 验证结束时间是否在开始时间之后
     if (!allDay && startTime && endTime) {
       const start = timeToMinutes(startTime);
       const end = timeToMinutes(endTime);
       if (end <= start) {
-        Alert.alert('错误', '结束时间必须晚于开始时间');
+        Alert.alert(t('addEventModal.error'), t('addEventModal.endTimeAfterStartTime'));
         return;
       }
     }
@@ -181,9 +170,8 @@ export default function AddEventModal({
       
       handleClose();
     } catch (error) {
-      console.error('保存事件失败:', error);
-      const errorMessage = error instanceof Error ? error.message : editingEvent ? '更新事件失败' : '创建事件失败';
-      Alert.alert('错误', errorMessage);
+      const errorMessage = error instanceof Error ? error.message : editingEvent ? t('addEventModal.updateFailed') : t('addEventModal.saveFailed');
+      Alert.alert(t('addEventModal.error'), errorMessage);
     } finally {
       setLoading(false);
     }
@@ -205,7 +193,7 @@ export default function AddEventModal({
   };
 
   const formatDate = (date: Date): string => {
-    return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
+    return date.toLocaleDateString();
   };
 
   const adjustDate = (days: number) => {
@@ -225,17 +213,15 @@ export default function AddEventModal({
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}
       >
-        {/* 顶部装饰条 */}
         <View style={styles.topIndicator} />
         
-        {/* 标题栏 */}
         <View style={styles.header}>
           <TouchableOpacity onPress={handleClose} style={styles.headerButton}>
             <Text style={styles.cancelButton}>✕</Text>
           </TouchableOpacity>
           <View style={styles.titleContainer}>
-            <Text style={styles.title}>{editingEvent ? '编辑事件' : '创建事件'}</Text>
-            <Text style={styles.subtitle}>记录美好时光</Text>
+            <Text style={styles.title}>{editingEvent ? t('addEventModal.editEvent') : t('addEventModal.createEvent')}</Text>
+            <Text style={styles.subtitle}>{t('addEventModal.recordGoodTimes')}</Text>
           </View>
           <TouchableOpacity 
             onPress={handleSave} 
@@ -243,280 +229,142 @@ export default function AddEventModal({
             style={[styles.headerButton, styles.saveButtonContainer, loading && styles.saveButtonDisabled]}
           >
             <Text style={[styles.saveButton, loading && styles.saveButtonTextDisabled]}>
-              {loading ? '...' : (editingEvent ? '更新' : '保存')}
+              {loading ? t('addEventModal.saving') : (editingEvent ? t('addEventModal.update') : t('addEventModal.save'))}
             </Text>
           </TouchableOpacity>
         </View>
 
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          {/* 事件类型选择 */}
-          <View style={styles.typeSelectorContainer}>
-            {eventTypes.map((item) => (
+        <ScrollView showsVerticalScrollIndicator={false}>
+          <View style={styles.dateSelector}>
+            <TouchableOpacity onPress={() => adjustDate(-1)} style={styles.arrowButton}>
+              <Text style={styles.arrowText}>◀</Text>
+            </TouchableOpacity>
+            <Text style={styles.dateText}>{formatDate(date)}</Text>
+            <TouchableOpacity onPress={() => adjustDate(1)} style={styles.arrowButton}>
+              <Text style={styles.arrowText}>▶</Text>
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.eventTypeContainer}>
+            {eventTypes.map(item => (
               <TouchableOpacity
                 key={item.value}
-                style={[
-                  styles.typeButton,
-                  type === item.value && styles.selectedTypeButton,
-                ]}
+                style={[styles.eventTypeButton, type === item.value && styles.eventTypeButtonSelected]}
                 onPress={() => setType(item.value)}
               >
-                <Text style={styles.typeButtonIcon}>{item.icon}</Text>
-                <Text
-                  style={[
-                    styles.typeButtonText,
-                    type === item.value && styles.selectedTypeButtonText,
-                  ]}
-                >
-                  {item.label}
-                </Text>
+                <Text style={styles.eventTypeIcon}>{item.icon}</Text>
+                <Text style={styles.eventTypeText}>{item.label}</Text>
               </TouchableOpacity>
             ))}
           </View>
 
-          {/* 事件标题 */}
-          <View style={styles.section}>
-            <View style={styles.labelContainer}>
-              <Text style={styles.labelEmoji}>📝</Text>
-              <Text style={styles.label}>事件标题</Text>
-              <Text style={styles.required}>*</Text>
-            </View>
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={styles.input}
-                value={title}
-                onChangeText={setTitle}
-                placeholder="给你的事件起个名字..."
-                placeholderTextColor="#9ca3af"
-                maxLength={100}
-                autoFocus
-              />
-            </View>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>{t('addEventModal.title')}</Text>
+            <TextInput
+              style={styles.input}
+              value={title}
+              onChangeText={setTitle}
+              placeholder={t('addEventModal.titlePlaceholder')}
+              placeholderTextColor="#c7c7cd"
+            />
           </View>
 
-          {/* 事件描述 */}
-          <View style={styles.section}>
-            <View style={styles.labelContainer}>
-              <Text style={styles.labelEmoji}>💭</Text>
-              <Text style={styles.label}>事件描述</Text>
-            </View>
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                value={description}
-                onChangeText={setDescription}
-                placeholder="描述这个特别的时刻..."
-                placeholderTextColor="#9ca3af"
-                multiline
-                numberOfLines={3}
-                maxLength={500}
-              />
-            </View>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>{t('addEventModal.description')}</Text>
+            <TextInput
+              style={[styles.input, styles.multilineInput]}
+              value={description}
+              onChangeText={setDescription}
+              placeholder={t('addEventModal.descriptionPlaceholder')}
+              placeholderTextColor="#c7c7cd"
+              multiline
+            />
+          </View>
+          
+          <View style={styles.switchContainer}>
+            <Text style={styles.label}>{t('addEventModal.allDay')}</Text>
+            <Switch
+              value={allDay}
+              onValueChange={setAllDay}
+              trackColor={{ false: "#767577", true: "#81b0ff" }}
+              thumbColor={allDay ? "#f5dd4b" : "#f4f3f4"}
+            />
           </View>
 
-          {/* 日期选择 */}
-          <View style={styles.section}>
-            <View style={styles.labelContainer}>
-              <Text style={styles.labelEmoji}>📅</Text>
-              <Text style={styles.label}>日期</Text>
-            </View>
-            <View style={styles.inputContainer}>
-              <View style={styles.dateContainer}>
-                <TouchableOpacity 
-                  style={styles.dateButton}
-                  onPress={() => adjustDate(-1)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.dateButtonText}>←</Text>
-                </TouchableOpacity>
-                <View style={styles.dateTextContainer}>
-                  <Text style={styles.dateText}>{formatDate(date)}</Text>
-                  <Text style={styles.dateSubtext}>选择日期</Text>
-                </View>
-                <TouchableOpacity 
-                  style={styles.dateButton}
-                  onPress={() => adjustDate(1)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.dateButtonText}>→</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-
-          {/* 全天开关 */}
-          <View style={styles.section}>
-            <View style={styles.labelContainer}>
-              <Text style={styles.labelEmoji}>⏰</Text>
-              <Text style={styles.label}>全天事件</Text>
-            </View>
-            <View style={styles.inputContainer}>
-              <View style={styles.switchContainer}>
-                <View style={styles.switchInfo}>
-                  <Text style={styles.switchTitle}>全天</Text>
-                  <Text style={styles.switchSubtitle}>不设置具体时间</Text>
-                </View>
-                <Switch
-                  value={allDay}
-                  onValueChange={setAllDay}
-                  trackColor={{ false: '#e5e7eb', true: '#bfdbfe' }}
-                  thumbColor={allDay ? '#3b82f6' : '#ffffff'}
-                  ios_backgroundColor="#e5e7eb"
-                />
-              </View>
-            </View>
-          </View>
-
-          {/* 时间设置 */}
           {!allDay && (
-            <View style={styles.section}>
-              <View style={styles.labelContainer}>
-                <Text style={styles.labelEmoji}>🕐</Text>
-                <Text style={styles.label}>时间</Text>
-              </View>
-              <View style={styles.inputContainer}>
-                <View style={styles.timeContainer}>
-                  <View style={styles.timeInputContainer}>
-                    <Text style={styles.timeLabel}>开始</Text>
-                    <TextInput
-                      style={styles.timeInput}
-                      value={startTime}
-                      onChangeText={handleStartTimeChange}
-                      placeholder="09:00"
-                      placeholderTextColor="#d1d5db"
-                      keyboardType="numeric"
-                      maxLength={5}
-                      autoCorrect={false}
-                      autoComplete="off"
-                      returnKeyType="done"
-                      selectTextOnFocus={true}
-                      editable={true}
-                    />
-                  </View>
-                  <View style={styles.timeSeparatorContainer}>
-                    <Text style={styles.timeSeparator}>→</Text>
-                    <Text style={styles.timeToText}>至</Text>
-                  </View>
-                  <View style={styles.timeInputContainer}>
-                    <Text style={styles.timeLabel}>结束</Text>
-                    <TextInput
-                      style={styles.timeInput}
-                      value={endTime}
-                      onChangeText={handleEndTimeChange}
-                      placeholder="10:00"
-                      placeholderTextColor="#d1d5db"
-                      keyboardType="numeric"
-                      maxLength={5}
-                      autoCorrect={false}
-                      autoComplete="off"
-                      returnKeyType="done"
-                      selectTextOnFocus={true}
-                      editable={true}
-                    />
-                  </View>
-                </View>
-              </View>
+            <View style={styles.timeInputContainer}>
+              <TextInput
+                style={styles.timeInput}
+                value={startTime}
+                onChangeText={handleStartTimeChange}
+                placeholder="09:00"
+                keyboardType="numeric"
+                maxLength={5}
+              />
+              <Text style={styles.timeSeparator}>-</Text>
+              <TextInput
+                style={styles.timeInput}
+                value={endTime}
+                onChangeText={handleEndTimeChange}
+                placeholder="10:00"
+                keyboardType="numeric"
+                maxLength={5}
+              />
             </View>
           )}
 
-          {/* 位置 */}
-          <View style={styles.section}>
-            <View style={styles.labelContainer}>
-              <Text style={styles.labelEmoji}>📍</Text>
-              <Text style={styles.label}>位置</Text>
-            </View>
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={styles.input}
-                value={location}
-                onChangeText={setLocation}
-                placeholder="在哪里发生呢？"
-                placeholderTextColor="#9ca3af"
-                maxLength={100}
-              />
-            </View>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>{t('addEventModal.location')}</Text>
+            <TextInput
+              style={styles.input}
+              value={location}
+              onChangeText={setLocation}
+              placeholder={t('addEventModal.locationPlaceholder')}
+              placeholderTextColor="#c7c7cd"
+            />
           </View>
 
-          {/* 日历选择 */}
-          <View style={styles.section}>
-            <View style={styles.labelContainer}>
-              <Text style={styles.labelEmoji}>📚</Text>
-              <Text style={styles.label}>保存到</Text>
-            </View>
-            <View style={styles.inputContainer}>
-              <View style={styles.calendarContainer}>
-                {/* 个人日历选项 */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>{t('addEventModal.color')}</Text>
+            <View style={styles.colorContainer}>
+              {colorOptions.map(color => (
                 <TouchableOpacity
+                  key={color.value}
                   style={[
-                    styles.calendarOption,
-                    selectedCalendar === 'personal' && styles.selectedCalendarOption
+                    styles.colorOption,
+                    { backgroundColor: color.value },
+                    selectedColor === color.value && styles.selectedColor,
                   ]}
-                  onPress={() => setSelectedCalendar('personal')}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.calendarIcon}>👤</Text>
-                  <Text style={[
-                    styles.calendarText,
-                    selectedCalendar === 'personal' && styles.selectedCalendarText
-                  ]}>
-                    个人日历
-                  </Text>
-                  {selectedCalendar === 'personal' && (
-                    <Text style={styles.calendarCheckmark}>✓</Text>
-                  )}
-                </TouchableOpacity>
-                
-                {/* 群组日历选项 */}
-                {userFamilies.map((family) => (
-                  <TouchableOpacity
-                    key={family.id}
-                    style={[
-                      styles.calendarOption,
-                      selectedCalendar === family.id && styles.selectedCalendarOption
-                    ]}
-                    onPress={() => setSelectedCalendar(family.id)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.calendarIcon}>👨‍👩‍👧‍👦</Text>
-                    <Text style={[
-                      styles.calendarText,
-                      selectedCalendar === family.id && styles.selectedCalendarText
-                    ]}>
-                      {family.name}
-                    </Text>
-                    {selectedCalendar === family.id && (
-                      <Text style={styles.calendarCheckmark}>✓</Text>
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </View>
+                  onPress={() => setSelectedColor(color.value)}
+                />
+              ))}
             </View>
           </View>
 
-          {/* 颜色选择 */}
-          <View style={styles.section}>
-            <View style={styles.labelContainer}>
-              <Text style={styles.labelEmoji}>🎨</Text>
-              <Text style={styles.label}>颜色标签</Text>
-            </View>
-            <View style={styles.inputContainer}>
-              <View style={styles.colorContainer}>
-                {colorOptions.map((color) => (
-                  <TouchableOpacity
-                    key={color.value}
-                    style={[
-                      styles.colorOption,
-                      { backgroundColor: color.value },
-                      selectedColor === color.value && styles.selectedColorOption
-                    ]}
-                    onPress={() => setSelectedColor(color.value)}
-                    activeOpacity={0.7}
-                  >
-                    {selectedColor === color.value && (
-                      <Text style={styles.colorCheckmark}>✓</Text>
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </View>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>{t('addEventModal.share')}</Text>
+            <View style={styles.calendarSelector}>
+              <TouchableOpacity
+                style={[
+                  styles.calendarButton,
+                  selectedCalendar === 'personal' && styles.calendarButtonSelected
+                ]}
+                onPress={() => setSelectedCalendar('personal')}
+              >
+                <Text style={styles.calendarButtonText}>{t('addEventModal.personal')}</Text>
+              </TouchableOpacity>
+              {userFamilies.map(family => (
+                <TouchableOpacity
+                  key={family.id}
+                  style={[
+                    styles.calendarButton,
+                    selectedCalendar === family.id && styles.calendarButtonSelected
+                  ]}
+                  onPress={() => setSelectedCalendar(family.id)}
+                >
+                  <Text style={styles.calendarButtonText}>{family.name}</Text>
+                </TouchableOpacity>
+              ))}
             </View>
           </View>
         </ScrollView>
@@ -527,420 +375,194 @@ export default function AddEventModal({
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
     backgroundColor: '#fff',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -3 },
     shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 5,
-    flex: 1,
+    shadowRadius: 5,
+    elevation: 20,
   },
   topIndicator: {
     width: 40,
-    height: 4,
-    backgroundColor: '#d1d5db',
-    borderRadius: 2,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: '#ccc',
     alignSelf: 'center',
-    marginTop: 12,
+    marginTop: 8,
     marginBottom: 8,
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 20,
-    backgroundColor: '#ffffff',
+    justifyContent: 'space-between',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.05)',
+    borderBottomColor: '#f0f0f0',
   },
   headerButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f8fafc',
+    padding: 8,
+  },
+  cancelButton: {
+    fontSize: 24,
+    color: '#888',
   },
   titleContainer: {
-    flex: 1,
     alignItems: 'center',
-    marginHorizontal: 16,
   },
   title: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#1f2937',
-    letterSpacing: 0.5,
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   subtitle: {
     fontSize: 13,
-    color: '#9ca3af',
+    color: '#888',
     marginTop: 2,
-    fontWeight: '500',
-    letterSpacing: 0.3,
-  },
-  cancelButton: {
-    fontSize: 18,
-    color: '#6b7280',
-    fontWeight: '600',
   },
   saveButtonContainer: {
-    backgroundColor: '#3b82f6',
-    shadowColor: '#3b82f6',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
+    backgroundColor: '#007AFF',
+    borderRadius: 8,
+    paddingHorizontal: 15,
+    paddingVertical: 8,
   },
   saveButton: {
-    fontSize: 15,
-    color: '#ffffff',
-    fontWeight: '700',
-    letterSpacing: 0.3,
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   saveButtonDisabled: {
-    backgroundColor: '#e5e7eb',
-    shadowOpacity: 0,
+    backgroundColor: '#a0c7ff',
   },
   saveButtonTextDisabled: {
-    color: '#9ca3af',
+    color: '#e0e0e0',
   },
-  content: {
-    flex: 1,
-    padding: 24,
-  },
-  section: {
-    marginBottom: 28,
-  },
-  labelContainer: {
+  dateSelector: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    padding: 15,
   },
-  labelEmoji: {
-    fontSize: 18,
-    marginRight: 8,
+  arrowButton: {
+    padding: 10,
+  },
+  arrowText: {
+    fontSize: 20,
+    color: '#007AFF',
+  },
+  dateText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  eventTypeContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingHorizontal: 15,
+    paddingBottom: 15,
+  },
+  eventTypeButton: {
+    alignItems: 'center',
+    padding: 10,
+    borderRadius: 10,
+    backgroundColor: '#f0f0f0',
+  },
+  eventTypeButtonSelected: {
+    backgroundColor: '#007AFF',
+  },
+  eventTypeIcon: {
+    fontSize: 24,
+  },
+  eventTypeText: {
+    marginTop: 5,
+    color: '#000',
+  },
+  inputGroup: {
+    paddingHorizontal: 20,
+    marginBottom: 15,
   },
   label: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#1f2937',
-    letterSpacing: 0.3,
-    flex: 1,
-  },
-  required: {
-    fontSize: 16,
-    color: '#ef4444',
-    fontWeight: '700',
-    marginLeft: 4,
-  },
-  inputContainer: {
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
+    fontWeight: 'bold',
+    marginBottom: 8,
   },
   input: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    paddingHorizontal: 18,
-    paddingVertical: 16,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.08)',
-    color: '#1f2937',
-    letterSpacing: 0.2,
-    fontWeight: '500',
-  },
-  textArea: {
-    height: 90,
-    textAlignVertical: 'top',
-    lineHeight: 22,
-  },
-  dateContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.08)',
-  },
-  dateButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: '#f0f2f5',
     borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.05)',
-    shadowColor: '#3b82f6',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    padding: 12,
+    fontSize: 16,
   },
-  dateButtonText: {
-    fontSize: 18,
-    color: '#3b82f6',
-    fontWeight: '700',
-    letterSpacing: 0.3,
-  },
-  dateTextContainer: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  dateText: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#1f2937',
-    letterSpacing: 0.3,
-  },
-  dateSubtext: {
-    fontSize: 12,
-    color: '#9ca3af',
-    marginTop: 2,
-    fontWeight: '500',
+  multilineInput: {
+    height: 100,
+    textAlignVertical: 'top',
   },
   switchContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.1)',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  switchInfo: {
-    flex: 1,
-  },
-  switchTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1f2937',
-    letterSpacing: 0.3,
-  },
-  switchSubtitle: {
-    fontSize: 12,
-    color: '#9ca3af',
-    marginTop: 2,
-    fontWeight: '500',
-  },
-  timeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
     paddingHorizontal: 20,
-    paddingVertical: 18,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.08)',
+    paddingVertical: 10,
   },
   timeInputContainer: {
-    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
-  },
-  timeLabel: {
-    fontSize: 12,
-    color: '#9ca3af',
-    marginBottom: 8,
-    fontWeight: '600',
-    letterSpacing: 0.3,
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
   },
   timeInput: {
-    fontSize: 18,
-    textAlign: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.08)',
+    flex: 1,
+    backgroundColor: '#f0f2f5',
     borderRadius: 10,
-    minWidth: 100,
-    backgroundColor: '#f8fafc',
-    color: '#1f2937',
-    fontWeight: '700',
-    letterSpacing: 0.5,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.02,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  timeSeparatorContainer: {
-    alignItems: 'center',
-    marginHorizontal: 16,
+    padding: 12,
+    fontSize: 16,
+    textAlign: 'center',
   },
   timeSeparator: {
-    fontSize: 20,
-    color: '#3b82f6',
-    fontWeight: '700',
-    letterSpacing: 0.2,
-  },
-  timeToText: {
-    fontSize: 10,
-    color: '#9ca3af',
-    fontWeight: '500',
-    marginTop: 2,
+    marginHorizontal: 10,
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   colorContainer: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 16,
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.1)',
+    justifyContent: 'space-between',
+    paddingTop: 5,
   },
   colorOption: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 3,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 2,
     borderColor: 'transparent',
+  },
+  selectedColor: {
+    borderColor: '#fff',
+    elevation: 5,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 3,
+      height: 2,
     },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 4,
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
-  selectedColorOption: {
-    borderColor: '#1f2937',
-    shadowOpacity: 0.3,
-    shadowColor: '#1f2937',
-    transform: [{ scale: 1.1 }],
-  },
-  colorCheckmark: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-  },
-  
-  // 日历选择样式
-  calendarContainer: {
-    gap: 8,
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.1)',
-  },
-  calendarOption: {
+  calendarSelector: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f8fafc',
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.06)',
-    marginVertical: 4,
+    paddingVertical: 5,
   },
-  selectedCalendarOption: {
-    borderColor: '#3b82f6',
-    backgroundColor: '#eff6ff',
-    shadowColor: '#3b82f6',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  calendarIcon: {
-    fontSize: 20,
-    marginRight: 12,
-  },
-  calendarText: {
-    flex: 1,
-    fontSize: 15,
-    color: '#374151',
-    fontWeight: '600',
-    letterSpacing: 0.2,
-  },
-  selectedCalendarText: {
-    color: '#3b82f6',
-    fontWeight: '700',
-  },
-  calendarCheckmark: {
-    color: '#3b82f6',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  // 新增样式
-  typeSelectorContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 20,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 12,
-    padding: 6,
-  },
-  typeButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+  calendarButton: {
+    paddingHorizontal: 15,
     paddingVertical: 10,
-    borderRadius: 8,
+    borderRadius: 20,
+    backgroundColor: '#f0f2f5',
+    marginRight: 10,
   },
-  selectedTypeButton: {
-    backgroundColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.15,
-    shadowRadius: 2,
-    elevation: 2,
+  calendarButtonSelected: {
+    backgroundColor: '#007AFF',
   },
-  typeButtonIcon: {
+  calendarButtonText: {
     fontSize: 16,
-    marginRight: 6,
-  },
-  typeButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#666',
-  },
-  selectedTypeButtonText: {
-    color: '#007AFF',
+    color: '#000',
   },
 }); 

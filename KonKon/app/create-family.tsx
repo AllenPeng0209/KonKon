@@ -1,19 +1,21 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-} from 'react-native';
+import { t } from '@/lib/i18n';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useFamily } from '../contexts/FamilyContext';
+import { useState } from 'react';
+import {
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
+import { useFamily } from '../contexts/FamilyContext';
 
 export default function CreateFamilyScreen() {
   const router = useRouter();
@@ -30,7 +32,7 @@ export default function CreateFamilyScreen() {
 
   const handleCreateFamily = async () => {
     if (!formData.name.trim()) {
-      Alert.alert('エラー', '家族名を入力してください');
+      Alert.alert(t('createFamily.errorTitle'), t('createFamily.errorNameRequired'));
       return;
     }
 
@@ -44,11 +46,11 @@ export default function CreateFamilyScreen() {
         // 直接跳转，不显示弹窗
         router.replace('/family-management');
       } else {
-        Alert.alert('エラー', error || '家族の作成に失敗しました');
+        Alert.alert(t('createFamily.errorTitle'), error || t('createFamily.errorCreateFailed'));
       }
     } catch (err) {
       console.error('家族作成エラー:', err);
-      Alert.alert('エラー', '家族の作成に失敗しました');
+      Alert.alert(t('createFamily.errorTitle'), t('createFamily.errorCreateFailed'));
     }
   };
 
@@ -61,43 +63,42 @@ export default function CreateFamilyScreen() {
         {/* 顶部标题栏 */}
         <View style={styles.header}>
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-            <Text style={styles.backIcon}>←</Text>
+            <Ionicons name="arrow-back" size={24} color="#007AFF" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>家族を作成</Text>
+          <Text style={styles.headerTitle}>{t('createFamily.title')}</Text>
           <View style={styles.headerRight} />
         </View>
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           {/* 说明文本 */}
           <View style={styles.introSection}>
-            <Text style={styles.introTitle}>新しい家族を作成</Text>
+            <Text style={styles.introTitle}>{t('createFamily.introTitle')}</Text>
             <Text style={styles.introText}>
-              家族の名前と説明を入力してください。{'\n'}
-              後で他のメンバーを招待できます。
+              {t('createFamily.introText')}
             </Text>
           </View>
 
           {/* 表单区域 */}
           <View style={styles.formSection}>
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>家族名 <Text style={styles.required}>*</Text></Text>
+              <Text style={styles.label}>{t('createFamily.familyName')} <Text style={styles.required}>*</Text></Text>
               <TextInput
                 style={styles.input}
                 value={formData.name}
                 onChangeText={(text) => setFormData({ ...formData, name: text })}
-                placeholder="例: 田中家"
+                placeholder={t('createFamily.familyNamePlaceholder')}
                 placeholderTextColor="#9CA3AF"
                 maxLength={50}
               />
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>説明 <Text style={styles.optional}>（任意）</Text></Text>
+              <Text style={styles.label}>{t('createFamily.description')} <Text style={styles.optional}>{t('createFamily.optional')}</Text></Text>
               <TextInput
                 style={[styles.input, styles.textArea]}
                 value={formData.description}
                 onChangeText={(text) => setFormData({ ...formData, description: text })}
-                placeholder="家族についての説明を入力してください"
+                placeholder={t('createFamily.descriptionPlaceholder')}
                 placeholderTextColor="#9CA3AF"
                 multiline
                 numberOfLines={4}
@@ -109,23 +110,23 @@ export default function CreateFamilyScreen() {
 
           {/* 功能说明 */}
           <View style={styles.featuresSection}>
-            <Text style={styles.featuresTitle}>家族を作成すると</Text>
+            <Text style={styles.featuresTitle}>{t('createFamily.featuresTitle')}</Text>
             <View style={styles.featuresList}>
               <View style={styles.featureItem}>
                 <Text style={styles.featureIcon}>📅</Text>
-                <Text style={styles.featureText}>共有のカレンダーでスケジュール管理</Text>
+                <Text style={styles.featureText}>{t('createFamily.featureSharedCalendar')}</Text>
               </View>
               <View style={styles.featureItem}>
                 <Text style={styles.featureIcon}>👥</Text>
-                <Text style={styles.featureText}>家族メンバーとの予定共有</Text>
+                <Text style={styles.featureText}>{t('createFamily.featureShareSchedules')}</Text>
               </View>
               <View style={styles.featureItem}>
                 <Text style={styles.featureIcon}>📝</Text>
-                <Text style={styles.featureText}>家事分担や買い物リストの管理</Text>
+                <Text style={styles.featureText}>{t('createFamily.featureManageTasks')}</Text>
               </View>
               <View style={styles.featureItem}>
                 <Text style={styles.featureIcon}>💬</Text>
-                <Text style={styles.featureText}>家族専用のコミュニケーション</Text>
+                <Text style={styles.featureText}>{t('createFamily.featureCommunication')}</Text>
               </View>
             </View>
           </View>
@@ -146,7 +147,7 @@ export default function CreateFamilyScreen() {
             disabled={loading}
           >
             <Text style={styles.createButtonText}>
-              {loading ? '作成中...' : '家族を作成'}
+              {loading ? t('createFamily.creatingButton') : t('createFamily.createButton')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -178,10 +179,6 @@ const styles = StyleSheet.create({
     height: 40,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  backIcon: {
-    fontSize: 24,
-    color: '#007AFF',
   },
   headerTitle: {
     flex: 1,

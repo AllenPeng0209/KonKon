@@ -1,16 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import { t } from '@/lib/i18n';
+import { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  Alert,
-  Modal,
-  ActivityIndicator,
+    ActivityIndicator,
+    Alert,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
-import { useRecurringEvents } from '../hooks/useRecurringEvents';
-import { RecurrenceInstance } from '../lib/recurrenceEngine';
+import { RecurringEventData, useRecurringEvents } from '../hooks/useRecurringEvents';
+import { RecurrenceInstance, RecurrenceRule } from '../lib/recurrenceEngine';
 import RecurrenceRuleEditor from './RecurrenceRuleEditor';
 
 interface RecurringEventManagerProps {
@@ -36,6 +37,7 @@ export default function RecurringEventManager({
   const [selectedInstance, setSelectedInstance] = useState<RecurrenceInstance | null>(null);
   const [actionType, setActionType] = useState<'modify' | 'cancel' | 'series' | null>(null);
   const [showRuleEditor, setShowRuleEditor] = useState(false);
+  const [seriesRule, setSeriesRule] = useState<RecurrenceRule | null>(null);
 
   useEffect(() => {
     loadInstances();
@@ -46,8 +48,9 @@ export default function RecurringEventManager({
     const endDate = new Date();
     endDate.setMonth(endDate.getMonth() + 6); // 加载6个月的实例
 
-    const instancesData = await getRecurringEventInstances(parentEventId, startDate, endDate);
+    const { instances: instancesData, rule } = await getRecurringEventInstances(parentEventId, startDate, endDate);
     setInstances(instancesData);
+    setSeriesRule(rule);
   };
 
   const handleInstanceAction = (instance: RecurrenceInstance, action: 'modify' | 'cancel') => {
@@ -63,12 +66,12 @@ export default function RecurringEventManager({
 
   const showCancelConfirmation = (instance: RecurrenceInstance) => {
     Alert.alert(
-      '取消事件',
-      `确定要取消 ${instance.start.toLocaleDateString('zh-CN')} 的这个事件吗？`,
+      t('recurringEventManager.cancelEvent'),
+      t('recurringEventManager.cancelConfirmation', { date: instance.start.toLocaleDateString() }),
       [
-        { text: '保留', style: 'cancel' },
+        { text: t('recurringEventManager.keep'), style: 'cancel' },
         {
-          text: '取消事件',
+          text: t('recurringEventManager.cancelThisEvent'),
           style: 'destructive',
           onPress: () => cancelInstance(instance),
         },
@@ -78,16 +81,16 @@ export default function RecurringEventManager({
 
   const showModifyOptions = (instance: RecurrenceInstance) => {
     Alert.alert(
-      '修改重复事件',
-      '选择修改范围',
+      t('recurringEventManager.modifyRecurringEvent'),
+      t('recurringEventManager.modifyScope'),
       [
-        { text: '取消', style: 'cancel' },
+        { text: t('recurringEventManager.cancel'), style: 'cancel' },
         {
-          text: '仅此事件',
+          text: t('recurringEventManager.onlyThisEvent'),
           onPress: () => modifyOnlyThisEvent(instance),
         },
         {
-          text: '此事件及以后',
+          text: t('recurringEventManager.thisAndFutureEvents'),
           onPress: () => modifyThisAndFutureEvents(instance),
         },
       ]
@@ -97,7 +100,7 @@ export default function RecurringEventManager({
   const cancelInstance = async (instance: RecurrenceInstance) => {
     const success = await cancelRecurringEventInstance(parentEventId, instance.start);
     if (success) {
-      Alert.alert('成功', '事件已取消');
+      Alert.alert(t('recurringEventManager.success'), t('recurringEventManager.eventCancelled'));
       loadInstances();
     }
   };
@@ -105,7 +108,7 @@ export default function RecurringEventManager({
   const modifyOnlyThisEvent = async (instance: RecurrenceInstance) => {
     // 这里应该打开事件编辑界面
     // 暂时显示提示
-    Alert.alert('功能开发中', '单个事件修改功能正在开发中');
+    Alert.alert(t('recurringEventManager.featureInProgress'), t('recurringEventManager.singleEventModificationInDev'));
   };
 
   const modifyThisAndFutureEvents = (instance: RecurrenceInstance) => {
@@ -116,17 +119,17 @@ export default function RecurringEventManager({
 
   const handleDeleteSeries = () => {
     Alert.alert(
-      '删除重复事件',
-      '确定要删除整个重复事件系列吗？这将删除所有相关的事件。',
+      t('recurringEventManager.deleteRecurringSeries'),
+      t('recurringEventManager.deleteSeriesConfirmation'),
       [
-        { text: '取消', style: 'cancel' },
+        { text: t('recurringEventManager.cancel'), style: 'cancel' },
         {
-          text: '删除',
+          text: t('recurringEventManager.delete'),
           style: 'destructive',
           onPress: async () => {
             const success = await deleteRecurringSeries(parentEventId);
             if (success) {
-              Alert.alert('成功', '重复事件系列已删除');
+              Alert.alert(t('recurringEventManager.success'), t('recurringEventManager.seriesDeleted'));
               onClose();
             }
           },
@@ -144,14 +147,14 @@ export default function RecurringEventManager({
         <View style={styles.instanceHeader}>
           <View style={styles.instanceDate}>
             <Text style={styles.dateText}>
-              {instance.start.toLocaleDateString('zh-CN', {
+              {instance.start.toLocaleDateString(undefined, {
                 month: 'short',
                 day: 'numeric',
                 weekday: 'short',
               })}
             </Text>
             <Text style={styles.timeText}>
-              {instance.start.toLocaleTimeString('zh-CN', {
+              {instance.start.toLocaleTimeString(undefined, {
                 hour: '2-digit',
                 minute: '2-digit',
               })}
@@ -161,9 +164,9 @@ export default function RecurringEventManager({
           {isException && (
             <View style={styles.exceptionBadge}>
               <Text style={styles.exceptionText}>
-                {instance.exceptionType === 'cancelled' && '已取消'}
-                {instance.exceptionType === 'modified' && '已修改'}
-                {instance.exceptionType === 'moved' && '已移动'}
+                {instance.exceptionType === 'cancelled' && t('recurringEventManager.cancelled')}
+                {instance.exceptionType === 'modified' && t('recurringEventManager.modified')}
+                {instance.exceptionType === 'moved' && t('recurringEventManager.moved')}
               </Text>
             </View>
           )}
@@ -174,13 +177,13 @@ export default function RecurringEventManager({
                 style={styles.actionButton}
                 onPress={() => handleInstanceAction(instance, 'modify')}
               >
-                <Text style={styles.actionButtonText}>修改</Text>
+                <Text style={styles.actionButtonText}>{t('recurringEventManager.modify')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.actionButton, styles.cancelButton]}
                 onPress={() => handleInstanceAction(instance, 'cancel')}
               >
-                <Text style={[styles.actionButtonText, styles.cancelButtonText]}>取消</Text>
+                <Text style={[styles.actionButtonText, styles.cancelButtonText]}>{t('recurringEventManager.cancel')}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -192,11 +195,11 @@ export default function RecurringEventManager({
   const renderHeader = () => (
     <View style={styles.header}>
       <TouchableOpacity onPress={onClose}>
-        <Text style={styles.closeButton}>关闭</Text>
+        <Text style={styles.closeButton}>{t('recurringEventManager.close')}</Text>
       </TouchableOpacity>
-      <Text style={styles.title}>重复事件管理</Text>
+      <Text style={styles.title}>{t('recurringEventManager.manageRecurringEvent')}</Text>
       <TouchableOpacity onPress={handleDeleteSeries}>
-        <Text style={styles.deleteButton}>删除系列</Text>
+        <Text style={styles.deleteButton}>{t('recurringEventManager.deleteSeries')}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -205,7 +208,7 @@ export default function RecurringEventManager({
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={styles.loadingText}>加载中...</Text>
+        <Text style={styles.loadingText}>{t('recurringEventManager.loading')}</Text>
       </View>
     );
   }
@@ -223,7 +226,7 @@ export default function RecurringEventManager({
       <ScrollView style={styles.content}>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
-            即将到来的事件 ({instances.filter(i => i.start >= new Date()).length})
+            {t('recurringEventManager.upcomingEvents', { count: instances.filter(i => i.start >= new Date()).length })}
           </Text>
           {instances
             .filter(i => i.start >= new Date())
@@ -233,7 +236,7 @@ export default function RecurringEventManager({
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
-            过去的事件 ({instances.filter(i => i.start < new Date()).length})
+            {t('recurringEventManager.pastEvents', { count: instances.filter(i => i.start < new Date()).length })}
           </Text>
           {instances
             .filter(i => i.start < new Date())
@@ -248,26 +251,26 @@ export default function RecurringEventManager({
         presentationStyle="pageSheet"
       >
         <RecurrenceRuleEditor
-          onRuleChange={(rule) => {
-            if (rule && selectedInstance) {
-              // 修改从选定日期开始的所有事件
-              modifyRecurringSeriesFromDate(parentEventId, selectedInstance.start, {
-                recurrenceRule: rule,
-              }).then((success) => {
+          initialRule={seriesRule || undefined}
+          onCancel={() => setShowRuleEditor(false)}
+          onRuleChange={(newRule) => {
+            if (newRule && selectedInstance) {
+              // The hook expects a Partial<RecurringEventData>, so we wrap the new rule
+              const eventUpdate: Partial<RecurringEventData> = { recurrenceRule: newRule };
+              modifyRecurringSeriesFromDate(
+                parentEventId,
+                selectedInstance.start,
+                eventUpdate
+              ).then((success) => {
                 if (success) {
-                  Alert.alert('成功', '重复事件系列已更新');
+                  Alert.alert(t('recurringEventManager.success'), t('recurringEventManager.seriesUpdated'));
                   loadInstances();
                 }
+                setShowRuleEditor(false);
               });
+            } else {
+              setShowRuleEditor(false);
             }
-            setShowRuleEditor(false);
-            setSelectedInstance(null);
-            setActionType(null);
-          }}
-          onCancel={() => {
-            setShowRuleEditor(false);
-            setSelectedInstance(null);
-            setActionType(null);
           }}
         />
       </Modal>

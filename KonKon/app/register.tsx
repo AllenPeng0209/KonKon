@@ -1,17 +1,18 @@
-import React, { useState } from 'react'
+import { t } from '@/lib/i18n'
+import { useRouter } from 'expo-router'
+import { useState } from 'react'
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  SafeAreaView,
-  KeyboardAvoidingView,
-  Platform,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    SafeAreaView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native'
 import { useAuth } from '../contexts/AuthContext'
-import { useRouter } from 'expo-router'
 
 export default function RegisterScreen() {
   const [email, setEmail] = useState('')
@@ -23,17 +24,17 @@ export default function RegisterScreen() {
 
   const handleRegister = async () => {
     if (!email || !password || !confirmPassword) {
-      Alert.alert('错误', '请填写所有字段')
+      Alert.alert(t('register.errorTitle'), t('register.errorAllFieldsRequired'))
       return
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('错误', '密码不匹配')
+      Alert.alert(t('register.errorTitle'), t('register.errorPasswordMismatch'))
       return
     }
 
     if (password.length < 6) {
-      Alert.alert('错误', '密码至少需要6个字符')
+      Alert.alert(t('register.errorTitle'), t('register.errorPasswordLength'))
       return
     }
 
@@ -41,21 +42,21 @@ export default function RegisterScreen() {
     try {
       const { error } = await signUp(email, password)
       if (error) {
-        Alert.alert('注册失败', error.message)
+        Alert.alert(t('register.registrationFailedTitle'), error.message)
       } else {
         Alert.alert(
-          '注册成功',
-          '请检查您的邮箱（包括垃圾邮件文件夹）并点击确认链接。如果没有收到邮件，请稍后重试或联系管理员。',
+          t('register.registrationSuccessTitle'),
+          t('register.registrationSuccessMessage'),
           [
             { 
-              text: '确定',
+              text: t('register.ok'),
               onPress: () => router.push('/login')
             }
           ]
         )
       }
     } catch (error) {
-      Alert.alert('注册失败', '发生未知错误')
+      Alert.alert(t('register.registrationFailedTitle'), t('register.unknownError'))
     } finally {
       setLoading(false)
     }
@@ -72,13 +73,13 @@ export default function RegisterScreen() {
         style={styles.container}
       >
         <View style={styles.content}>
-          <Text style={styles.title}>创建账户</Text>
-          <Text style={styles.subtitle}>加入KonKon，开始家庭日程管理</Text>
+          <Text style={styles.title}>{t('register.title')}</Text>
+          <Text style={styles.subtitle}>{t('register.subtitle')}</Text>
 
           <View style={styles.form}>
             <TextInput
               style={styles.input}
-              placeholder="邮箱"
+              placeholder={t('register.emailPlaceholder')}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -87,7 +88,7 @@ export default function RegisterScreen() {
             />
             <TextInput
               style={styles.input}
-              placeholder="密码"
+              placeholder={t('register.passwordPlaceholder')}
               value={password}
               onChangeText={setPassword}
               secureTextEntry
@@ -95,7 +96,7 @@ export default function RegisterScreen() {
             />
             <TextInput
               style={styles.input}
-              placeholder="确认密码"
+              placeholder={t('register.confirmPasswordPlaceholder')}
               value={confirmPassword}
               onChangeText={setConfirmPassword}
               secureTextEntry
@@ -107,15 +108,15 @@ export default function RegisterScreen() {
               disabled={loading}
             >
               <Text style={styles.buttonText}>
-                {loading ? '注册中...' : '注册'}
+                {loading ? t('register.registeringButton') : t('register.registerButton')}
               </Text>
             </TouchableOpacity>
           </View>
 
           <View style={styles.footer}>
-            <Text style={styles.footerText}>已有账户？</Text>
+            <Text style={styles.footerText}>{t('register.haveAccount')}</Text>
             <TouchableOpacity onPress={goToLogin}>
-              <Text style={styles.linkText}>登录</Text>
+              <Text style={styles.linkText}>{t('register.login')}</Text>
             </TouchableOpacity>
           </View>
         </View>

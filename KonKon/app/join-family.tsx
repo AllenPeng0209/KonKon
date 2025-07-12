@@ -1,16 +1,18 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
+import { t } from '@/lib/i18n';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import {
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    SafeAreaView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 import { useFamily } from '../contexts/FamilyContext';
 
 export default function JoinFamilyScreen() {
@@ -24,7 +26,7 @@ export default function JoinFamilyScreen() {
 
   const handleJoinFamily = async () => {
     if (!inviteCode.trim()) {
-      Alert.alert('エラー', '招待コードを入力してください');
+      Alert.alert(t('joinFamily.errorTitle'), t('joinFamily.errorCodeRequired'));
       return;
     }
 
@@ -32,11 +34,11 @@ export default function JoinFamilyScreen() {
       const success = await joinFamilyByCode(inviteCode.trim());
       if (success) {
         Alert.alert(
-          '成功！',
-          '家族に参加しました！',
+          t('joinFamily.successTitle'),
+          t('joinFamily.successMessage'),
           [
             {
-              text: 'OK',
+              text: t('joinFamily.ok'),
               onPress: () => {
                 router.replace('/family-management');
               },
@@ -44,11 +46,11 @@ export default function JoinFamilyScreen() {
           ]
         );
       } else {
-        Alert.alert('エラー', error || '家族への参加に失敗しました');
+        Alert.alert(t('joinFamily.errorTitle'), error || t('joinFamily.joinFailed'));
       }
     } catch (err) {
       console.error('家族参加エラー:', err);
-      Alert.alert('エラー', '家族への参加に失敗しました');
+      Alert.alert(t('joinFamily.errorTitle'), t('joinFamily.joinFailed'));
     }
   };
 
@@ -61,9 +63,9 @@ export default function JoinFamilyScreen() {
         {/* 顶部标题栏 */}
         <View style={styles.header}>
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-            <Text style={styles.backIcon}>←</Text>
+            <Ionicons name="arrow-back" size={24} color="#007AFF" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>家族に参加</Text>
+          <Text style={styles.headerTitle}>{t('joinFamily.title')}</Text>
           <View style={styles.headerRight} />
         </View>
 
@@ -71,21 +73,20 @@ export default function JoinFamilyScreen() {
           {/* 说明文本 */}
           <View style={styles.introSection}>
             <Text style={styles.introIcon}>👨‍👩‍👧‍👦</Text>
-            <Text style={styles.introTitle}>招待コードで家族に参加</Text>
+            <Text style={styles.introTitle}>{t('joinFamily.introTitle')}</Text>
             <Text style={styles.introText}>
-              家族から共有された招待コードを入力して、{'\n'}
-              家族グループに参加してください。
+              {t('joinFamily.introText')}
             </Text>
           </View>
 
           {/* 表单区域 */}
           <View style={styles.formSection}>
-            <Text style={styles.label}>招待コード</Text>
+            <Text style={styles.label}>{t('joinFamily.inviteCode')}</Text>
             <TextInput
               style={styles.input}
               value={inviteCode}
               onChangeText={setInviteCode}
-              placeholder="招待コードを入力してください"
+              placeholder={t('joinFamily.inviteCodePlaceholder')}
               placeholderTextColor="#9CA3AF"
               autoCapitalize="none"
               autoCorrect={false}
@@ -100,11 +101,11 @@ export default function JoinFamilyScreen() {
 
           {/* 说明 */}
           <View style={styles.helpSection}>
-            <Text style={styles.helpTitle}>招待コードとは？</Text>
+            <Text style={styles.helpTitle}>{t('joinFamily.helpTitle')}</Text>
             <Text style={styles.helpText}>
-              • 家族の管理者から共有される英数字のコード{'\n'}
-              • 家族グループに参加するために必要{'\n'}
-              • 一度参加すると、家族のスケジュールや情報を共有できます
+              {t('joinFamily.helpText1')}{'\n'}
+              {t('joinFamily.helpText2')}{'\n'}
+              {t('joinFamily.helpText3')}
             </Text>
           </View>
         </View>
@@ -117,7 +118,7 @@ export default function JoinFamilyScreen() {
             disabled={loading || !inviteCode.trim()}
           >
             <Text style={styles.joinButtonText}>
-              {loading ? '参加中...' : '家族に参加'}
+              {loading ? t('joinFamily.joiningButton') : t('joinFamily.joinButton')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -149,10 +150,6 @@ const styles = StyleSheet.create({
     height: 40,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  backIcon: {
-    fontSize: 24,
-    color: '#007AFF',
   },
   headerTitle: {
     flex: 1,

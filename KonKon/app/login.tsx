@@ -1,17 +1,18 @@
-import React, { useState } from 'react'
+import { t } from '@/lib/i18n'
+import { useRouter } from 'expo-router'
+import { useState } from 'react'
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  SafeAreaView,
-  KeyboardAvoidingView,
-  Platform,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    SafeAreaView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native'
 import { useAuth } from '../contexts/AuthContext'
-import { useRouter } from 'expo-router'
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('')
@@ -22,7 +23,7 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('错误', '请输入邮箱和密码')
+      Alert.alert(t('login.errorTitle'), t('login.errorEmailPasswordRequired'))
       return
     }
 
@@ -30,12 +31,12 @@ export default function LoginScreen() {
     try {
       const { error } = await signIn(email, password)
       if (error) {
-        Alert.alert('登录失败', error.message)
+        Alert.alert(t('login.loginFailedTitle'), error.message)
       } else {
         router.replace('/(tabs)')
       }
     } catch (error) {
-      Alert.alert('登录失败', '发生未知错误')
+      Alert.alert(t('login.loginFailedTitle'), t('login.unknownError'))
     } finally {
       setLoading(false)
     }
@@ -53,12 +54,12 @@ export default function LoginScreen() {
       >
         <View style={styles.content}>
           <Text style={styles.title}>KonKon</Text>
-          <Text style={styles.subtitle}>家庭共享日历</Text>
+          <Text style={styles.subtitle}>{t('login.subtitle')}</Text>
 
           <View style={styles.form}>
             <TextInput
               style={styles.input}
-              placeholder="邮箱"
+              placeholder={t('login.emailPlaceholder')}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -67,7 +68,7 @@ export default function LoginScreen() {
             />
             <TextInput
               style={styles.input}
-              placeholder="密码"
+              placeholder={t('login.passwordPlaceholder')}
               value={password}
               onChangeText={setPassword}
               secureTextEntry
@@ -79,15 +80,15 @@ export default function LoginScreen() {
               disabled={loading}
             >
               <Text style={styles.buttonText}>
-                {loading ? '登录中...' : '登录'}
+                {loading ? t('login.loggingInButton') : t('login.loginButton')}
               </Text>
             </TouchableOpacity>
           </View>
 
           <View style={styles.footer}>
-            <Text style={styles.footerText}>还没有账户？</Text>
+            <Text style={styles.footerText}>{t('login.noAccount')}</Text>
             <TouchableOpacity onPress={goToRegister}>
-              <Text style={styles.linkText}>注册</Text>
+              <Text style={styles.linkText}>{t('login.register')}</Text>
             </TouchableOpacity>
           </View>
         </View>

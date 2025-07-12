@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Alert, ScrollView, Switch } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useAuth } from '../contexts/AuthContext';
+import { t } from '@/lib/i18n';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import { Alert, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -18,21 +19,21 @@ export default function SettingsScreen() {
       await signOut();
       router.replace('/login');
     } catch (error) {
-      Alert.alert('退出失败', '请稍后重试');
+      Alert.alert(t('settings.logoutFailed'));
     }
   };
 
   const handleClearCache = () => {
     Alert.alert(
-      "确认清除缓存",
-      `您确定要清除 ${cacheSize.toFixed(1)}MB 的缓存吗？`,
+      t('settings.confirmClearCacheTitle'),
+      t('settings.confirmClearCacheMessage', { size: cacheSize.toFixed(1) }),
       [
-        { text: "取消", style: "cancel" },
+        { text: t('settings.cancel'), style: "cancel" },
         { 
-          text: "确认", 
+          text: t('settings.confirm'),
           onPress: () => {
             setCacheSize(0);
-            Alert.alert("缓存已清除");
+            Alert.alert(t('settings.cacheCleared'));
           },
           style: 'destructive'
         }
@@ -46,39 +47,39 @@ export default function SettingsScreen() {
          <TouchableOpacity onPress={handleBack} style={styles.backButton}>
            <Ionicons name="arrow-back" size={24} color="#007AFF" />
          </TouchableOpacity>
-         <Text style={styles.headerTitle}>设置</Text>
+         <Text style={styles.headerTitle}>{t('settings.title')}</Text>
          <View style={styles.headerRight} />
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.sectionHeader}>账户</Text>
+        <Text style={styles.sectionHeader}>{t('settings.account')}</Text>
         <View style={styles.settingsGroup}>
           <TouchableOpacity style={styles.settingItem} onPress={() => router.push('/edit-profile')}>
             <Ionicons name="person-circle-outline" size={24} color="#333" style={styles.icon} />
-            <Text style={styles.settingText}>编辑个人资料</Text>
+            <Text style={styles.settingText}>{t('settings.editProfile')}</Text>
             <Ionicons name="chevron-forward" size={20} color="#c7c7cc" />
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.sectionHeader}>通用</Text>
+        <Text style={styles.sectionHeader}>{t('settings.general')}</Text>
         <View style={styles.settingsGroup}>
           <TouchableOpacity style={styles.settingItem} onPress={() => router.push('/notification-settings')}>
             <Ionicons name="notifications-outline" size={24} color="#333" style={styles.icon} />
-            <Text style={styles.settingText}>通知设置</Text>
+            <Text style={styles.settingText}>{t('settings.notificationSettings')}</Text>
             <Ionicons name="chevron-forward" size={20} color="#c7c7cc" />
           </TouchableOpacity>
           <TouchableOpacity style={styles.settingItem} onPress={() => router.push('/language-selection')}>
             <Ionicons name="language-outline" size={24} color="#333" style={styles.icon} />
-            <Text style={styles.settingText}>语言选择</Text>
+            <Text style={styles.settingText}>{t('settings.languageSelection')}</Text>
             <Ionicons name="chevron-forward" size={20} color="#c7c7cc" />
           </TouchableOpacity>
         </View>
         
-        <Text style={styles.sectionHeader}>存储</Text>
+        <Text style={styles.sectionHeader}>{t('settings.storage')}</Text>
         <View style={styles.settingsGroup}>
            <TouchableOpacity style={styles.settingItem} onPress={handleClearCache}>
             <MaterialCommunityIcons name="cached" size={24} color="#333" style={styles.icon} />
-            <Text style={styles.settingText}>清除缓存</Text>
+            <Text style={styles.settingText}>{t('settings.clearCache')}</Text>
             <View style={{flexDirection: 'row', alignItems: 'center'}}>
                 <Text style={styles.settingValue}>{cacheSize.toFixed(1)} MB</Text>
                 <Ionicons name="chevron-forward" size={20} color="#c7c7cc" />
@@ -88,7 +89,7 @@ export default function SettingsScreen() {
         
         <View style={styles.logoutContainer}>
           <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <Text style={styles.logoutButtonText}>退出登录</Text>
+            <Text style={styles.logoutButtonText}>{t('settings.logout')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

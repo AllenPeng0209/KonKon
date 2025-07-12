@@ -1,24 +1,25 @@
-import React, { useState, useRef } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Animated,
-  TextInput,
-  Alert,
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
 import { Audio } from 'expo-av';
 import * as FileSystem from 'expo-file-system';
-import { speechToText } from '../../lib/bailian_omni_calendar';
+import { useRef, useState } from 'react';
+import {
+    ActivityIndicator,
+    Alert,
+    Animated,
+    KeyboardAvoidingView,
+    Platform,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native';
+import { ParsedCalendarResult, processVoiceToCalendar } from '../../lib/bailian_omni_calendar';
 
 interface SmartButtonProps {
   onPress?: () => void;
   onTextInputPress?: () => void;
   onTextResult?: (text: string) => void;
+  onParseResult?: (result: ParsedCalendarResult) => void;
   onError?: (error: string) => void;
   onPhotoPress?: () => void;
   onAlbumPress?: () => void;
@@ -32,6 +33,7 @@ export default function SmartButton({
   onPress,
   onTextInputPress,
   onTextResult,
+  onParseResult,
   onError,
   onPhotoPress,
   onAlbumPress,
@@ -221,27 +223,32 @@ export default function SmartButton({
           encoding: FileSystem.EncodingType.Base64,
         });
         
-        console.log('录音完成，开始 Qwen-Audio 语音识别...');
-        setRealTimeText('正在连接 Qwen-Audio...');
-        
-        // 调用 Qwen-Audio 语音识别API
-        const transcribedText = await speechToText(base64Audio, (text) => {
-          // 更新处理状态文本
-          setRealTimeText(text);
-        });
-        
-        console.log('Qwen-Audio 语音识别完成:', transcribedText);
-        
-        if (!transcribedText || transcribedText.trim() === '') {
-          throw new Error('语音识别结果为空，请重新录音');
-        }
-        
-        setRealTimeText('正在解析日程...');
-        
-        // 调用文字转日程接口
-        if (onTextResult) {
-          setIsProcessing(true);
-          onTextResult(transcribedText); // Pass the raw text to the parent
+        try {
+          console.log('录音完成，开始 Bailian Omni Calendar 解析...');
+          setRealTimeText('正在连接...');
+          
+          const result = await processVoiceToCalendar(base64Audio, (text) => {
+            setRealTimeText(text);
+          });
+          
+          console.log('Bailian Omni Calendar 解析完成:', result);
+          
+          if (!result || result.events.length === 0) {
+            throw new Error('未能解析出任何日程事件');
+          }
+          
+          setRealTimeText('解析完成');
+          
+          if (onParseResult) {
+            onParseResult(result);
+          }
+        } catch (e) {
+          console.error('Bailian Omni Calendar 解析失败:', e);
+          if (onError) {
+            onError(e instanceof Error ? e.message : '未知错误');
+          }
+        } finally {
+          setIsProcessing(false);
           setRealTimeText('');
         }
         

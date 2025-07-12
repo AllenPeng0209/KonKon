@@ -1,6 +1,7 @@
-import React from 'react';
-import { View, Text, StyleSheet, Alert } from 'react-native';
 import { BAILIAN_API_KEY, BAILIAN_ENDPOINT, BAILIAN_WORKSPACE_ID } from '@/lib/bailian';
+import { t } from '@/lib/i18n';
+import React from 'react';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 
 interface BailianConfigProps {
   onConfigError?: (error: string) => void;
@@ -11,21 +12,21 @@ export function BailianConfig({ onConfigError }: BailianConfigProps) {
     const errors: string[] = [];
 
     if (!BAILIAN_API_KEY) {
-      errors.push('EXPO_PUBLIC_BAILIAN_API_KEY 未配置');
+      errors.push(t('bailianConfig.apiKeyNotConfigured'));
     }
 
     if (!BAILIAN_ENDPOINT) {
-      errors.push('EXPO_PUBLIC_BAILIAN_ENDPOINT 未配置');
+      errors.push(t('bailianConfig.endpointNotConfigured'));
     }
 
     if (!BAILIAN_WORKSPACE_ID) {
-      errors.push('EXPO_PUBLIC_BAILIAN_WORKSPACE_ID 未配置');
+      errors.push(t('bailianConfig.workspaceIdNotConfigured'));
     }
 
     if (errors.length > 0) {
-      const errorMessage = `阿里百炼配置错误：\n${errors.join('\n')}`;
+      const errorMessage = `${t('bailianConfig.configError')}:\n${errors.join('\n')}`;
       onConfigError?.(errorMessage);
-      Alert.alert('配置错误', errorMessage);
+      Alert.alert(t('bailianConfig.errorTitle'), errorMessage);
       return false;
     }
 
@@ -39,9 +40,9 @@ export function BailianConfig({ onConfigError }: BailianConfigProps) {
   if (!checkConfig()) {
     return (
       <View style={styles.container}>
-        <Text style={styles.errorText}>⚠️ 阿里百炼配置错误</Text>
+        <Text style={styles.errorText}>⚠️ {t('bailianConfig.configError')}</Text>
         <Text style={styles.descriptionText}>
-          请在 .env.local 文件中配置以下环境变量：
+          {t('bailianConfig.errorDescription')}
         </Text>
         <Text style={styles.codeText}>
           EXPO_PUBLIC_BAILIAN_API_KEY=your_api_key{'\n'}

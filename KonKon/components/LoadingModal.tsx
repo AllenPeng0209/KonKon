@@ -1,12 +1,14 @@
+import { t } from '@/lib/i18n';
 import React from 'react';
-import { Modal, View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { ActivityIndicator, Modal, StyleSheet, Text, View } from 'react-native';
 
 interface LoadingModalProps {
   isVisible: boolean;
   text?: string;
 }
 
-const LoadingModal: React.FC<LoadingModalProps> = ({ isVisible, text = '正在处理...' }) => {
+const LoadingModal: React.FC<LoadingModalProps> = ({ isVisible, text }) => {
+  const displayText = text || t('loadingModal.processing');
   return (
     <Modal
       animationType="fade"
@@ -19,7 +21,7 @@ const LoadingModal: React.FC<LoadingModalProps> = ({ isVisible, text = '正在�
       <View style={styles.centeredView}>
         <View style={styles.modalView}>
           <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={styles.modalText}>{text}</Text>
+          <Text style={styles.modalText}>{displayText}</Text>
         </View>
       </View>
     </Modal>

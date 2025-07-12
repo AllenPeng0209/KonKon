@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useAuth } from '../contexts/AuthContext';
+import { t } from '@/lib/i18n';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import { Alert, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 
 export default function EditProfileScreen() {
@@ -19,11 +20,11 @@ export default function EditProfileScreen() {
 
   const handleSave = async () => {
     if (!user) {
-      Alert.alert('错误', '用户未登录');
+      Alert.alert(t('editProfile.error'), t('editProfile.notLoggedIn'));
       return;
     }
     if (!name.trim()) {
-      Alert.alert('错误', '昵称不能为空');
+      Alert.alert(t('editProfile.error'), t('editProfile.nicknameRequired'));
       return;
     }
 
@@ -35,10 +36,10 @@ export default function EditProfileScreen() {
     setLoading(false);
 
     if (error) {
-      Alert.alert('保存失败', error.message);
+      Alert.alert(t('editProfile.saveFailed'), error.message);
     } else {
-      Alert.alert('成功', '您的个人资料已更新', [
-        { text: '好的', onPress: () => router.back() }
+      Alert.alert(t('editProfile.success'), t('editProfile.profileUpdated'), [
+        { text: t('editProfile.ok'), onPress: () => router.back() }
       ]);
     }
   };
@@ -49,19 +50,19 @@ export default function EditProfileScreen() {
         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#007AFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>编辑个人资料</Text>
+        <Text style={styles.headerTitle}>{t('editProfile.title')}</Text>
         <TouchableOpacity onPress={handleSave} style={styles.saveButton} disabled={loading}>
-          <Text style={styles.saveButtonText}>{loading ? '保存中...' : '保存'}</Text>
+          <Text style={styles.saveButtonText}>{loading ? t('editProfile.saving') : t('editProfile.save')}</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.form}>
-        <Text style={styles.label}>昵称</Text>
+        <Text style={styles.label}>{t('editProfile.nickname')}</Text>
         <TextInput
           style={styles.input}
           value={name}
           onChangeText={setName}
-          placeholder="请输入您的昵称"
+          placeholder={t('editProfile.nicknamePlaceholder')}
           autoCapitalize="words"
         />
       </View>

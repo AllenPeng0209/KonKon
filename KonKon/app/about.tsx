@@ -1,6 +1,7 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Image } from 'react-native';
+import { t } from '@/lib/i18n';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function AboutScreen() {
   const router = useRouter();
@@ -13,9 +14,9 @@ export default function AboutScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-          <Text style={styles.backIcon}>←</Text>
+          <Ionicons name="arrow-back" size={24} color="#007AFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>关于 KonKon</Text>
+        <Text style={styles.headerTitle}>{t('about.title')}</Text>
         <View style={styles.headerRight} />
       </View>
       <View style={styles.content}>
@@ -24,12 +25,12 @@ export default function AboutScreen() {
           style={styles.logo}
         />
         <Text style={styles.appName}>KonKon</Text>
-        <Text style={styles.version}>版本 1.0.0</Text>
+        <Text style={styles.version}>{t('about.version')}</Text>
         <Text style={styles.description}>
-          KonKon 是一款专为家庭设计的智能助手，旨在通过共享日历、任务分配、购物清单等功能，让家庭成员之间的沟通更简单，生活更有条理。
+          {t('about.description')}
         </Text>
         <View style={styles.footer}>
-          <Text style={styles.footerText}>© 2024 KonKon. 保留所有权利。</Text>
+          <Text style={styles.footerText}>{t('about.copyright')}</Text>
         </View>
       </View>
     </SafeAreaView>
@@ -52,10 +53,6 @@ const styles = StyleSheet.create({
   },
   backButton: {
     padding: 10,
-  },
-  backIcon: {
-    fontSize: 22,
-    color: '#007AFF',
   },
   headerTitle: {
     flex: 1,
