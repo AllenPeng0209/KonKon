@@ -4,6 +4,7 @@ import { t } from '@/lib/i18n'; // 导入 t 函数
 import { supabase } from '@/lib/supabase';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import AddMemoryModal from './AddMemoryModal'; // 导入模态框
 
 type Memory = Tables<'family_memories'> & {
   // 未来のために：ユーザー情報を結合するためのプレースホルダー
@@ -42,14 +43,22 @@ const MemoryCard = ({ memory }: { memory: Memory }) => {
 
 const AlbumView = () => {
   const { user } = useAuth();
-  const [memories, setMemories] = useState<Memory[]>([]);
+  const [memories, setMemories] = useState<Tables<'family_memories'>[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showAddMemoryModal, setShowAddMemoryModal] = useState(false);
 
   useEffect(() => {
-    const fetchMemories = async () => {
-      if (!user) return;
+    fetchMemories();
+  }, [user]);
 
-      // TODO: ここでは、ユーザーのfamily_idに基づいて取得する必要があります
+  const fetchMemories = async () => {
+    if (!user) {
+        setLoading(false);
+        return;
+    };
+    
+    setLoading(true);
+    // TODO: ここでは、ユーザーのfamily_idに基づいて取得する必要があります
       const { data, error } = await supabase
         .from('family_memories')
         .select('*')
@@ -63,8 +72,9 @@ const AlbumView = () => {
       setLoading(false);
     };
 
+  const handleRefresh = () => {
     fetchMemories();
-  }, [user]);
+  }
 
   if (loading) {
     return (
@@ -86,11 +96,21 @@ const AlbumView = () => {
   }
 
   return (
+    <>
     <ScrollView style={styles.container}>
       {memories.map((memory) => (
         <MemoryCard key={memory.id} memory={memory} />
       ))}
     </ScrollView>
+    <AddMemoryModal 
+        isVisible={showAddMemoryModal}
+        onClose={() => setShowAddMemoryModal(false)}
+        onSave={() => {
+            setShowAddMemoryModal(false);
+            handleRefresh();
+        }}
+    />
+    </>
   );
 };
 

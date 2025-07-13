@@ -554,5 +554,19 @@
     "loading": "正在加载家庭回忆...",
     "emptyStateTitle": "还没有任何家庭回忆",
     "emptyStateSubtitle": "点击下方的按钮，分享第一张照片吧！"
+  },
+  "addMemory": {
+    "title": "添加新回忆",
+    "permissionDenied": "需要相册访问权限。",
+    "error": "错误",
+    "notInFamily": "您必须加入一个家庭才能发布回忆。",
+    "noImages": "请至少选择一张图片。",
+    "success": "成功",
+    "publishSuccess": "回忆发布成功！",
+    "publishFailed": "回忆发布失败。",
+    "storyPlaceholder": "分享这一刻背后的故事...",
+    "aiWriteStory": "AI 帮我写",
+    "aiEditPhoto": "AI 魔法编辑",
+    "publish": "发布"
   }
 }

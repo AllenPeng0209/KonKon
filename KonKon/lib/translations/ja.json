@@ -554,5 +554,19 @@
     "loading": "家族の思い出を読み込み中...",
     "emptyStateTitle": "まだ家族の思い出はありません",
     "emptyStateSubtitle": "下のボタンをタップして最初の写真を共有しましょう！"
+  },
+  "addMemory": {
+    "title": "新しい思い出を追加",
+    "permissionDenied": "フォトライブラリへのアクセス許可が必要です。",
+    "error": "エラー",
+    "notInFamily": "思い出を投稿するには、ファミリーに参加している必要があります。",
+    "noImages": "画像を1枚以上選択してください。",
+    "success": "成功",
+    "publishSuccess": "思い出を正常に投稿しました！",
+    "publishFailed": "思い出の投稿に失敗しました。",
+    "storyPlaceholder": "この瞬間の裏話を共有しましょう...",
+    "aiWriteStory": "AIが記述補助",
+    "aiEditPhoto": "AIマジック編集",
+    "publish": "公開"
   }
 }

@@ -1,18 +1,24 @@
-import * as React from 'react'
-import { createContext, useContext, useEffect, useState } from 'react'
-import { supabase } from '../lib/supabase'
-import { Session, User } from '@supabase/supabase-js'
+import { Tables } from '@/lib/database.types';
+import { Session, User } from '@supabase/supabase-js';
+import * as React from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
+import { supabase } from '../lib/supabase';
+
+type FamilyDetails = Tables<'family_members'> & {
+  families: Tables<'families'> | null;
+};
 
 interface AuthContextType {
-  user: User | null
-  session: Session | null
-  loading: boolean
-  signIn: (email: string, password: string) => Promise<any>
-  signUp: (email: string, password: string) => Promise<any>
-  signOut: () => Promise<void>
+  user: User | null;
+  session: Session | null;
+  loading: boolean;
+  userFamilyDetails: FamilyDetails[] | null;
+  signIn: (email: string, password: string) => Promise<any>;
+  signUp: (email: string, password: string) => Promise<any>;
+  signOut: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const useAuth = () => {
   const context = useContext(AuthContext)
@@ -27,28 +33,59 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null)
-  const [session, setSession] = useState<Session | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [userFamilyDetails, setUserFamilyDetails] = useState<FamilyDetails[] | null>(null);
 
   useEffect(() => {
     // 获取初始会话
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      setLoading(false)
-    })
+      setSession(session);
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      if (currentUser) {
+        fetchUserFamilyDetails(currentUser.id);
+      }
+      setLoading(false);
+    });
 
     // 监听认证状态变化
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      setLoading(false)
-    })
+      setSession(session);
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      if (currentUser) {
+        fetchUserFamilyDetails(currentUser.id);
+      } else {
+        setUserFamilyDetails(null); // 清理家庭信息当用户登出
+      }
+      setLoading(false);
+    });
 
-    return () => subscription.unsubscribe()
-  }, [])
+    return () => subscription.unsubscribe();
+  }, []);
 
+  const fetchUserFamilyDetails = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('family_members')
+        .select(`
+          *,
+          families (*)
+        `)
+        .eq('user_id', userId);
+      
+      if (error) {
+        throw error;
+      }
+      setUserFamilyDetails(data);
+    } catch (error) {
+      console.error('Error fetching user family details:', error);
+      setUserFamilyDetails(null);
+    }
+  };
+  
   const signIn = async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -74,6 +111,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     user,
     session,
     loading,
+    userFamilyDetails,
     signIn,
     signUp,
     signOut,

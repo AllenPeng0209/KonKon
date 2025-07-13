@@ -556,5 +556,19 @@
     "loading": "Loading family memories...",
     "emptyStateTitle": "No Family Memories Yet",
     "emptyStateSubtitle": "Tap the button below to share the first photo!"
+  },
+  "addMemory": {
+    "title": "Add New Memory",
+    "permissionDenied": "Permission to access photo library is required.",
+    "error": "Error",
+    "notInFamily": "You must be in a family to post a memory.",
+    "noImages": "Please select at least one image.",
+    "success": "Success",
+    "publishSuccess": "Memory published successfully!",
+    "publishFailed": "Failed to publish memory.",
+    "storyPlaceholder": "Share the story behind this moment...",
+    "aiWriteStory": "AI Help Write",
+    "aiEditPhoto": "AI Magic Edit",
+    "publish": "Publish"
   }
 }

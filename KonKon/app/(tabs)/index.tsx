@@ -1,5 +1,6 @@
 import AddEventModal from '@/components/AddEventModal';
 import AddExpenseModal from '@/components/AddExpenseModal';
+import AddMemoryModal from '@/components/AddMemoryModal';
 import AlbumView from '@/components/AlbumView'; // 新增：导入相簿视图
 import EventListModal from '@/components/EventListModal';
 import FinanceView from '@/components/FinanceView'; // Import the new component
@@ -68,6 +69,10 @@ export default function HomeScreen() {
   const [expenses, setExpenses] = useState<any[]>([]);
   const [monthlySummary, setMonthlySummary] = useState({ expense: 0, income: 0 });
   
+  // 新增：相簿模态框状态
+  const [showAddMemoryModal, setShowAddMemoryModal] = useState(false);
+  const [initialMemoryImages, setInitialMemoryImages] = useState<ImagePicker.ImagePickerAsset[]>([]);
+
   // 事件管理
   const { 
     events, 
@@ -345,6 +350,13 @@ export default function HomeScreen() {
     }
 
     if (pickerResult.assets && pickerResult.assets.length > 0) {
+      // 如果当前是相册视图，则打开 AddMemoryModal
+      if (selectedFilter === 'album') {
+        setInitialMemoryImages(pickerResult.assets);
+        setShowAddMemoryModal(true);
+        return;
+      }
+      
       const imageUri = pickerResult.assets[0].uri;
       try {
         setIsProcessingImage(true);
@@ -1364,6 +1376,21 @@ export default function HomeScreen() {
         selectedDate={selectedDate}
       />
       
+      {/* 新增：添加回忆模态框 */}
+      <AddMemoryModal
+        isVisible={showAddMemoryModal}
+        onClose={() => {
+          setShowAddMemoryModal(false);
+          setInitialMemoryImages([]); // 清理图片
+        }}
+        onSave={() => {
+          setShowAddMemoryModal(false);
+          setInitialMemoryImages([]);
+          // Note: AlbumView has its own refresh logic, so we don't need to call refresh here.
+        }}
+        initialImages={initialMemoryImages}
+      />
+
       {/* 事件列表模态框 */}
       <EventListModal
         visible={showEventListModal}

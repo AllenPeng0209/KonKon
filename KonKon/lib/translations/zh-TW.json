@@ -137,6 +137,20 @@
     "emptyStateTitle": "還沒有任何家庭回憶",
     "emptyStateSubtitle": "點擊下方的按鈕，分享第一張照片吧！"
   },
+  "addMemory": {
+    "title": "新增回憶",
+    "permissionDenied": "需要相簿存取權限。",
+    "error": "錯誤",
+    "notInFamily": "您必須加入一個家庭才能發佈回憶。",
+    "noImages": "請至少選擇一張圖片。",
+    "success": "成功",
+    "publishSuccess": "回憶發佈成功！",
+    "publishFailed": "回憶發佈失敗。",
+    "storyPlaceholder": "分享這一刻背後的故事...",
+    "aiWriteStory": "AI 幫我寫",
+    "aiEditPhoto": "AI 魔法編輯",
+    "publish": "發佈"
+  },
   "tabs": {
     "record": "記錄",
     "explore": "洞察"
