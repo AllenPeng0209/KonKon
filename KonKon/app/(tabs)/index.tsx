@@ -1,6 +1,8 @@
 import AddEventModal from '@/components/AddEventModal';
 import AddExpenseModal from '@/components/AddExpenseModal';
+import AlbumView from '@/components/AlbumView'; // 新增：导入相簿视图
 import EventListModal from '@/components/EventListModal';
+import FinanceView from '@/components/FinanceView'; // Import the new component
 import LoadingModal from '@/components/LoadingModal';
 import RecurringEventManager from '@/components/RecurringEventManager';
 import SmartButton from '@/components/ui/SmartButton';
@@ -64,6 +66,7 @@ export default function HomeScreen() {
   const [selectedParentEventId, setSelectedParentEventId] = useState<string | null>(null);
   const [processedEvents, setProcessedEvents] = useState<any[]>([]);
   const [expenses, setExpenses] = useState<any[]>([]);
+  const [monthlySummary, setMonthlySummary] = useState({ expense: 0, income: 0 });
   
   // 事件管理
   const { 
@@ -101,6 +104,7 @@ export default function HomeScreen() {
   // 过滤选项，增加 value 字段
   const filterOptions = [
     { label: t('home.all'), value: 'all', icon: '📊', color: '#8E8E93', bgColor: '#F2F2F7' },
+    { label: t('home.album'), value: 'album', icon: '🖼️', color: '#5856D6', bgColor: '#E9E9FF' },
     { label: t('home.calendar'), value: 'calendar', icon: '🔔', color: '#FF9500', bgColor: '#FFF3E0' },
     { label: t('home.expense'), value: 'expense', icon: '💰', color: '#4CAF50', bgColor: '#E8F5E9' },
     { label: t('home.idea'), value: 'idea', icon: '💡', color: '#9C27B0', bgColor: '#F3E5F5' },
@@ -115,6 +119,12 @@ export default function HomeScreen() {
       fetchExpenses();
     }
   }, [user, loading, router]);
+
+  useEffect(() => {
+    if (user) {
+      calculateMonthlySummary();
+    }
+  }, [expenses, user]);
 
   // 初始化日历权限
   useEffect(() => {
@@ -174,8 +184,28 @@ export default function HomeScreen() {
     if (error) {
       console.error('Error fetching expenses:', error);
     } else {
-      setExpenses(data);
+      setExpenses(data || []);
     }
+  };
+
+  const calculateMonthlySummary = () => {
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+    let totalExpense = 0;
+    let totalIncome = 0;
+
+    expenses.forEach(expense => {
+      const expenseDate = new Date(expense.date);
+      if (expenseDate.getMonth() === currentMonth && expenseDate.getFullYear() === currentYear) {
+        if (expense.type === 'expense') {
+          totalExpense += expense.amount;
+        } else if (expense.type === 'income') {
+          totalIncome += expense.amount;
+        }
+      }
+    });
+
+    setMonthlySummary({ expense: totalExpense, income: totalIncome });
   };
 
   const initializeCalendarPermissions = async () => {
@@ -1116,177 +1146,185 @@ export default function HomeScreen() {
       )}
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* 日历部分 */}
-        <View style={styles.calendarContainer}>
-          <View style={styles.calendarHeader}>
-            <Text style={styles.monthYear}>{t('home.familyCalendar')}</Text>
-            <Text style={styles.calendarNote}>
-              {t('home.recordFamilyTime')}{' '}
-              {hasCalendarPermission && `📱 ${t('home.connectedToSystemCalendar')}`}
-            </Text>
-          </View>
-          
-          <Calendar
-            key={currentMonth}
-            current={currentMonth}
-            markedDates={getCalendarMarkedDates()}
-            onDayPress={handleDatePress}
-            onMonthChange={handleMonthChange}
-            enableSwipeMonths={true}
-            theme={{
-              backgroundColor: '#ffffff',
-              calendarBackground: '#ffffff',
-              textSectionTitleColor: '#2c3e50',
-              selectedDayBackgroundColor: '#3b82f6',
-              selectedDayTextColor: '#ffffff',
-              todayTextColor: '#3b82f6',
-              dayTextColor: '#2c3e50',
-              textDisabledColor: '#d1d5db',
-              dotColor: '#ff6b6b',
-              selectedDotColor: '#ffffff',
-              arrowColor: '#3b82f6',
-              disabledArrowColor: '#d1d5db',
-              monthTextColor: '#1f2937',
-              indicatorColor: '#3b82f6',
-              textDayFontFamily: 'System',
-              textMonthFontFamily: 'System',
-              textDayHeaderFontFamily: 'System',
-              textDayFontWeight: '600',
-              textMonthFontWeight: '700',
-              textDayHeaderFontWeight: '600',
-              textDayFontSize: 16,
-              textMonthFontSize: 18,
-              textDayHeaderFontSize: 14,
-            }}
-            style={styles.calendar}
-            hideExtraDays={true}
-            firstDay={1}
-            showWeekNumbers={false}
-            disableMonthChange={false}
-            hideDayNames={false}
-            showSixWeeks={false}
-            disabledByDefault={false}
-            markingType={'dot'}
-          />
-        </View>
+        {selectedFilter === 'expense' ? (
+          <FinanceView expenses={expenses} monthlySummary={monthlySummary} />
+        ) : selectedFilter === 'album' ? (
+          <AlbumView />
+        ) : (
+          <>
+            {/* 日历部分 */}
+            <View style={styles.calendarContainer}>
+              <View style={styles.calendarHeader}>
+                <Text style={styles.monthYear}>{t('home.familyCalendar')}</Text>
+                <Text style={styles.calendarNote}>
+                  {t('home.recordFamilyTime')}{' '}
+                  {hasCalendarPermission && `📱 ${t('home.connectedToSystemCalendar')}`}
+                </Text>
+              </View>
+              
+              <Calendar
+                key={currentMonth}
+                current={currentMonth}
+                markedDates={getCalendarMarkedDates()}
+                onDayPress={handleDatePress}
+                onMonthChange={handleMonthChange}
+                enableSwipeMonths={true}
+                theme={{
+                  backgroundColor: '#ffffff',
+                  calendarBackground: '#ffffff',
+                  textSectionTitleColor: '#2c3e50',
+                  selectedDayBackgroundColor: '#3b82f6',
+                  selectedDayTextColor: '#ffffff',
+                  todayTextColor: '#3b82f6',
+                  dayTextColor: '#2c3e50',
+                  textDisabledColor: '#d1d5db',
+                  dotColor: '#ff6b6b',
+                  selectedDotColor: '#ffffff',
+                  arrowColor: '#3b82f6',
+                  disabledArrowColor: '#d1d5db',
+                  monthTextColor: '#1f2937',
+                  indicatorColor: '#3b82f6',
+                  textDayFontFamily: 'System',
+                  textMonthFontFamily: 'System',
+                  textDayHeaderFontFamily: 'System',
+                  textDayFontWeight: '600',
+                  textMonthFontWeight: '700',
+                  textDayHeaderFontWeight: '600',
+                  textDayFontSize: 16,
+                  textMonthFontSize: 18,
+                  textDayHeaderFontSize: 14,
+                }}
+                style={styles.calendar}
+                hideExtraDays={true}
+                firstDay={1}
+                showWeekNumbers={false}
+                disableMonthChange={false}
+                hideDayNames={false}
+                showSixWeeks={false}
+                disabledByDefault={false}
+                markingType={'dot'}
+              />
+            </View>
 
-        {/* 今天日程 */}
-        <View style={styles.todaySection}>
-          <View style={styles.todayHeader}>
-            <Text style={styles.todayIcon}>📅</Text>
-            <Text style={styles.todayTitle}>{t('home.today')} {new Date().toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}</Text>
-          </View>
-          
-          {/* 显示今天的事件，并应用过滤 */}
-          {(() => {
-            const todayEvents = getProcessedEventsByDate(new Date());
-            
-            // 根据 selectedFilter 过滤事件
-            const filteredEvents = selectedFilter === 'all'
-              ? todayEvents
-              : todayEvents.filter(event => event.type === selectedFilter);
+            {/* 今天日程 */}
+            <View style={styles.todaySection}>
+              <View style={styles.todayHeader}>
+                <Text style={styles.todayIcon}>📅</Text>
+                <Text style={styles.todayTitle}>{t('home.today')} {new Date().toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}</Text>
+              </View>
+              
+              {/* 显示今天的事件，并应用过滤 */}
+              {(() => {
+                const todayEvents = getProcessedEventsByDate(new Date());
+                
+                // 根据 selectedFilter 过滤事件
+                const filteredEvents = selectedFilter === 'all'
+                  ? todayEvents
+                  : todayEvents.filter(event => event.type === selectedFilter);
 
-            if (filteredEvents.length > 0) {
-              return (
-                <View style={styles.eventsContainer}>
-                  <View style={styles.eventsTitleContainer}>
-                    <Text style={styles.eventsTitle}>📋 {t('home.todayEvents')}</Text>
-                    <View style={styles.eventsCountBadge}>
-                      <Text style={styles.eventsCountText}>{filteredEvents.length}</Text>
-                    </View>
-                  </View>
-                  {filteredEvents.map((event) => (
-                    <TouchableOpacity 
-                      key={event.id} 
-                      style={styles.eventItem}
-                      onPress={() => handleEditEvent(event)}
-                      activeOpacity={0.8}
-                    >
-                      <View style={[styles.eventColor, { backgroundColor: event.color || '#007AFF' }]} />
-                      <View style={styles.eventContent}>
-                        <Text style={styles.eventTitle}>{event.title}</Text>
-                        {event.description && (
-                          <Text style={styles.eventDescription}>{event.description}</Text>
-                        )}
-                        <View style={styles.eventMeta}>
-                          <Text style={styles.eventTime}>
-                            🕐 {new Date(event.start_ts * 1000).toLocaleTimeString(undefined, { 
-                              hour: '2-digit', 
-                              minute: '2-digit' 
-                            })}
-                          </Text>
-                          {event.location && (
-                            <Text style={styles.eventLocation}>📍 {event.location}</Text>
-                          )}
+                if (filteredEvents.length > 0) {
+                  return (
+                    <View style={styles.eventsContainer}>
+                      <View style={styles.eventsTitleContainer}>
+                        <Text style={styles.eventsTitle}>📋 {t('home.todayEvents')}</Text>
+                        <View style={styles.eventsCountBadge}>
+                          <Text style={styles.eventsCountText}>{filteredEvents.length}</Text>
                         </View>
                       </View>
-                      <View style={styles.eventActions}>
-                        <Text style={styles.eventActionIcon}>›</Text>
-                      </View>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              );
-            } else if (selectedFilter === 'expense' && expenses.length > 0) {
-              return (
-                <View style={styles.eventsContainer}>
-                  <View style={styles.eventsTitleContainer}>
-                    <Text style={styles.eventsTitle}>💰 {t('home.recentExpenses')}</Text>
-                    <View style={styles.eventsCountBadge}>
-                      <Text style={styles.eventsCountText}>{expenses.length}</Text>
+                      {filteredEvents.map((event) => (
+                        <TouchableOpacity 
+                          key={event.id} 
+                          style={styles.eventItem}
+                          onPress={() => handleEditEvent(event)}
+                          activeOpacity={0.8}
+                        >
+                          <View style={[styles.eventColor, { backgroundColor: event.color || '#007AFF' }]} />
+                          <View style={styles.eventContent}>
+                            <Text style={styles.eventTitle}>{event.title}</Text>
+                            {event.description && (
+                              <Text style={styles.eventDescription}>{event.description}</Text>
+                            )}
+                            <View style={styles.eventMeta}>
+                              <Text style={styles.eventTime}>
+                                🕐 {new Date(event.start_ts * 1000).toLocaleTimeString(undefined, { 
+                                  hour: '2-digit', 
+                                  minute: '2-digit' 
+                                })}
+                              </Text>
+                              {event.location && (
+                                <Text style={styles.eventLocation}>📍 {event.location}</Text>
+                              )}
+                            </View>
+                          </View>
+                          <View style={styles.eventActions}>
+                            <Text style={styles.eventActionIcon}>›</Text>
+                          </View>
+                        </TouchableOpacity>
+                      ))}
                     </View>
-                  </View>
-                  {expenses.map((expense) => (
-                    <View key={expense.id} style={styles.eventItem}>
-                      <View style={[styles.eventColor, { backgroundColor: expense.type === 'income' ? '#4CAF50' : '#F44336' }]} />
-                      <View style={styles.eventContent}>
-                        <Text style={styles.eventTitle}>{expense.category}: {expense.amount}元</Text>
-                        <Text style={styles.eventDescription}>{expense.description}</Text>
-                        <View style={styles.eventMeta}>
-                          <Text style={styles.eventTime}>
-                            📅 {new Date(expense.date).toLocaleDateString()}
-                          </Text>
+                  );
+                } else if (selectedFilter === 'expense' && expenses.length > 0) {
+                  return (
+                    <View style={styles.eventsContainer}>
+                      <View style={styles.eventsTitleContainer}>
+                        <Text style={styles.eventsTitle}>💰 {t('home.recentExpenses')}</Text>
+                        <View style={styles.eventsCountBadge}>
+                          <Text style={styles.eventsCountText}>{expenses.length}</Text>
                         </View>
                       </View>
+                      {expenses.map((expense) => (
+                        <View key={expense.id} style={styles.eventItem}>
+                          <View style={[styles.eventColor, { backgroundColor: expense.type === 'income' ? '#4CAF50' : '#F44336' }]} />
+                          <View style={styles.eventContent}>
+                            <Text style={styles.eventTitle}>{expense.category}: {expense.amount}元</Text>
+                            <Text style={styles.eventDescription}>{expense.description}</Text>
+                            <View style={styles.eventMeta}>
+                              <Text style={styles.eventTime}>
+                                📅 {new Date(expense.date).toLocaleDateString()}
+                              </Text>
+                            </View>
+                          </View>
+                        </View>
+                      ))}
                     </View>
-                  ))}
-                </View>
-              )
-            } else {
-              return (
-                <View style={styles.aiAssistant}>
-                  <View style={styles.aiAvatar}>
-                    <Text style={styles.aiEmoji}>🦝</Text>
-                  </View>
-                  <View style={styles.aiContent}>
-                    <Text style={styles.aiGreeting}>{t('home.noEventsToday')}</Text>
-                    <Text style={styles.aiSuggestion}>{t('home.manualAddPrompt')}</Text>
-                  </View>
-                </View>
-              );
-            }
-          })()}
-          
-          <TouchableOpacity style={styles.autoRecordButton}>
-            <Text style={styles.autoRecordText}>{t('home.smartReminder')} 〉</Text>
-          </TouchableOpacity>
-          
-          {/* 快捷功能 */}
-          <View style={styles.quickActions}>
-            <TouchableOpacity style={styles.quickAction}>
-              <Text style={styles.quickActionIcon}>👶</Text>
-              <Text style={styles.quickActionText}>{t('home.kidsSchedule')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.quickAction}>
-              <Text style={styles.quickActionIcon}>🏠</Text>
-              <Text style={styles.quickActionText}>{t('home.choreSchedule')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.quickAction}>
-              <Text style={styles.quickActionIcon}>🎂</Text>
-              <Text style={styles.quickActionText}>{t('home.anniversaryReminder')}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+                  )
+                } else {
+                  return (
+                    <View style={styles.aiAssistant}>
+                      <View style={styles.aiAvatar}>
+                        <Text style={styles.aiEmoji}>🦝</Text>
+                      </View>
+                      <View style={styles.aiContent}>
+                        <Text style={styles.aiGreeting}>{t('home.noEventsToday')}</Text>
+                        <Text style={styles.aiSuggestion}>{t('home.manualAddPrompt')}</Text>
+                      </View>
+                    </View>
+                  );
+                }
+              })()}
+              
+              <TouchableOpacity style={styles.autoRecordButton}>
+                <Text style={styles.autoRecordText}>{t('home.smartReminder')} 〉</Text>
+              </TouchableOpacity>
+              
+              {/* 快捷功能 */}
+              <View style={styles.quickActions}>
+                <TouchableOpacity style={styles.quickAction}>
+                  <Text style={styles.quickActionIcon}>👶</Text>
+                  <Text style={styles.quickActionText}>{t('home.kidsSchedule')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.quickAction}>
+                  <Text style={styles.quickActionIcon}>🏠</Text>
+                  <Text style={styles.quickActionText}>{t('home.choreSchedule')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.quickAction}>
+                  <Text style={styles.quickActionIcon}>🎂</Text>
+                  <Text style={styles.quickActionText}>{t('home.anniversaryReminder')}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </>
+        )}
       </ScrollView>
 
       {/* 底部快速记录按钮 */}

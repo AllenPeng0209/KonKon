@@ -546,5 +546,13 @@
   "animatedLogo": {
     "welcome": "こんにちは！私はあなたのAIアシスタントです",
     "subtitle": "何かお手伝いできることはありますか？"
+  },
+  "album": {
+    "familyMember": "家族",
+    "like": "いいね",
+    "comment": "コメント",
+    "loading": "家族の思い出を読み込み中...",
+    "emptyStateTitle": "まだ家族の思い出はありません",
+    "emptyStateSubtitle": "下のボタンをタップして最初の写真を共有しましょう！"
   }
 }

@@ -548,5 +548,13 @@
   "animatedLogo": {
     "welcome": "Hello! I am your AI assistant",
     "subtitle": "How can I help you?"
+  },
+  "album": {
+    "familyMember": "Family Member",
+    "like": "Like",
+    "comment": "Comment",
+    "loading": "Loading family memories...",
+    "emptyStateTitle": "No Family Memories Yet",
+    "emptyStateSubtitle": "Tap the button below to share the first photo!"
   }
 }

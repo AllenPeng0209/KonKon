@@ -528,6 +528,50 @@ export type Database = {
           },
         ]
       }
+      family_memories: {
+        Row: {
+          ai_generated_image_urls: Json | null
+          created_at: string
+          family_id: string
+          id: string
+          image_urls: Json | null
+          location: string | null
+          story: string | null
+          tags: Json | null
+          user_id: string
+        }
+        Insert: {
+          ai_generated_image_urls?: Json | null
+          created_at?: string
+          family_id: string
+          id?: string
+          image_urls?: Json | null
+          location?: string | null
+          story?: string | null
+          tags?: Json | null
+          user_id: string
+        }
+        Update: {
+          ai_generated_image_urls?: Json | null
+          created_at?: string
+          family_id?: string
+          id?: string
+          image_urls?: Json | null
+          location?: string | null
+          story?: string | null
+          tags?: Json | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "family_memories_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tags: {
         Row: {
           color: string
@@ -595,7 +639,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      current_user_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never

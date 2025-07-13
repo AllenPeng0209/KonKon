@@ -546,5 +546,13 @@
   "animatedLogo": {
     "welcome": "你好！我是你的AI助手",
     "subtitle": "有什么可以帮助你的吗？"
+  },
+  "album": {
+    "familyMember": "家庭成员",
+    "like": "喜欢",
+    "comment": "评论",
+    "loading": "正在加载家庭回忆...",
+    "emptyStateTitle": "还没有任何家庭回忆",
+    "emptyStateSubtitle": "点击下方的按钮，分享第一张照片吧！"
   }
 }

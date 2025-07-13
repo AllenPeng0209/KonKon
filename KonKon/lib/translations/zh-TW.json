@@ -129,6 +129,14 @@
     "isRecording": "錄製中... {duration}s",
     "eventDeleted": "事件已刪除"
   },
+  "album": {
+    "familyMember": "家庭成員",
+    "like": "喜歡",
+    "comment": "評論",
+    "loading": "正在載入家庭回憶...",
+    "emptyStateTitle": "還沒有任何家庭回憶",
+    "emptyStateSubtitle": "點擊下方的按鈕，分享第一張照片吧！"
+  },
   "tabs": {
     "record": "記錄",
     "explore": "洞察"
