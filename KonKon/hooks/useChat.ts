@@ -1,6 +1,6 @@
-import { useState, useCallback } from 'react';
+import { BailianMessage, sendBailianMessage } from '@/lib/bailian';
 import { nanoid } from '@/lib/nanoid';
-import { sendBailianMessage, BailianMessage } from '@/lib/bailian';
+import { useCallback, useState } from 'react';
 import { getCurrentLocation } from '../lib/location';
 
 export interface UIMessage {

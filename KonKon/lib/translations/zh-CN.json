@@ -92,13 +92,13 @@
     "mood": "心情",
     "confirmationSuccessTitle": "解析成功",
     "confirmationConfirmMessage": "请确认以下信息：",
-    "confirmationEventLabel": "事件",
+    "confirmationEventLabel": "日程",
     "confirmationTimeLabel": "时间",
     "confirmationLocationLabel": "地点",
     "confirmationConfidenceLabel": "置信度",
     "confirmationConfirmQuestion": "确认创建这个日程吗？",
-    "confirmationCreateButton": "创建",
-    "confirmationCancelButton": "取消",
+    "confirmationCreateButton": "创建日程",
+    "confirmationCancelButton": "修改",
     "recurringRuleError": "重复规则错误",
     "recurringRuleFrequencyMissing": "AI解析的重复规则缺少频率信息",
     "recurringPatternRecognitionFailed": "未能识别重复模式，将作为常规事件创建。是否继续？",
@@ -110,7 +110,11 @@
     "eventUpdateFailed": "更新事件失败，请检查网络连接和权限",
     "noEventThisDay": "当天没有事件",
     "addEventPrompt": "您想为这一天添加新事件吗？",
-    "addEvent": "添加事件"
+    "addEvent": "添加事件",
+    "confirmationTitleSingle": "帮你安排好啦！",
+    "confirmationTitleMultiple": "帮你安排好这些日程啦！",
+    "eventCreatedSuccess": "日程已成功创建！",
+    "eventUpdatedSuccess": "日程已成功更新！"
   },
   "ios": {
     "infoPlist": {

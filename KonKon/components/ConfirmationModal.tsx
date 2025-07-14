@@ -1,11 +1,11 @@
 import { t } from '@/lib/i18n';
 import React from 'react';
-import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { CalendarEvent } from '../lib/bailian_omni_calendar';
 
 interface ConfirmationModalProps {
   isVisible: boolean;
-  event: CalendarEvent | null;
+  events: CalendarEvent[];
   userInput: string | null;
   summary: string | null;
   onConfirm: () => void;
@@ -24,16 +24,13 @@ const formatTime = (date: Date) => {
 
 export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   isVisible,
-  event,
+  events,
   userInput,
   summary,
   onConfirm,
   onCancel,
 }) => {
-  if (!event) return null;
-
-  const timeRange = `${formatTime(event.startTime)} - ${formatTime(event.endTime)}`;
-  const confidence = Math.round(event.confidence * 100);
+  if (!events || events.length === 0) return null;
 
   return (
     <Modal
@@ -45,9 +42,9 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
       <View style={styles.overlay}>
         <View style={styles.container}>
           <View style={styles.header}>
-            <Text style={styles.title}>帮你安排好啦！</Text>
+            <Text style={styles.title}>{t(events.length > 1 ? 'home.confirmationTitleMultiple' : 'home.confirmationTitleSingle')}</Text>
           </View>
-          <View style={styles.content}>
+          <ScrollView style={styles.contentContainer} contentContainerStyle={styles.content}>
             {userInput && (
               <View style={styles.dialogueBox}>
                 <Text style={styles.userMessage}>“{userInput}”</Text>
@@ -57,30 +54,35 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
               </View>
             )}
             
-            <View style={styles.infoCard}>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoIcon}>📅</Text>
-                <Text style={styles.infoLabel}>{t('home.confirmationEventLabel')}:</Text>
-                <Text style={styles.infoValue}>{event.title}</Text>
-              </View>
+            {events.map((event, index) => {
+              const timeRange = `${formatTime(event.startTime)} - ${formatTime(event.endTime)}`;
+              return (
+                <View key={index} style={[styles.infoCard, index > 0 && { marginTop: 15 }]}>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoIcon}>📅</Text>
+                    <Text style={styles.infoLabel}>{t('home.confirmationEventLabel')}:</Text>
+                    <Text style={styles.infoValue}>{event.title}</Text>
+                  </View>
 
-              <View style={styles.infoRow}>
-                <Text style={styles.infoIcon}>⏰</Text>
-                <Text style={styles.infoLabel}>{t('home.confirmationTimeLabel')}:</Text>
-                <Text style={styles.infoValue} numberOfLines={2}>{timeRange}</Text>
-              </View>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoIcon}>⏰</Text>
+                    <Text style={styles.infoLabel}>{t('home.confirmationTimeLabel')}:</Text>
+                    <Text style={styles.infoValue}>{timeRange}</Text>
+                  </View>
 
-              {event.location && (
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoIcon}>📍</Text>
-                  <Text style={styles.infoLabel}>{t('home.confirmationLocationLabel')}:</Text>
-                  <Text style={styles.infoValue}>{event.location}</Text>
+                  {event.location && (
+                    <View style={styles.infoRow}>
+                      <Text style={styles.infoIcon}>📍</Text>
+                      <Text style={styles.infoLabel}>{t('home.confirmationLocationLabel')}:</Text>
+                      <Text style={styles.infoValue}>{event.location}</Text>
+                    </View>
+                  )}
                 </View>
-              )}
-            </View>
-
+              );
+            })}
+            
             <Text style={styles.confirmQuestion}>{t('home.confirmationConfirmQuestion')}</Text>
-          </View>
+          </ScrollView>
           <View style={styles.footer}>
             <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={onCancel}>
               <Text style={styles.buttonText}>{t('home.confirmationCancelButton')}</Text>
@@ -105,6 +107,7 @@ const styles = StyleSheet.create({
   container: {
     width: '85%',
     maxWidth: 320,
+    maxHeight: '80%',
     backgroundColor: '#F7F9FC', // 更改背景色
     borderRadius: 20, // 增加圆角
     overflow: 'hidden',
@@ -126,6 +129,9 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     color: '#005A9C', // 深蓝色字体
+  },
+  contentContainer: {
+    // flexGrow: 1,
   },
   content: {
     padding: 20,
@@ -155,7 +161,7 @@ const styles = StyleSheet.create({
   },
   infoRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 10,
   },
   infoIcon: {

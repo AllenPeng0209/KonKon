@@ -14,6 +14,7 @@ import { useEvents } from '@/hooks/useEvents';
 import { useRecurringEvents } from '@/hooks/useRecurringEvents';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import {
+  CalendarEvent,
   ParsedCalendarResult,
   ParsedExpenseResult,
   processImageToCalendar,
@@ -73,7 +74,7 @@ export default function HomeScreen() {
   
   // 新增：确认弹窗状态
   const [isConfirmationModalVisible, setIsConfirmationModalVisible] = useState(false);
-  const [pendingEvent, setPendingEvent] = useState<any>(null);
+  const [pendingEvent, setPendingEvent] = useState<CalendarEvent[]>([]);
   const [pendingUserInput, setPendingUserInput] = useState<string | null>(null);
   const [pendingSummary, setPendingSummary] = useState<string | null>(null);
 
@@ -537,51 +538,31 @@ export default function HomeScreen() {
   };
 
   const handleAIResult = (result: ParsedCalendarResult) => {
-    if (!result || !result.events || result.events.length === 0) {
-      Alert.alert(t('home.parsingFailed'), t('home.noValidInfo'));
-      return;
-    }
-
-    setPendingUserInput(result.userInput || null);
-    setPendingSummary(result.summary || null);
-
-    // 只处理单个事件的情况，使用新弹窗
-    if (result.events.length === 1) {
-      setPendingEvent(result.events[0]);
+    console.log('Got AI result:', result);
+    if (result.events && result.events.length > 0) {
+      setPendingEvent(result.events);
+      setPendingUserInput(result.userInput || null);
+      setPendingSummary(result.summary);
       setIsConfirmationModalVisible(true);
     } else {
-      // 多个事件的情况暂时保留旧逻辑
-      const eventList = result.events.map((event, index) =>
-        `${index + 1}. ${event.title} (${formatTime(event.startTime)})`
-      ).join('\n');
-
-      Alert.alert(
-        t('home.parsingSuccess'),
-        t('home.multipleEventsParsed', { count: result.events.length, list: eventList, confidence: Math.round(result.confidence * 100) }),
-        [
-          { text: t('home.cancel'), style: 'cancel' },
-          {
-            text: t('home.createAll'),
-            onPress: () => handleCreateMultipleAIEvents(result.events),
-          },
-        ]
-      );
+      handleTextError(t('home.errorNoEventsFound'));
     }
   };
 
   const handleConfirmCreateEvent = () => {
-    if (pendingEvent) {
-      handleCreateAIEvent(pendingEvent);
-    }
     setIsConfirmationModalVisible(false);
-    setPendingEvent(null);
-    setPendingUserInput(null);
-    setPendingSummary(null);
+    if (pendingEvent.length > 0) {
+      if (pendingEvent.length > 1) {
+        handleCreateMultipleAIEvents(pendingEvent);
+      } else {
+        handleCreateAIEvent(pendingEvent[0]);
+      }
+    }
   };
 
   const handleCancelCreateEvent = () => {
     setIsConfirmationModalVisible(false);
-    setPendingEvent(null);
+    setPendingEvent([]);
     setPendingUserInput(null);
     setPendingSummary(null);
   };
@@ -1270,7 +1251,7 @@ export default function HomeScreen() {
       {/* 确认弹窗 */}
       <ConfirmationModal
         isVisible={isConfirmationModalVisible}
-        event={pendingEvent}
+        events={pendingEvent}
         userInput={pendingUserInput}
         summary={pendingSummary}
         onConfirm={handleConfirmCreateEvent}
