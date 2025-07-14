@@ -50,6 +50,7 @@ export default function SmartButton({
   const [realTimeText, setRealTimeText] = useState('');
   const [rotateAnim] = useState(new Animated.Value(0));
   const recordingRef = useRef<Audio.Recording | null>(null);
+  const thinkingIntervalRef = useRef<any>(null);
   const realtimeTimeoutRefs = useRef<NodeJS.Timeout[]>([]);
 
   const toggleExpanded = () => {
@@ -201,13 +202,13 @@ export default function SmartButton({
     if (isRecording && recordingRef.current) {
       console.log('结束录音');
       
+      // 清理之前的定时器
+      if (thinkingIntervalRef.current) {
+        clearInterval(thinkingIntervalRef.current);
+      }
+
       try {
         setIsRecording(false);
-        setRealTimeText('录音结束，正在识别...');
-        
-        // 清除定时器
-        realtimeTimeoutRefs.current.forEach(timeout => clearTimeout(timeout));
-        realtimeTimeoutRefs.current = [];
         
         // 停止录音
         await recordingRef.current.stopAndUnloadAsync();
@@ -217,6 +218,23 @@ export default function SmartButton({
         if (!uri) {
           throw new Error('录音文件为空');
         }
+
+        // --- 开始卖萌动画 ---
+        const thinkingMessages = [
+          '收到！让我想想看...',
+          '嗯... 脑筋正在高速转动...',
+          '帮你检查下日程安排~',
+          '马上就好啦！',
+          '嘿咻嘿咻... 正在生成魔法...',
+        ];
+        let messageIndex = 0;
+        setRealTimeText(thinkingMessages[messageIndex]);
+
+        thinkingIntervalRef.current = setInterval(() => {
+          messageIndex = (messageIndex + 1) % thinkingMessages.length;
+          setRealTimeText(thinkingMessages[messageIndex]);
+        }, 1500);
+        // --- 动画结束 ---
         
         // 读取录音文件并转换为Base64
         const base64Audio = await FileSystem.readAsStringAsync(uri, {
@@ -225,25 +243,18 @@ export default function SmartButton({
         
         try {
           console.log('录音完成，开始 Bailian Omni Calendar 解析...');
-          setRealTimeText('正在连接...');
           
-          const result = await processVoiceToCalendar(base64Audio, (text) => {
-            setRealTimeText(text);
-          });
+          // 不再将实时数据流更新到UI
+          const result = await processVoiceToCalendar(base64Audio);
           
           console.log('Bailian Omni Calendar 解析完成:', result);
           
           if (!result || result.events.length === 0) {
             throw new Error('未能解析出任何日程事件');
           }
-          
-          setRealTimeText('解析完成');
-
 
           if (onParseResult) {
             onParseResult(result);
-            console.log('Bailian Omni Calendar 解析完成2222:', result);
-
           }
         } catch (e) {
           console.error('Bailian Omni Calendar 解析失败:', e);
@@ -252,7 +263,6 @@ export default function SmartButton({
           }
         } finally {
           setIsProcessing(false);
-          setRealTimeText('');
         }
         
         // 删除临时录音文件
@@ -275,6 +285,10 @@ export default function SmartButton({
         setRealTimeText('');
         recordingRef.current = null;
       } finally {
+        if (thinkingIntervalRef.current) {
+          clearInterval(thinkingIntervalRef.current);
+        }
+        setRealTimeText('');
         setIsProcessing(false);
       }
     }
@@ -586,7 +600,7 @@ const styles = StyleSheet.create({
   },
   // 实时转录显示框样式
   realTimeTranscriptContainer: {
-    backgroundColor: '#95EC69',
+    backgroundColor: '#E6F4FF', // 换个更柔和的颜色
     borderRadius: 12,
     padding: 12,
     marginBottom: 12,
@@ -596,7 +610,7 @@ const styles = StyleSheet.create({
   },
   realTimeTranscriptText: {
     fontSize: 14,
-    color: '#333',
+    color: '#005A9C', // 配合背景色
     textAlign: 'center',
     fontWeight: '500',
   },

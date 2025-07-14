@@ -6,6 +6,8 @@ import { CalendarEvent } from '../lib/bailian_omni_calendar';
 interface ConfirmationModalProps {
   isVisible: boolean;
   event: CalendarEvent | null;
+  userInput: string | null;
+  summary: string | null;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -23,6 +25,8 @@ const formatTime = (date: Date) => {
 export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   isVisible,
   event,
+  userInput,
+  summary,
   onConfirm,
   onCancel,
 }) => {
@@ -41,37 +45,40 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
       <View style={styles.overlay}>
         <View style={styles.container}>
           <View style={styles.header}>
-            <Text style={styles.title}>🎯 {t('home.confirmationSuccessTitle')}</Text>
+            <Text style={styles.title}>帮你安排好啦！</Text>
           </View>
           <View style={styles.content}>
-            <Text style={styles.message}>{t('home.confirmationConfirmMessage')}</Text>
-            
-            <View style={styles.infoRow}>
-              <Text style={styles.infoIcon}>📅</Text>
-              <Text style={styles.infoLabel}>{t('home.confirmationEventLabel')}:</Text>
-              <Text style={styles.infoValue}>{event.title}</Text>
-            </View>
-
-            <View style={styles.infoRow}>
-              <Text style={styles.infoIcon}>⏰</Text>
-              <Text style={styles.infoLabel}>{t('home.confirmationTimeLabel')}:</Text>
-              <Text style={styles.infoValue} numberOfLines={2}>{timeRange}</Text>
-            </View>
-
-            {event.location && (
-              <View style={styles.infoRow}>
-                <Text style={styles.infoIcon}>📍</Text>
-                <Text style={styles.infoLabel}>{t('home.confirmationLocationLabel')}:</Text>
-                <Text style={styles.infoValue}>{event.location}</Text>
+            {userInput && (
+              <View style={styles.dialogueBox}>
+                <Text style={styles.userMessage}>“{userInput}”</Text>
+                <Text style={styles.aiMessage}>
+                  🦝 {summary || t('home.confirmationConfirmMessage')}
+                </Text>
               </View>
             )}
-
-            <View style={styles.infoRow}>
-               <Text style={styles.infoIcon}>🎯</Text>
-              <Text style={styles.infoLabel}>{t('home.confirmationConfidenceLabel')}:</Text>
-              <Text style={styles.infoValue}>{confidence}%</Text>
-            </View>
             
+            <View style={styles.infoCard}>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoIcon}>📅</Text>
+                <Text style={styles.infoLabel}>{t('home.confirmationEventLabel')}:</Text>
+                <Text style={styles.infoValue}>{event.title}</Text>
+              </View>
+
+              <View style={styles.infoRow}>
+                <Text style={styles.infoIcon}>⏰</Text>
+                <Text style={styles.infoLabel}>{t('home.confirmationTimeLabel')}:</Text>
+                <Text style={styles.infoValue} numberOfLines={2}>{timeRange}</Text>
+              </View>
+
+              {event.location && (
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoIcon}>📍</Text>
+                  <Text style={styles.infoLabel}>{t('home.confirmationLocationLabel')}:</Text>
+                  <Text style={styles.infoValue}>{event.location}</Text>
+                </View>
+              )}
+            </View>
+
             <Text style={styles.confirmQuestion}>{t('home.confirmationConfirmQuestion')}</Text>
           </View>
           <View style={styles.footer}>
@@ -98,37 +105,61 @@ const styles = StyleSheet.create({
   container: {
     width: '85%',
     maxWidth: 320,
-    backgroundColor: 'white',
-    borderRadius: 14,
+    backgroundColor: '#F7F9FC', // 更改背景色
+    borderRadius: 20, // 增加圆角
     overflow: 'hidden',
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 5,
   },
   header: {
     padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#EFEFEF',
+    backgroundColor: '#E6F4FF', // 柔和的蓝色
   },
   title: {
     fontSize: 18,
     fontWeight: 'bold',
     textAlign: 'center',
+    color: '#005A9C', // 深蓝色字体
   },
   content: {
     padding: 20,
-    gap: 15,
   },
-  message: {
+  dialogueBox: {
+    marginBottom: 20,
+    padding: 15,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+  },
+  userMessage: {
     fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 10,
+    fontStyle: 'italic',
+    color: '#666',
+    marginBottom: 12,
+  },
+  aiMessage: {
+    fontSize: 16,
     color: '#333',
+    lineHeight: 22,
+  },
+  infoCard: {
+    padding: 15,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    gap: 15,
   },
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
   },
   infoIcon: {
-    fontSize: 18,
+    fontSize: 20,
   },
   infoLabel: {
     fontSize: 15,
@@ -141,14 +172,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   confirmQuestion: {
-    marginTop: 15,
+    marginTop: 20,
     fontSize: 16,
     fontWeight: '500',
     textAlign: 'center',
-    color: '#000',
+    color: '#333',
   },
   footer: {
     flexDirection: 'row',
+    borderTopWidth: 1,
+    borderTopColor: '#EAEAEA',
   },
   button: {
     flex: 1,
@@ -157,22 +190,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   cancelButton: {
-    borderTopWidth: 1,
-    borderTopColor: '#EFEFEF',
-    borderRightWidth: 1,
-    borderRightColor: '#EFEFEF',
+    backgroundColor: '#FFFFFF',
   },
   confirmButton: {
-    backgroundColor: '#F0F9FF',
-    borderTopWidth: 1,
-    borderTopColor: '#EFEFEF',
+    backgroundColor: '#D6EFFF',
   },
   buttonText: {
     fontSize: 17,
     color: '#007AFF',
   },
   confirmButtonText: {
-    color: '#007AFF',
+    color: '#005A9C',
     fontWeight: 'bold',
   },
 }); 

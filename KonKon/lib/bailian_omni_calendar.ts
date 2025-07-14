@@ -18,6 +18,7 @@ export interface ParsedCalendarResult {
   summary: string;
   confidence: number;
   rawResponse: string;
+  userInput?: string; // 新增：用户原始输入
 }
 
 // 新增：记账数据结构
@@ -283,7 +284,13 @@ export async function processVoiceToCalendar(
     }
     
     // 第二步：文字转日程
-    return await processTextToCalendar(transcribedText, onProgress);
+    const result = await processTextToCalendar(transcribedText, onProgress);
+    
+    // 将用户输入文本附加到最终结果中
+    return {
+      ...result,
+      userInput: transcribedText,
+    };
     
   } catch (error) {
     console.error('语音转日程失败:', error);
@@ -506,7 +513,11 @@ export async function processTextToCalendar(
             try {
               // 在流结束后，完整的JSON应该已经接收完毕
               const finalResult = parseCalendarResult(fullResponse);
-              resolve(finalResult);
+              // 在这里附加原始文本
+              resolve({
+                ...finalResult,
+                userInput: text,
+              });
             } catch (e) {
               console.error('最终JSON解析失败:', e);
               // 尝试从不完整的文本中提取基本信息作为备用方案
@@ -516,7 +527,8 @@ export async function processTextToCalendar(
                       events: [basicEvent],
                       summary: `未能完全解析，已提取基本信息: ${basicEvent.title}`,
                       confidence: 0.4,
-                      rawResponse: fullResponse
+                      rawResponse: fullResponse,
+                      userInput: text, // 同样附加原始文本
                   });
               } else {
                   reject(new Error('无法解析服务器返回的有效日程数据'));

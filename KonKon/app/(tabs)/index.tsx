@@ -74,6 +74,8 @@ export default function HomeScreen() {
   // 新增：确认弹窗状态
   const [isConfirmationModalVisible, setIsConfirmationModalVisible] = useState(false);
   const [pendingEvent, setPendingEvent] = useState<any>(null);
+  const [pendingUserInput, setPendingUserInput] = useState<string | null>(null);
+  const [pendingSummary, setPendingSummary] = useState<string | null>(null);
 
   // 新增：成功弹窗状态
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -540,6 +542,9 @@ export default function HomeScreen() {
       return;
     }
 
+    setPendingUserInput(result.userInput || null);
+    setPendingSummary(result.summary || null);
+
     // 只处理单个事件的情况，使用新弹窗
     if (result.events.length === 1) {
       setPendingEvent(result.events[0]);
@@ -570,11 +575,15 @@ export default function HomeScreen() {
     }
     setIsConfirmationModalVisible(false);
     setPendingEvent(null);
+    setPendingUserInput(null);
+    setPendingSummary(null);
   };
 
   const handleCancelCreateEvent = () => {
     setIsConfirmationModalVisible(false);
     setPendingEvent(null);
+    setPendingUserInput(null);
+    setPendingSummary(null);
   };
 
 
@@ -1262,6 +1271,8 @@ export default function HomeScreen() {
       <ConfirmationModal
         isVisible={isConfirmationModalVisible}
         event={pendingEvent}
+        userInput={pendingUserInput}
+        summary={pendingSummary}
         onConfirm={handleConfirmCreateEvent}
         onCancel={handleCancelCreateEvent}
       />
