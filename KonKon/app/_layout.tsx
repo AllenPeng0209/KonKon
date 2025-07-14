@@ -13,6 +13,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
+import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { FamilyProvider } from '../contexts/FamilyContext';
@@ -24,6 +25,20 @@ function ProtectedLayout() {
   const segments = useSegments();
   const router = useRouter();
   const colorScheme = useColorScheme();
+
+  const onHandlerStateChange = (event: any) => {
+    const currentRoute = segments.join('/');
+    if (currentRoute.includes('avatar')) {
+      return;
+    }
+    if (event.nativeEvent.oldState === State.ACTIVE) {
+      const { translationX, translationY } = event.nativeEvent;
+      if (translationX > 100 && Math.abs(translationY) < 50) {
+        router.push('/avatar');
+      }
+    }
+  };
+
 
   useEffect(() => {
     if (loading) return;
@@ -47,28 +62,33 @@ function ProtectedLayout() {
   }
 
   return (
-    <FamilyProvider>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="login" options={{ headerShown: false }} />
-          <Stack.Screen name="register" options={{ headerShown: false }} />
-          <Stack.Screen name="profile" options={{ headerShown: false }} />
-          <Stack.Screen name="create-family" options={{ headerShown: false }} />
-          <Stack.Screen name="family-management" options={{ headerShown: false }} />
-          <Stack.Screen name="join-family" options={{ headerShown: false }} />
-          <Stack.Screen name="settings" options={{ headerShown: false }} />
-          <Stack.Screen name="user-agreement" options={{ headerShown: false }} />
-          <Stack.Screen name="privacy-policy" options={{ headerShown: false }} />
-          <Stack.Screen name="about" options={{ headerShown: false }} />
-          <Stack.Screen name="edit-profile" options={{ headerShown: false }} />
-          <Stack.Screen name="notification-settings" options={{ headerShown: false }} />
-          <Stack.Screen name="language-selection" options={{ headerShown: false }} />
-          <Stack.Screen name="+not-found" />
-        </Stack>
-        <StatusBar style="auto" />
-      </ThemeProvider>
-    </FamilyProvider>
+    <PanGestureHandler onHandlerStateChange={onHandlerStateChange}>
+      <View style={{ flex: 1 }}>
+        <FamilyProvider>
+          <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+            <Stack>
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="login" options={{ headerShown: false }} />
+              <Stack.Screen name="register" options={{ headerShown: false }} />
+              <Stack.Screen name="profile" options={{ headerShown: false }} />
+              <Stack.Screen name="create-family" options={{ headerShown: false }} />
+              <Stack.Screen name="family-management" options={{ headerShown: false }} />
+              <Stack.Screen name="join-family" options={{ headerShown: false }} />
+              <Stack.Screen name="settings" options={{ headerShown: false }} />
+              <Stack.Screen name="user-agreement" options={{ headerShown: false }} />
+              <Stack.Screen name="privacy-policy" options={{ headerShown: false }} />
+              <Stack.Screen name="about" options={{ headerShown: false }} />
+              <Stack.Screen name="edit-profile" options={{ headerShown: false }} />
+              <Stack.Screen name="notification-settings" options={{ headerShown: false }} />
+              <Stack.Screen name="language-selection" options={{ headerShown: false }} />
+              <Stack.Screen name="avatar" options={{ headerShown: false, animation: 'slide_from_left' }} />
+              <Stack.Screen name="+not-found" />
+            </Stack>
+            <StatusBar style="auto" />
+          </ThemeProvider>
+        </FamilyProvider>
+      </View>
+    </PanGestureHandler>
   );
 }
 
@@ -87,10 +107,12 @@ export default function RootLayout() {
   }
 
   return (
-    <AuthProvider>
-      <LanguageProvider>
-        <ProtectedLayout />
-      </LanguageProvider>
-    </AuthProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <AuthProvider>
+        <LanguageProvider>
+          <ProtectedLayout />
+        </LanguageProvider>
+      </AuthProvider>
+    </GestureHandlerRootView>
   );
 }

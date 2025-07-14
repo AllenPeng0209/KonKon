@@ -2,6 +2,9 @@ const { getDefaultConfig } = require('expo/metro-config');
 
 const config = getDefaultConfig(__dirname);
 
+// 添加对 .lottie 文件的支持
+config.resolver.assetExts.push('lottie');
+
 // 添加 web 环境的 AsyncStorage 别名
 config.resolver.alias = {
   ...config.resolver.alias,
