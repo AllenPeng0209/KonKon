@@ -2,16 +2,16 @@ import { Audio } from 'expo-av';
 import * as FileSystem from 'expo-file-system';
 import { useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Animated,
-    KeyboardAvoidingView,
-    Platform,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Animated,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { ParsedCalendarResult, processVoiceToCalendar } from '../../lib/bailian_omni_calendar';
 
@@ -238,9 +238,12 @@ export default function SmartButton({
           }
           
           setRealTimeText('解析完成');
-          
+
+
           if (onParseResult) {
             onParseResult(result);
+            console.log('Bailian Omni Calendar 解析完成2222:', result);
+
           }
         } catch (e) {
           console.error('Bailian Omni Calendar 解析失败:', e);

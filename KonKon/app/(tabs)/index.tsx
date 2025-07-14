@@ -1167,6 +1167,7 @@ export default function HomeScreen() {
           // console.log('Text input pressed')
         }}
         onTextResult={handleTextResult}
+        onParseResult={handleAIResult}
         onError={handleTextError}
         onManualAddPress={handleManualAdd}
         onPhotoPress={handlePhotoPress}
