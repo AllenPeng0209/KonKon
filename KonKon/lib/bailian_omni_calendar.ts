@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // 事件数据结构
 export interface CalendarEvent {
@@ -393,23 +392,19 @@ export async function processTextToCalendar(
   text: string,
   onProgress?: (chunk: string) => void
 ): Promise<ParsedCalendarResult> {
-  try {
-    const config = await getOmniConfig();
-    
-    const requestBody = {
-      model: config.model,
-      input: {
-        messages: [{
-          role: "system",
-          content: (() => {
-            const now = new Date();
-            const today = now.toISOString().split('T')[0];
-            const tomorrow = new Date(now.getTime() + 24*60*60*1000).toISOString().split('T')[0];
-            const currentYear = now.getFullYear();
-            const currentMonth = now.getMonth() + 1;
-            const currentDate = now.getDate();
-            
-            return `你是一个智能日程助手。请分析用户的文本输入，提取其中的日程信息，并返回JSON格式的结构化数据。
+  return new Promise(async (resolve, reject) => {
+    try {
+      const config = await getOmniConfig();
+      const url = `${config.baseURL}/compatible-mode/v1/chat/completions`;
+      
+      const now = new Date();
+      const today = now.toISOString().split('T')[0];
+      const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth() + 1;
+      const currentDate = now.getDate();
+      
+      const systemPrompt = `你是一个智能日程助手。请分析用户的文本输入，提取其中的日程信息，并返回JSON格式的结构化数据。
 
 返回格式：
 {
@@ -436,9 +431,9 @@ export async function processTextToCalendar(
 }
 
 注意：
-1. 时间格式必须是YYYY-MM-DD HH:mm:ss，年份必须是${currentYear}年
+1. 时间格式必须是YYYY-MM-DD HH:mm:ss
 2. 当前日期是${now.toLocaleDateString('zh-CN')}，今天是${currentYear}年${currentMonth}月${currentDate}日
-3. 如果用户只说了时间没说日期，默认为今天或明天，年份必须是${currentYear}年
+3. 如果用户只说了时间没说日期，默认为今天或明天。
 4. 如果没有明确的结束时间，根据事件类型估算（如会议1小时，吃饭1小时等）
 5. confidence表示解析的置信度（0-1之间）
 6. 必须返回有效的JSON格式，不要包含其他解释文字
@@ -458,44 +453,94 @@ export async function processTextToCalendar(
      * "每两周" -> {"frequency":"WEEKLY","interval":2}
      * "每月15号" -> {"frequency":"MONTHLY","interval":1,"byMonthDay":[15]}
      * "工作日" -> {"frequency":"WEEKLY","interval":1,"byDay":["MO","TU","WE","TH","FR"]}`;
-          })()
-        }, {
-          role: "user", 
-          content: text
-        }]
-      },
-      parameters: {
-        max_tokens: 1000,
-        temperature: 0.1,
-        top_p: 0.8,
-        repetition_penalty: 1.1,
-      },
-    };
 
-    // 使用与洞察页面相同的API endpoint
-    const response = await fetch(`${config.baseURL}/api/v1/services/aigc/text-generation/generation`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${config.apiKey}`,
-      },
-      body: JSON.stringify(requestBody),
-    });
+      const requestBody = {
+        model: 'qwen2.5-omni-7b', // 使用兼容 openai 的模型
+        stream: true,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: text }
+        ],
+        // 如果模型支持，可以强制json输出
+        // response_format: { type: "json_object" } 
+      };
 
-    if (!response.ok) {
-      const errorData = await response.text();
-      throw new Error(`API请求失败: ${response.status} - ${errorData}`);
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', url, true);
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.setRequestHeader('Authorization', `Bearer ${config.apiKey}`);
+      xhr.setRequestHeader('Accept', 'text/event-stream');
+
+      let fullResponse = '';
+      let lastProcessedPosition = 0;
+
+      xhr.onprogress = () => {
+        const chunk = xhr.responseText.substring(lastProcessedPosition);
+        lastProcessedPosition = xhr.responseText.length;
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.trim() === '' || !line.startsWith('data: ')) continue;
+          const data = line.slice(6);
+          if (data.trim() === '[DONE]') return;
+
+          try {
+            const parsed = JSON.parse(data);
+            const textChunk = parsed.choices?.[0]?.delta?.content || '';
+            if (textChunk) {
+              fullResponse += textChunk;
+              if (onProgress) {
+                // 为了与之前的实现保持一致，这里可以简单地传递累积的文本
+                onProgress(fullResponse); 
+              }
+            }
+          } catch (e) {
+            console.warn('解析流数据失败 (onprogress):', data, e);
+          }
+        }
+      };
+
+      xhr.onreadystatechange = () => {
+        if (xhr.readyState === 4) {
+          if (xhr.status === 200) {
+            try {
+              // 在流结束后，完整的JSON应该已经接收完毕
+              const finalResult = parseCalendarResult(fullResponse);
+              resolve(finalResult);
+            } catch (e) {
+              console.error('最终JSON解析失败:', e);
+              // 尝试从不完整的文本中提取基本信息作为备用方案
+              const basicEvent = extractBasicEventInfo(text);
+              if (basicEvent) {
+                  resolve({
+                      events: [basicEvent],
+                      summary: `未能完全解析，已提取基本信息: ${basicEvent.title}`,
+                      confidence: 0.4,
+                      rawResponse: fullResponse
+                  });
+              } else {
+                  reject(new Error('无法解析服务器返回的有效日程数据'));
+              }
+            }
+          } else {
+            console.error('文本转日历 API 错误:', xhr.status, xhr.responseText);
+            reject(new Error(`API 错误: ${xhr.status} - ${xhr.responseText}`));
+          }
+        }
+      };
+
+      xhr.onerror = () => {
+        console.error('文本转日历请求失败');
+        reject(new Error('网络错误，无法连接到日程解析服务'));
+      };
+
+      xhr.send(JSON.stringify(requestBody));
+
+    } catch (error) {
+      console.error('文本处理失败:', error);
+      reject(new Error(`文本处理失败: ${error instanceof Error ? error.message : '未知错误'}`));
     }
-
-    const data = await response.json();
-    const responseText = data.output?.text || '';
-    
-    return parseCalendarResult(responseText);
-
-  } catch (error) {
-    console.error('文本处理失败:', error);
-    throw new Error(`文本处理失败: ${error instanceof Error ? error.message : '未知错误'}`);
-  }
+  });
 }
 
 // 图片输入处理

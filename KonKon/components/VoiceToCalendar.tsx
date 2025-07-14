@@ -113,9 +113,8 @@ export const VoiceToCalendar: React.FC<VoiceToCalendarProps> = ({
          await createEvent({
            title: event.title,
            description: event.description || '',
-           date: event.startTime,
-           startTime: event.startTime.toTimeString().substring(0, 5),
-           endTime: event.endTime.toTimeString().substring(0, 5),
+           startTime: event.startTime,
+           endTime: event.endTime,
            location: event.location || '',
          });
        }

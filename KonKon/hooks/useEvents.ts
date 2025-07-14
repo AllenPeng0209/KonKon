@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Database } from '../lib/database.types';
-import { scheduleNotificationForEvent, cancelNotificationForEvent } from '../lib/notifications';
+import { cancelNotificationForEvent, scheduleNotificationForEvent } from '../lib/notifications';
+import { supabase } from '../lib/supabase';
 
 type Event = Database['public']['Tables']['events']['Row'];
 type EventInsert = Database['public']['Tables']['events']['Insert'];
@@ -12,9 +12,8 @@ type EventShare = Database['public']['Tables']['event_shares']['Row'];
 export interface CreateEventData {
   title: string;
   description?: string;
-  date: Date;
-  startTime?: string;
-  endTime?: string;
+  startTime: Date;
+  endTime?: Date;
   location?: string;
   color?: string;
   shareToFamilies?: string[]; // 要分享给的家庭群组ID数组
@@ -209,37 +208,29 @@ export const useEvents = () => {
     setError(null);
 
     try {
-      const { title, description, date, startTime, endTime, location, color, shareToFamilies, type } = eventData;
+      const { title, description, startTime, endTime, location, color, shareToFamilies, type } = eventData;
 
-      // 1. 转换日期和时间为时间戳
-      const eventDate = new Date(date);
-      if (startTime) {
-        const [hours, minutes] = startTime.split(':');
-        eventDate.setHours(parseInt(hours, 10), parseInt(minutes, 10));
-      }
-      const start_ts = Math.floor(eventDate.getTime() / 1000);
+      const start_ts = Math.floor(startTime.getTime() / 1000);
+      const end_ts = endTime ? Math.floor(endTime.getTime() / 1000) : null;
 
-      // 2. 准备要插入的数据
-      const eventToInsert: Omit<EventInsert, 'end_ts'> & { end_ts?: number | null } = {
+      const eventToInsert: Partial<EventInsert> = {
         creator_id: user.id,
         title,
         description,
         start_ts,
+        end_ts,
         location,
         color,
         type,
-        // family_id 先设置为 null，如果是家庭事件则在后面处理
-        family_id: null,
       };
-
-      if (endTime) {
-        const endDate = new Date(date);
-        const [hours, minutes] = endTime.split(':');
-        endDate.setHours(parseInt(hours, 10), parseInt(minutes, 10));
-        eventToInsert.end_ts = Math.floor(endDate.getTime() / 1000);
+      
+      if (shareToFamilies && shareToFamilies.length > 0) {
+        // For now, let's assume we share to the first family. 
+        // This logic can be expanded later.
+        eventToInsert.family_id = shareToFamilies[0];
       }
 
-      // 3. 插入事件
+
       const { data: newEvent, error: eventError } = await supabase
         .from('events')
         .insert(eventToInsert as EventInsert)
@@ -271,8 +262,8 @@ export const useEvents = () => {
         await scheduleNotificationForEvent({
           id: newEvent.id,
           title: newEvent.title,
-          date: eventDate,
-          startTime: startTime,
+          date: startTime,
+          startTime: startTime.toTimeString().substring(0, 5),
         });
       }
 
@@ -320,97 +311,73 @@ export const useEvents = () => {
       return false;
     }
 
+    setLoading(true);
+    setError(null);
+
     try {
-      // 计算时间戳
-      const startTime = eventData.startTime || '09:00';
-      const endTime = eventData.endTime || '10:00';
-      
-      const startDateTime = new Date(eventData.date);
-      const [startHour, startMinute] = startTime.split(':').map(Number);
-      startDateTime.setHours(startHour, startMinute, 0, 0);
-      
-      const endDateTime = new Date(eventData.date);
-      const [endHour, endMinute] = endTime.split(':').map(Number);
-      endDateTime.setHours(endHour, endMinute, 0, 0);
-      
-      const updateData: Partial<EventInsert> = {
-        title: eventData.title,
-        description: eventData.description,
-        start_ts: Math.floor(startDateTime.getTime() / 1000),
-        end_ts: Math.floor(endDateTime.getTime() / 1000),
-        location: eventData.location,
-        color: eventData.color || '#007AFF',
-        type: eventData.type,
+      const { title, description, startTime, endTime, location, color, shareToFamilies, type } = eventData;
+
+      const start_ts = Math.floor(startTime.getTime() / 1000);
+      const end_ts = endTime ? Math.floor(endTime.getTime() / 1000) : null;
+
+      const eventToUpdate: Partial<Event> = {
+        title,
+        description,
+        start_ts,
+        end_ts,
+        location,
+        color,
+        type,
         updated_at: new Date().toISOString(),
       };
 
-      // 更新事件
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('events')
-        .update(updateData)
+        .update(eventToUpdate)
         .eq('id', eventId)
-        .eq('creator_id', user.id)
-        .select()
-        .single();
+        .eq('creator_id', user.id);
 
       if (error) {
-        // console.error('更新事件失败:', error);
         throw error;
       }
+      
+      // 更新通知 (如果需要的话)
+      // ...
 
-      // 处理分享
-      if (eventData.shareToFamilies && eventData.shareToFamilies.length > 0) {
+      // 处理分享逻辑
+      if (shareToFamilies) {
         // 先删除旧的分享记录
         await supabase
           .from('event_shares')
           .delete()
           .eq('event_id', eventId);
 
-        // 添加新的分享记录
-        const shareData = eventData.shareToFamilies.map(familyId => ({
-          event_id: eventId,
-          family_id: familyId,
-          shared_by: user.id
-        }));
-
-        const { error: shareError } = await supabase
-          .from('event_shares')
-          .insert(shareData);
-
-        if (shareError) {
-          // console.error('更新分享失败:', shareError);
-          // 继续执行，不抛出错误
+        if (shareToFamilies.length > 0) {
+          // 添加新的分享记录
+          const shareData = shareToFamilies.map(familyId => ({
+            event_id: eventId,
+            family_id: familyId,
+            shared_by: user.id,
+          }));
+          await supabase.from('event_shares').insert(shareData);
         }
-      } else {
-        // 删除所有分享记录
-        await supabase
-          .from('event_shares')
-          .delete()
-          .eq('event_id', eventId);
       }
 
-      // 更新本地状态
-      setEvents(prev => prev.map(event => {
-        if (event.id === eventId) {
-          return {
-            ...data,
-            is_shared: (eventData.shareToFamilies?.length || 0) > 0,
-            shared_families: eventData.shareToFamilies || []
-          };
-        }
-        return event;
-      }));
+      await fetchEvents(); // 刷新事件列表
 
+      console.log('✅ 事件更新成功:', eventId);
       return true;
 
     } catch (err) {
-      // console.error('更新事件失败:', err);
+      console.error('更新事件失败:', err);
       setError(err instanceof Error ? err.message : '更新事件失败');
       return false;
+    } finally {
+      setLoading(false);
     }
   };
 
-  // 分享事件到群组
+  // 分享事件给家庭/群组
   const shareEventToFamily = async (eventId: string, familyId: string): Promise<boolean> => {
     if (!user) {
       setError('用户未登录');

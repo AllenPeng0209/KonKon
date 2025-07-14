@@ -255,7 +255,7 @@ export type Database = {
           created_at: string | null
           creator_id: string
           description: string | null
-          end_ts: number
+          end_ts: number | null
           family_id: string | null
           id: string
           location: string | null
@@ -274,7 +274,7 @@ export type Database = {
           created_at?: string | null
           creator_id: string
           description?: string | null
-          end_ts: number
+          end_ts?: number | null
           family_id?: string | null
           id?: string
           location?: string | null
@@ -293,7 +293,7 @@ export type Database = {
           created_at?: string | null
           creator_id?: string
           description?: string | null
-          end_ts?: number
+          end_ts?: number | null
           family_id?: string | null
           id?: string
           location?: string | null

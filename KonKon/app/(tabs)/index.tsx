@@ -2,10 +2,12 @@ import AddEventModal from '@/components/AddEventModal';
 import AddExpenseModal from '@/components/AddExpenseModal';
 import AddMemoryModal from '@/components/AddMemoryModal';
 import AlbumView from '@/components/AlbumView'; // 新增：导入相簿视图
+import { ConfirmationModal } from '@/components/ConfirmationModal';
 import EventListModal from '@/components/EventListModal';
 import FinanceView from '@/components/FinanceView'; // Import the new component
 import LoadingModal from '@/components/LoadingModal';
 import RecurringEventManager from '@/components/RecurringEventManager';
+import { SuccessModal } from '@/components/SuccessModal';
 import SmartButton from '@/components/ui/SmartButton';
 import { VoiceToCalendar } from '@/components/VoiceToCalendar';
 import { useEvents } from '@/hooks/useEvents';
@@ -24,7 +26,6 @@ import {
 import CalendarService from '@/lib/calendarService';
 import { TablesInsert } from '@/lib/database.types';
 import { t } from '@/lib/i18n';
-import { parseNaturalLanguageRecurrence } from '@/lib/recurrenceEngine';
 import { supabase } from '@/lib/supabase';
 import * as FileSystem from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
@@ -62,6 +63,7 @@ export default function HomeScreen() {
   const [hasCalendarPermission, setHasCalendarPermission] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date().toISOString().slice(0, 7));
   const [isProcessingImage, setIsProcessingImage] = useState(false);
+  const [isProcessingText, setIsProcessingText] = useState(false); // 新增：文本处理状态
   const [loadingText, setLoadingText] = useState('');
   const [showRecurringEventManager, setShowRecurringEventManager] = useState(false);
   const [selectedParentEventId, setSelectedParentEventId] = useState<string | null>(null);
@@ -69,6 +71,15 @@ export default function HomeScreen() {
   const [expenses, setExpenses] = useState<any[]>([]);
   const [monthlySummary, setMonthlySummary] = useState({ expense: 0, income: 0 });
   
+  // 新增：确认弹窗状态
+  const [isConfirmationModalVisible, setIsConfirmationModalVisible] = useState(false);
+  const [pendingEvent, setPendingEvent] = useState<any>(null);
+
+  // 新增：成功弹窗状态
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successTitle, setSuccessTitle] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+
   // 新增：相簿模态框状态
   const [showAddMemoryModal, setShowAddMemoryModal] = useState(false);
   const [initialMemoryImages, setInitialMemoryImages] = useState<ImagePicker.ImagePickerAsset[]>([]);
@@ -428,25 +439,25 @@ export default function HomeScreen() {
 
   // 处理文字输入转日程的结果（兼容原有逻辑）
   const handleTextResult = async (result: string) => {
-    setIsProcessingImage(true);
-    setLoadingText(t('home.processingVoice'));
+    console.log('接收到文本输入:', result);
+    setLoadingText(t('home.analyzingText'));
+    setIsProcessingText(true); // 使用新的状态
+
     try {
-      const calendarResult = await processTextToCalendar(result);
-      if (calendarResult.events && calendarResult.events.length > 0) {
-        handleAIResult(calendarResult);
-      } else {
+      // 简单的意图识别
+      if (result.match(/记账|消费|收入|花了|赚了|买单|付款/)) {
+        console.log('判断为记账意图');
         const expenseResult = await processTextToExpense(result);
-        if (expenseResult.expenses && expenseResult.expenses.length > 0) {
-          handleAIExpenseResult(expenseResult);
-        } else {
-          Alert.alert(t('home.parsingFailed'), t('home.noValidInfo'));
-        }
+        handleAIExpenseResult(expenseResult);
+      } else {
+        console.log('判断为日程意图');
+        const calendarResult = await processTextToCalendar(result);
+        handleAIResult(calendarResult);
       }
     } catch (error) {
-      // console.error('文本处理失败:', error);
-      Alert.alert(t('home.error'), t('home.textProcessingFailedWithReason'));
+      handleTextError(error instanceof Error ? error.message : '未知错误');
     } finally {
-      setIsProcessingImage(false);
+      setIsProcessingText(false); // 结束时重置状态
       setLoadingText('');
     }
   };
@@ -523,309 +534,105 @@ export default function HomeScreen() {
     }
   };
 
-  // 统一处理AI解析结果
   const handleAIResult = (result: ParsedCalendarResult) => {
-    // console.log('AI result:', result);
-    
-    if (result.events && result.events.length > 0) {
-      const confidence = Math.round(result.confidence * 100);
-      
-      if (result.events.length === 1) {
-        // 单个事件的情况
-        const event = result.events[0];
-        
-        // 格式化时间显示
-        const startTime = new Date(event.startTime);
-        const endTime = new Date(event.endTime);
-        const formatTime = (date: Date) => {
-          return date.toLocaleString(undefined, { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-        };
-        const timeRange = `${formatTime(startTime)} - ${formatTime(endTime)}`;
-        const locationText = event.location ? t('home.location', { location: event.location }) : '';
-        
-        Alert.alert(
-          t('home.parsingSuccess'),
-          t('home.eventParsingSuccessMessage', {
-            title: event.title,
-            timeRange: timeRange,
-            location: locationText,
-            confidence: confidence
-          }),
-          [
-            { text: t('home.cancel'), style: 'cancel' },
-            { 
-              text: t('home.create'), 
-              onPress: () => handleCreateAIEvent(event)
-            }
-          ]
-        );
-      } else {
-        // 多个事件的情况
-        const formatTime = (date: Date) => {
-          return date.toLocaleString(undefined, { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-        };
-        
-        let eventsList = '';
-        result.events.forEach((event, index) => {
-          const startTime = new Date(event.startTime);
-          const endTime = new Date(event.endTime);
-          const timeRange = `${formatTime(startTime)} - ${formatTime(endTime)}`;
-          eventsList += `${index + 1}. ${event.title}\n   ⏰ ${timeRange}\n`;
-          if (event.location) {
-            eventsList += `   ${t('home.location', { location: event.location })}`;
-          }
-          eventsList += '\n';
-        });
-        
-        Alert.alert(
-          t('home.parsingSuccess'),
-          t('home.multipleEventsParsed', {
-            count: result.events.length,
-            list: eventsList,
-            confidence: confidence
-          }),
-          [
-            { text: t('home.cancel'), style: 'cancel' },
-            { 
-              text: t('home.createAll'), 
-              onPress: () => handleCreateMultipleAIEvents(result.events)
-            }
-          ]
-        );
-      }
-    } else {
+    if (!result || !result.events || result.events.length === 0) {
       Alert.alert(t('home.parsingFailed'), t('home.noValidInfo'));
+      return;
+    }
+
+    // 只处理单个事件的情况，使用新弹窗
+    if (result.events.length === 1) {
+      setPendingEvent(result.events[0]);
+      setIsConfirmationModalVisible(true);
+    } else {
+      // 多个事件的情况暂时保留旧逻辑
+      const eventList = result.events.map((event, index) =>
+        `${index + 1}. ${event.title} (${formatTime(event.startTime)})`
+      ).join('\n');
+
+      Alert.alert(
+        t('home.parsingSuccess'),
+        t('home.multipleEventsParsed', { count: result.events.length, list: eventList, confidence: Math.round(result.confidence * 100) }),
+        [
+          { text: t('home.cancel'), style: 'cancel' },
+          {
+            text: t('home.createAll'),
+            onPress: () => handleCreateMultipleAIEvents(result.events),
+          },
+        ]
+      );
     }
   };
+
+  const handleConfirmCreateEvent = () => {
+    if (pendingEvent) {
+      handleCreateAIEvent(pendingEvent);
+    }
+    setIsConfirmationModalVisible(false);
+    setPendingEvent(null);
+  };
+
+  const handleCancelCreateEvent = () => {
+    setIsConfirmationModalVisible(false);
+    setPendingEvent(null);
+  };
+
 
   // 创建从AI解析出的事件（支持语音和文字）
   const handleCreateAIEvent = async (event: any) => {
     try {
-
-      const startDate = new Date(event.startTime);
-      const endDate = new Date(event.endTime);
-
-      // Defensively check for invalid date objects
-      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-        Alert.alert(t('home.error'), t('home.invalidTimeFormat'));
-        return;
-      }
+      const eventData = {
+        title: event.title,
+        description: event.description,
+        startTime: new Date(event.startTime),
+        endTime: event.endTime ? new Date(event.endTime) : undefined,
+        location: event.location,
+      };
       
-      // Defensively check that start is before end
-      if (startDate >= endDate) {
-        Alert.alert(t('home.error'), t('home.timeSequenceError'));
-        return;
-      }
+      const createdId = await createEvent(eventData);
 
-      // Check if the event spans across multiple days, which the current createEvent hook might not support.
-      const startDay = new Date(startDate);
-      startDay.setHours(0, 0, 0, 0);
-      const endDay = new Date(endDate);
-      endDay.setHours(0, 0, 0, 0);
-
-      if (startDay.getTime() !== endDay.getTime()) {
-        Alert.alert(
-          t('home.crossDayEventReminder'),
-          t('home.crossDayEventReminderMessage'),
-          [
-            { text: t('home.manualAdjust'), style: 'cancel' },
-            {
-              text: t('home.continueCreate'),
-              onPress: async () => {
-                const eventData = {
-                  title: event.title,
-                  description: `${event.description || ''} (跨天事件)`.trim(),
-                  date: startDate,
-                  allDay: true, // Treat as an all-day event
-                  location: event.location || '',
-                  color: '#007AFF',
-                };
-                 await createAndRefresh(eventData);
-              },
-            },
-          ]
-        );
-        return;
-      }
-      
-      // 檢查是否為重複事件
-      if (event.isRecurring && event.recurrenceRule) {
-        console.log('Creating recurring event with rule:', event.recurrenceRule);
-        
-        // 確保 recurrenceRule 有必需的字段
-        if (!event.recurrenceRule.frequency) {
-          Alert.alert(t('home.recurringRuleError'), t('home.recurringRuleFrequencyMissing'));
-          return;
-        }
-        
-        // 創建重複事件
-        const recurringEventData = {
-          title: event.title,
-          description: event.description || '',
-          startDate: startDate,
-          endDate: endDate,
-          location: event.location || '',
-          color: '#007AFF',
-          recurrenceRule: event.recurrenceRule,
-          familyId: userFamilyDetails?.[0]?.id || undefined,
-        };
-        
-        console.log('Recurring event data:', recurringEventData);
-        const parentEventId = await createRecurringEvent(recurringEventData);
-        
-        if (parentEventId) {
-          Alert.alert(
-            t('home.recurringEventCreationSuccess'), 
-            t('home.recurringEventCreationSuccessMessage', { title: event.title }),
-            [{ text: t('home.ok'), style: 'default' }]
-          );
-          const newEventDate = new Date(startDate);
-          await fetchEvents(newEventDate.getFullYear(), newEventDate.getMonth() + 1);
-        } else {
-          const errorMessage = recurringError || t('home.recurringEventCreationFailed');
-          Alert.alert(t('home.error'), errorMessage);
-        }
-      } else if (event.isRecurring && event.recurringPattern) {
-        // 嘗試解析自然語言重複模式
-        const recurrenceRule = parseNaturalLanguageRecurrence(event.recurringPattern);
-        
-        if (recurrenceRule) {
-          const recurringEventData = {
-            title: event.title,
-            description: event.description || '',
-            startDate: startDate,
-            endDate: endDate,
-            location: event.location || '',
-            color: '#007AFF',
-            recurrenceRule: recurrenceRule,
-            familyId: userFamilyDetails?.[0]?.id || undefined,
-          };
-          
-          const parentEventId = await createRecurringEvent(recurringEventData);
-          
-          if (parentEventId) {
-            Alert.alert(
-              t('home.recurringEventCreationSuccess'), 
-              t('home.recurringEventCreationSuccessMessage', { title: event.title }),
-              [{ text: t('home.ok'), style: 'default' }]
-            );
-            const newEventDate = new Date(startDate);
-            await fetchEvents(newEventDate.getFullYear(), newEventDate.getMonth() + 1);
-          } else {
-            const errorMessage = recurringError || t('home.recurringEventCreationFailed');
-            Alert.alert(t('home.error'), errorMessage);
-          }
-        } else {
-          // 無法解析重複模式，創建普通事件
-          Alert.alert(
-            t('home.parsingFailed'),
-            t('home.recurringPatternRecognitionFailed'),
-            [
-              { text: t('home.cancel'), style: 'cancel' },
-              { 
-                text: t('home.continue'), 
-                onPress: async () => {
-                  const eventData = {
-                    title: event.title,
-                    description: event.description || '',
-                    date: startDate,
-                    startTime: startDate.toTimeString().substring(0, 5),
-                    endTime: endDate.toTimeString().substring(0, 5),
-                    location: event.location || '',
-                    color: '#007AFF',
-                  };
-                  await createAndRefresh(eventData);
-                }
-              }
-            ]
-          );
-        }
+      if (createdId) {
+        setSuccessTitle(t('home.eventCreationSuccess'));
+        setSuccessMessage(t('home.eventCreationSuccessMessage', { title: event.title }));
+        setShowSuccessModal(true);
       } else {
-        // 創建普通事件
-        const eventData = {
-          title: event.title,
-          description: event.description || '',
-          date: startDate,
-          startTime: startDate.toTimeString().substring(0, 5),
-          endTime: endDate.toTimeString().substring(0, 5),
-          location: event.location || '',
-          color: '#007AFF',
-        };
-        
-        await createAndRefresh(eventData);
+        Alert.alert(t('home.error'), t('home.eventCreationFailed'));
       }
-
     } catch (error) {
-      // console.error('创建AI事件失败:', error);
-      Alert.alert(t('home.error'), t('home.createEventFailed', { error: error instanceof Error ? error.message : '' }));
+      console.error('AI event creation failed:', error);
+      Alert.alert(t('home.error'), error instanceof Error ? error.message : t('home.eventCreationFailed'));
     }
   };
 
-  // Helper function to create event and refresh list
-  const createAndRefresh = async (eventData: any) => {
-      // console.log('创建事件数据:', eventData);
-      
-      const createdEvent = await createEvent(eventData);
-      if (createdEvent) {
-        // console.log('事件创建成功:', createdEvent);
-        Alert.alert(
-          t('home.eventCreationSuccess'), 
-          t('home.eventCreationSuccessMessage', { title: eventData.title }),
-          [{ text: t('home.ok'), style: 'default' }]
-        );
-        const newEventDate = new Date(eventData.date);
-        await fetchEvents(newEventDate.getFullYear(), newEventDate.getMonth() + 1);
-      } else {
-        // console.error('事件创建失败: createEvent 返回 null');
-        const errorMessage = eventsError || t('home.eventCreationFailed');
-        Alert.alert(t('home.error'), errorMessage);
-      }
-  }
+  // This function is deprecated and will be removed.
+  // const createAndRefresh = async (eventData: any) => { ... }
 
-  // 处理多个AI解析结果
   const handleCreateMultipleAIEvents = async (events: any[]) => {
-    setLoadingText(t('home.savingEvents'));
-    try {
-      let successCount = 0;
-      let failCount = 0;
-      
-      for (const event of events) {
-        try {
-          await handleCreateAIEvent(event);
+    let successCount = 0;
+    for (const event of events) {
+      try {
+        const eventData = {
+          title: event.title,
+          description: event.description,
+          startTime: new Date(event.startTime),
+          endTime: event.endTime ? new Date(event.endTime) : undefined,
+          location: event.location,
+        };
+        const createdId = await createEvent(eventData);
+        if (createdId) {
           successCount++;
-        } catch (error) {
-          console.error('创建事件失败:', error);
-          failCount++;
         }
+      } catch (e) {
+        console.error("Failed to create one of multiple events:", e);
       }
-      
-      // 显示结果
-      if (successCount > 0 && failCount === 0) {
-        Alert.alert(
-          t('home.success'), 
-          t('home.createMultipleEventsSuccess', { count: successCount }),
-          [{ text: t('home.ok'), style: 'default' }]
-        );
-      } else if (successCount > 0 && failCount > 0) {
-        Alert.alert(
-          t('home.partialSuccess'), 
-          t('home.createMultipleEventsPartialSuccess', { success: successCount, failed: failCount }),
-          [{ text: t('home.ok'), style: 'default' }]
-        );
-      } else {
-        Alert.alert(
-          t('home.error'), 
-          t('home.createMultipleEventsFailed'),
-          [{ text: t('home.ok'), style: 'default' }]
-        );
-      }
-      
-      // 重新获取当月事件
-      const currentDate = new Date();
-      await fetchEvents(currentDate.getFullYear(), currentDate.getMonth() + 1);
-    } catch (error) {
-      console.error('批量创建事件失败:', error);
-      Alert.alert(t('home.error'), t('home.batchEventCreationFailed'));
+    }
+
+    if (successCount > 0) {
+      setSuccessTitle(t('home.eventCreationSuccess'));
+      setSuccessMessage(t('home.multipleEventsCreationSuccessMessage', { count: successCount }));
+      setShowSuccessModal(true);
+    } else {
+      Alert.alert(t('home.error'), t('home.eventCreationFailed'));
     }
   };
 
@@ -1062,6 +869,16 @@ export default function HomeScreen() {
       eventStartDate.setHours(0,0,0,0);
       return eventStartDate.getTime() === targetDayStart.getTime();
     });
+  };
+
+  const formatTime = (date: Date) => {
+    return new Intl.DateTimeFormat('zh-CN', {
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).format(date);
   };
 
   if (loading) {
@@ -1354,7 +1171,7 @@ export default function HomeScreen() {
         onManualAddPress={handleManualAdd}
         onPhotoPress={handlePhotoPress}
         onAlbumPress={handleAlbumPress}
-        disabled={voiceState.isLoading || isProcessingImage}
+        disabled={voiceState.isLoading || isProcessingImage || isProcessingText}
       />
 
       {/* 添加事件模态框 */}
@@ -1438,7 +1255,21 @@ export default function HomeScreen() {
         }}
       />
 
-      <LoadingModal isVisible={isProcessingImage} text={loadingText} />
+      <LoadingModal isVisible={isProcessingImage || isProcessingText} text={loadingText} />
+
+      {/* 确认弹窗 */}
+      <ConfirmationModal
+        isVisible={isConfirmationModalVisible}
+        event={pendingEvent}
+        onConfirm={handleConfirmCreateEvent}
+        onCancel={handleCancelCreateEvent}
+      />
+      <SuccessModal
+        isVisible={showSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
+        title={successTitle}
+        message={successMessage}
+      />
     </SafeAreaView>
   );
 }
