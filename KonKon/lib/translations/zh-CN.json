@@ -113,8 +113,10 @@
     "addEvent": "添加事件",
     "confirmationTitleSingle": "帮你安排好啦！",
     "confirmationTitleMultiple": "帮你安排好这些日程啦！",
+    "multipleEventsCreationSuccessMessage": "成功创建 {{count}} 个日程！",
     "eventCreatedSuccess": "日程已成功创建！",
-    "eventUpdatedSuccess": "日程已成功更新！"
+    "eventUpdatedSuccess": "日程已成功更新！",
+    "eventDeleteSuccess": "日程已成功删除！"
   },
   "ios": {
     "infoPlist": {

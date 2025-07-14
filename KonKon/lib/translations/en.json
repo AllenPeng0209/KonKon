@@ -127,7 +127,13 @@
     "choreSchedule": "Chore Schedule",
     "anniversaryReminder": "Anniversary Reminder",
     "isRecording": "Recording... %{duration}s",
-    "eventDeleted": "Event deleted"
+    "eventDeleted": "Event deleted",
+    "confirmationTitleSingle": "Confirm Event",
+    "confirmationTitleMultiple": "Confirm Events",
+    "eventCreatedSuccess": "Event created successfully!",
+    "multipleEventsCreationSuccessMessage": "{{count}} events have been created successfully!",
+    "eventUpdatedSuccess": "Event updated successfully!",
+    "eventDeleteSuccess": "Event deleted successfully!"
   },
   "ios": {
     "infoPlist": {

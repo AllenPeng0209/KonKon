@@ -17,7 +17,35 @@ i18n.defaultLocale = 'en-US';
 i18n.locale = Localization.getLocales()[0].languageCode ?? 'en-US';
 i18n.enableFallback = true;
 
-export const t = (key: string, options?: any) => i18n.t(key, options);
+type TranslationKeys = 
+  | 'home.addEvent'
+  | 'home.addExpense'
+  | 'home.addMemory'
+  | 'home.viewAlbum'
+  | 'home.viewEvents'
+  | 'home.viewFinance'
+  | 'home.confirmationTitle'
+  | 'home.confirmationMessage'
+  | 'home.confirm'
+  | 'home.cancel'
+  | 'home.eventDetails'
+  | 'home.success'
+  | 'home.eventCreatedSuccess'
+  | 'home.permissionRequired'
+  | 'home.voicePermission'
+  | 'home.goToSettings'
+  | 'home.startRecording'
+  | 'home.stopRecording'
+  | 'home.processing'
+  | 'home.confirmationTitleSingle'
+  | 'home.confirmationTitleMultiple'
+  | 'home.multipleEventsCreationSuccessMessage'
+  | 'home.eventUpdatedSuccess'
+  | 'home.eventDeleteSuccess'
+  // Add other keys as needed...
+  ;
+
+export const t = (key: TranslationKeys, options?: any) => i18n.t(key, options);
 
 export const setLocale = (locale: string) => {
   i18n.locale = locale;

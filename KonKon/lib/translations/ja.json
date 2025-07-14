@@ -136,7 +136,13 @@
     "choreSchedule": "家事のスケジュール",
     "anniversaryReminder": "記念日リマインダー",
     "isRecording": "録音中... %{duration}s",
-    "eventDeleted": "イベントが削除されました"
+    "eventDeleted": "イベントが削除されました",
+    "confirmationTitleSingle": "カレンダー登録",
+    "confirmationTitleMultiple": "カレンダー登録",
+    "eventCreatedSuccess": "イベントが正常に作成されました！",
+    "multipleEventsCreationSuccessMessage": "{{count}}件のイベントが正常に作成されました！",
+    "eventUpdatedSuccess": "イベントが正常に更新されました！",
+    "eventDeleteSuccess": "イベントが正常に削除されました！"
   },
   "ios": {
     "infoPlist": {

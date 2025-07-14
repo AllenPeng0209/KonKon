@@ -136,7 +136,13 @@
     "choreSchedule": "家務安排",
     "anniversaryReminder": "紀念日提醒",
     "isRecording": "錄製中... %{duration}s",
-    "eventDeleted": "事件已刪除"
+    "eventDeleted": "事件已刪除",
+    "confirmationTitleSingle": "確認日程",
+    "confirmationTitleMultiple": "確認日程",
+    "eventCreatedSuccess": "日程已成功建立！",
+    "multipleEventsCreationSuccessMessage": "成功創建 {{count}} 個日程！",
+    "eventUpdatedSuccess": "日程已成功更新！",
+    "eventDeleteSuccess": "日程已成功刪除！"
   },
   "ios": {
     "infoPlist": {

@@ -399,8 +399,7 @@ export async function processTextToCalendar(
   text: string,
   onProgress?: (chunk: string) => void
 ): Promise<ParsedCalendarResult> {
-  return new Promise(async (resolve, reject) => {
-    try {
+  try {
       const config = await getOmniConfig();
       const url = `${config.baseURL}/compatible-mode/v1/chat/completions`;
       
@@ -422,14 +421,6 @@ export async function processTextToCalendar(
       "startTime": "YYYY-MM-DD HH:mm:ss",
       "endTime": "YYYY-MM-DD HH:mm:ss",
       "location": "地点（可选）",
-      "isRecurring": false,
-      "recurringPattern": "重复模式（可选）",
-      "recurrenceRule": {
-        "frequency": "WEEKLY",
-        "interval": 1,
-        "byDay": ["TU"],
-        "until": "YYYY-MM-DD"
-      },
       "confidence": 0.9
     }
   ],
@@ -438,121 +429,93 @@ export async function processTextToCalendar(
 }
 
 注意：
-1. 时间格式必须是YYYY-MM-DD HH:mm:ss
-2. 当前日期是${now.toLocaleDateString('zh-CN')}，今天是${currentYear}年${currentMonth}月${currentDate}日
-3. 如果用户只说了时间没说日期，默认为今天或明天。
-4. 如果没有明确的结束时间，根据事件类型估算（如会议1小时，吃饭1小时等）
-5. confidence表示解析的置信度（0-1之间）
-6. 必须返回有效的JSON格式，不要包含其他解释文字
-7. 相对时间参考：今天=${today}，明天=${tomorrow}
-8. 重复事件处理：
-   - 如果用户提到"每天"、"每周"、"每月"等重复词汇，请设置 isRecurring: true
-   - recurringPattern 是用户原始描述，如"每周二"
-   - recurrenceRule 是结构化的重复规则：
-     * frequency: "DAILY"(每天) | "WEEKLY"(每周) | "MONTHLY"(每月) | "YEARLY"(每年)
-     * interval: 间隔数，默认1
-     * byDay: 星期几，如["MO","TU","WE","TH","FR","SA","SU"]
-     * byMonthDay: 月份中的第几天，如[1,15,31]
-     * count: 重复次数
-     * until: 结束日期"YYYY-MM-DD"
-   - 示例：
-     * "每周二" -> {"frequency":"WEEKLY","interval":1,"byDay":["TU"]}
-     * "每两周" -> {"frequency":"WEEKLY","interval":2}
-     * "每月15号" -> {"frequency":"MONTHLY","interval":1,"byMonthDay":[15]}
-     * "工作日" -> {"frequency":"WEEKLY","interval":1,"byDay":["MO","TU","WE","TH","FR"]}`;
+1.  **JSON输出**: 必须返回有效的JSON格式，不要包含其他解释文字。
+2.  **多事件**: 如果文本包含多个事件，请在 'events' 数组中返回所有事件。
+3.  **时间格式**: 时间格式必须是 'YYYY-MM-DD HH:mm:ss'。
+4.  **日期推断**: 当前日期是${now.toLocaleDateString('zh-CN')}。如果用户只说了时间没说日期，默认为今天(${today})。相对时间参考：明天=${tomorrow}。
+5.  **结束时间**: 如果没有明确的结束时间，根据事件类型估算（如会议1小时，吃饭1.5小时等）。
+6.  **置信度**: 'confidence' 表示你对解析结果的信心（0-1之间）。`;
 
       const requestBody = {
-        model: 'qwen2.5-omni-7b', // 使用兼容 openai 的模型
+        model: 'qwen2.5-omni-7b', // 使用更适合对话和快速指令的模型
         stream: true,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: text }
         ],
-        // 如果模型支持，可以强制json输出
-        // response_format: { type: "json_object" } 
       };
 
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', url, true);
-      xhr.setRequestHeader('Content-Type', 'application/json');
-      xhr.setRequestHeader('Authorization', `Bearer ${config.apiKey}`);
-      xhr.setRequestHeader('Accept', 'text/event-stream');
+      if (onProgress) onProgress('正在处理...');
 
-      let fullResponse = '';
-      let lastProcessedPosition = 0;
+      const response = await new Promise<string>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', url, true);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.setRequestHeader('Authorization', `Bearer ${config.apiKey}`);
+        xhr.setRequestHeader('Accept', 'text/event-stream');
 
-      xhr.onprogress = () => {
-        const chunk = xhr.responseText.substring(lastProcessedPosition);
-        lastProcessedPosition = xhr.responseText.length;
-        const lines = chunk.split('\n');
+        let fullResponse = '';
+        let lastProcessedPosition = 0;
+        xhr.onprogress = () => {
+          const chunk = xhr.responseText.substring(lastProcessedPosition);
+          lastProcessedPosition = xhr.responseText.length;
+          const lines = chunk.split('\n');
 
-        for (const line of lines) {
-          if (line.trim() === '' || !line.startsWith('data: ')) continue;
-          const data = line.slice(6);
-          if (data.trim() === '[DONE]') return;
+          for (const line of lines) {
+            if (line.trim() === '' || !line.startsWith('data: ')) continue;
+            const data = line.slice(6);
+            if (data.trim() === '[DONE]') return;
 
-          try {
-            const parsed = JSON.parse(data);
-            const textChunk = parsed.choices?.[0]?.delta?.content || '';
-            if (textChunk) {
-              fullResponse += textChunk;
-              if (onProgress) {
-                // 为了与之前的实现保持一致，这里可以简单地传递累积的文本
-                onProgress(fullResponse); 
-              }
-            }
-          } catch (e) {
-            console.warn('解析流数据失败 (onprogress):', data, e);
-          }
-        }
-      };
-
-      xhr.onreadystatechange = () => {
-        if (xhr.readyState === 4) {
-          if (xhr.status === 200) {
             try {
-              // 在流结束后，完整的JSON应该已经接收完毕
-              const finalResult = parseCalendarResult(fullResponse);
-              // 在这里附加原始文本
-              resolve({
-                ...finalResult,
-                userInput: text,
-              });
-            } catch (e) {
-              console.error('最终JSON解析失败:', e);
-              // 尝试从不完整的文本中提取基本信息作为备用方案
-              const basicEvent = extractBasicEventInfo(text);
-              if (basicEvent) {
-                  resolve({
-                      events: [basicEvent],
-                      summary: `未能完全解析，已提取基本信息: ${basicEvent.title}`,
-                      confidence: 0.4,
-                      rawResponse: fullResponse,
-                      userInput: text, // 同样附加原始文本
-                  });
-              } else {
-                  reject(new Error('无法解析服务器返回的有效日程数据'));
+              const parsed = JSON.parse(data);
+              const textChunk = parsed.choices?.[0]?.delta?.content || '';
+              if (textChunk) {
+                fullResponse += textChunk;
+                if (onProgress) onProgress(fullResponse); 
               }
+            } catch (e) {
+              console.warn('解析流数据失败 (onprogress):', data, e);
             }
-          } else {
-            console.error('文本转日历 API 错误:', xhr.status, xhr.responseText);
-            reject(new Error(`API 错误: ${xhr.status} - ${xhr.responseText}`));
           }
-        }
-      };
+        };
 
-      xhr.onerror = () => {
-        console.error('文本转日历请求失败');
-        reject(new Error('网络错误，无法连接到日程解析服务'));
-      };
+        xhr.onreadystatechange = () => {
+          if (xhr.readyState === 4) {
+            if (xhr.status === 200) {
+                // 流结束后，完整的JSON应该已经接收完毕
+                resolve(fullResponse);
+            } else {
+              console.error('文本转日历 API 错误:', xhr.status, xhr.responseText);
+              reject(new Error(`API 错误: ${xhr.status} - ${xhr.responseText}`));
+            }
+          }
+        };
+        
+        xhr.onerror = () => {
+          reject(new Error('网络错误，无法连接到日程解析服务'));
+        };
 
-      xhr.send(JSON.stringify(requestBody));
+        xhr.send(JSON.stringify(requestBody));
+      });
+      
+      const finalResult = parseCalendarResult(response);
+      return {
+        ...finalResult,
+        userInput: text,
+      };
 
     } catch (error) {
       console.error('文本处理失败:', error);
-      reject(new Error(`文本处理失败: ${error instanceof Error ? error.message : '未知错误'}`));
+      // 降级处理
+      const fallbackEvent = extractBasicEventInfo(text);
+      return {
+          events: fallbackEvent ? [fallbackEvent] : [],
+          summary: `处理失败: ${error instanceof Error ? error.message : "未知错误"}`,
+          confidence: 0.2,
+          rawResponse: '',
+          userInput: text,
+      };
     }
-  });
 }
 
 // 图片输入处理
@@ -681,6 +644,7 @@ function normalizeEventKeys(event: any): any {
         event: 'title',
         event_name: 'title',
         name: 'title',
+        summary: 'title', // 将 summary 也映射到 title
         start_time: 'startTime',
         starttime: 'startTime',
         end_time: 'endTime',
@@ -759,86 +723,109 @@ function parseDuration(durationStr: string): { hours: number, minutes: number } 
 function parseCalendarResult(
   content: string
 ): ParsedCalendarResult {
-    console.log("Raw content for parsing:", content);
+  console.log("Raw content for parsing:", content);
 
-    const jsonRegex = /```json\s*([\s\S]*?)\s*```|({[\s\S]*})/;
-    const match = content.match(jsonRegex);
+  const jsonRegex = /```json\s*([\s\S]*?)\s*```|({[\s\S]*})/;
+  const match = content.match(jsonRegex);
 
-    if (!match) {
-        console.error("No JSON found in response:", content);
-        throw new Error("未能从AI响应中解析出有效的JSON。");
-    }
-    
-    // 优先使用 ```json ``` 块的内容，其次是独立的 {}
-    const jsonString = match[1] || match[2];
+  if (!match) {
+      console.error("No JSON found in response:", content);
+      // 如果没有找到JSON，直接进入后备逻辑
+      const fallbackEvent = extractBasicEventInfo(content);
+      return {
+          events: fallbackEvent ? [fallbackEvent] : [],
+          summary: "AI未返回有效JSON，已尝试基本提取。",
+          confidence: 0.3,
+          rawResponse: content,
+      };
+  }
+  
+  // 优先使用 ```json ``` 块的内容，其次是独立的 {}
+  const jsonString = match[1] || match[2];
 
-    try {
-        let parsedData = JSON.parse(jsonString);
+  try {
+      let parsedData = JSON.parse(jsonString);
 
-        // 处理整个结果被包裹在一个 "event" key下的情况
-        if (parsedData.event && typeof parsedData.event === 'object' && !Array.isArray(parsedData.event)) {
-             parsedData = { events: [parsedData.event], ...parsedData };
-             delete parsedData.event;
-        }
+      // 处理整个结果被包裹在一个 "event" key下的情况
+      if (parsedData.event && typeof parsedData.event === 'object' && !Array.isArray(parsedData.event)) {
+           parsedData = { events: [parsedData.event], ...parsedData };
+           delete parsedData.event;
+      }
 
-        const normalizedEvents = (parsedData.events || []).map((rawEvent: any) => {
-             const event = normalizeEventKeys(rawEvent);
+      if (!parsedData.events || !Array.isArray(parsedData.events)) {
+        throw new Error("返回的数据中'events'字段不是一个数组或不存在");
+      }
 
-             const referenceDate = new Date();
-             const startTime = parseTime(event.startTime, referenceDate);
-             let endTime = parseTime(event.endTime, referenceDate);
-             
-             // If only startTime and duration are available
-             if (startTime && !endTime && event.duration) {
-                 const { hours, minutes } = parseDuration(event.duration);
-                 endTime = new Date(startTime.getTime() + hours * 60 * 60 * 1000 + minutes * 60 * 1000);
-             }
+      const normalizedEvents = (parsedData.events || []).map((rawEvent: any) => {
+           const event = normalizeEventKeys(rawEvent);
 
-             // If endTime is still invalid, set a default duration
-             if (startTime && !endTime) {
-                 endTime = new Date(startTime.getTime() + 60 * 60 * 1000); // Default 1 hour
-             }
+           if (!event.title || !event.startTime) {
+              throw new Error('事件缺少必要的字段 "title" 或 "startTime"');
+           }
 
-             // Ensure recurrenceRule.until is a Date object if it exists
-             if (event.recurrenceRule && event.recurrenceRule.until && typeof event.recurrenceRule.until === 'string') {
-                const untilDate = new Date(event.recurrenceRule.until);
-                // Check for invalid date
-                if (!isNaN(untilDate.getTime())) {
-                  event.recurrenceRule.until = untilDate;
-                } else {
-                  console.warn(`Could not parse until date string: "${event.recurrenceRule.until}"`);
-                  delete event.recurrenceRule.until; // Remove invalid date
-                }
-             }
+           const referenceDate = new Date();
+           const startTime = parseTime(event.startTime, referenceDate);
+           let endTime = parseTime(event.endTime, referenceDate);
+           
+           // If only startTime and duration are available
+           if (startTime && !endTime && event.duration) {
+               const { hours, minutes } = parseDuration(event.duration);
+               endTime = new Date(startTime.getTime() + hours * 60 * 60 * 1000 + minutes * 60 * 1000);
+           }
 
-            return {
-                ...event, // Spread original event data first
-                id: generateEventId(),
-                startTime: startTime, // Overwrite with parsed Date object
-                endTime: endTime,     // Overwrite with parsed Date object
-                confidence: event.confidence || parsedData.confidence || 0.85,
-            };
-        });
-        
-        const finalEvents = normalizedEvents.filter((e: any) => e.title && e.startTime && e.endTime && e.startTime < e.endTime);
-        
-        // Allow for cases where no events are found, do not throw an error.
-        if (finalEvents.length === 0 && parsedData.events && parsedData.events.length > 0) {
-           // This case means events were present but failed validation (e.g., bad dates)
-           console.warn("解析到的事件缺少必要信息或起止时间不正确。", parsedData.events);
-        }
+           // If endTime is still invalid, set a default duration
+           if (startTime && !endTime) {
+               endTime = new Date(startTime.getTime() + 60 * 60 * 1000); // Default 1 hour
+           }
 
-        return {
-            events: finalEvents,
-            summary: parsedData.summary || '日程已解析',
-            confidence: parsedData.confidence || 0.85,
-            rawResponse: content,
-        };
-    } catch (e) {
-        console.error("Failed to parse JSON:", e);
-        console.error("Original JSON string:", jsonString);
-        throw new Error(`JSON解析失败: ${e instanceof Error ? e.message : "未知错误"}`);
-    }
+           // Ensure recurrenceRule.until is a Date object if it exists
+           if (event.recurrenceRule && event.recurrenceRule.until && typeof event.recurrenceRule.until === 'string') {
+              const untilDate = new Date(event.recurrenceRule.until);
+              // Check for invalid date
+              if (!isNaN(untilDate.getTime())) {
+                event.recurrenceRule.until = untilDate;
+              } else {
+                console.warn(`Could not parse until date string: "${event.recurrenceRule.until}"`);
+                delete event.recurrenceRule.until; // Remove invalid date
+              }
+           }
+
+           return {
+               ...event, // Spread original event data first
+               id: generateEventId(),
+               startTime: startTime, // Overwrite with parsed Date object
+               endTime: endTime,     // Overwrite with parsed Date object
+               confidence: event.confidence || parsedData.confidence || 0.85,
+           };
+      });
+      
+      const finalEvents = normalizedEvents.filter((e: any) => e.title && e.startTime && e.endTime && e.startTime < e.endTime);
+      
+      // Allow for cases where no events are found, do not throw an error.
+      if (finalEvents.length === 0 && parsedData.events && parsedData.events.length > 0) {
+         // This case means events were present but failed validation (e.g., bad dates)
+         console.warn("解析到的事件缺少必要信息或起止时间不正确。", parsedData.events);
+      }
+
+      return {
+          events: finalEvents,
+          summary: parsedData.summary || '日程已解析',
+          confidence: parsedData.confidence || 0.85,
+          rawResponse: content,
+      };
+  } catch (e) {
+    console.error("Failed to parse JSON:", e);
+    console.error("Original JSON string:", jsonString);
+    // 在失败时返回一个包含错误信息的对象
+    const fallbackEvent = extractBasicEventInfo(jsonString || content);
+    return {
+      events: fallbackEvent ? [fallbackEvent] : [],
+      summary: `JSON解析失败: ${e instanceof Error ? e.message : "未知错误"}`,
+      confidence: 0.3,
+      rawResponse: content,
+      userInput: jsonString || content,
+    };
+  }
 }
 
 // 新增：解析记账结果
