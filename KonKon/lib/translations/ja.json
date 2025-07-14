@@ -129,6 +129,17 @@
     "isRecording": "録音中... {duration}s",
     "eventDeleted": "イベントが削除されました"
   },
+  "ios": {
+    "infoPlist": {
+      "NSLocationWhenInUseUsageDescription": "KonKonは、地域化されたイベントの推薦やサービスを提供するために、あなたの位置情報を必要とします。",
+      "NSCameraUsageDescription": "KonKonは、写真を撮ってカレンダーイベントに変換するために、あなたのカメラへのアクセスを必要とします。",
+      "NSPhotoLibraryUsageDescription": "KonKonは、写真を選択してカレンダーイベントに変換するために、あなたのフォトライブラリへのアクセスを必要とします。",
+      "NSMicrophoneUsageDescription": "あなたの音声をリアルタイムで文字起こしし、チャットコンテンツを生成するためにマイクが必要です。録音はローカルでリアルタイムに処理され、アップロードや保存はされません。",
+      "NSUserTrackingUsageDescription": "あなたのデータは、パーソナライズされた体験と広告効果を向上させるために使用されます。私たちはあなたのプライバシーを保護し、データを決して悪用しないことをお約束します。"
+    },
+    "calendarPermission": "KonKonは、イベントを同期および管理するために、カレンダーへのアクセスが必要です。",
+    "remindersPermission": "KonKonは、リマインダー通知を作成するために、リマインダーへのアクセスが必要です。"
+  },
   "tabs": {
     "record": "記録",
     "explore": "洞察"

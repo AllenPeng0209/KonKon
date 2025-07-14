@@ -10,7 +10,9 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
+import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from 'expo-status-bar';
+import { requestTrackingPermissionsAsync } from 'expo-tracking-transparency';
 import { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
@@ -19,6 +21,8 @@ import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { FamilyProvider } from '../contexts/FamilyContext';
 import { LanguageProvider } from '../contexts/LanguageContext';
 import { registerForPushNotificationsAsync } from '../lib/notifications';
+
+SplashScreen.preventAutoHideAsync();
 
 function ProtectedLayout() {
   const { user, loading } = useAuth();
@@ -97,6 +101,21 @@ export default function RootLayout() {
   const [loaded] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
+
+  useEffect(() => {
+    (async () => {
+      const { status } = await requestTrackingPermissionsAsync();
+      if (status === 'granted') {
+        console.log('Yay! I have user permission to track an advertiser identifier!');
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (loaded) {
+      SplashScreen.hideAsync();
+    }
+  }, [loaded]);
 
   useEffect(() => {
     registerForPushNotificationsAsync();

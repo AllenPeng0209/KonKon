@@ -129,6 +129,17 @@
     "isRecording": "Recording... {duration}s",
     "eventDeleted": "Event deleted"
   },
+  "ios": {
+    "infoPlist": {
+      "NSLocationWhenInUseUsageDescription": "KonKon needs your location to provide localized event recommendations and services.",
+      "NSCameraUsageDescription": "KonKon needs access to your camera so you can take photos and convert them into calendar events.",
+      "NSPhotoLibraryUsageDescription": "KonKon needs access to your photo library so you can select pictures and convert them into calendar events.",
+      "NSMicrophoneUsageDescription": "Your microphone is needed to transcribe your voice in real-time and generate chat content. Recordings are processed locally in real-time and are not uploaded or saved.",
+      "NSUserTrackingUsageDescription": "Your data will be used to improve personalized experiences and ad effectiveness. We are committed to protecting your privacy and will never misuse your data."
+    },
+    "calendarPermission": "KonKon needs access to your calendar to sync and manage events.",
+    "remindersPermission": "KonKon needs access to your reminders to create reminder notifications."
+  },
   "tabs": {
     "record": "Record",
     "explore": "Explore"

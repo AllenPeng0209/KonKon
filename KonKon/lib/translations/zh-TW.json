@@ -129,6 +129,17 @@
     "isRecording": "錄製中... {duration}s",
     "eventDeleted": "事件已刪除"
   },
+  "ios": {
+    "infoPlist": {
+      "NSLocationWhenInUseUsageDescription": "KonKon需要您的位置來提供本地化的事件推薦與服務。",
+      "NSCameraUsageDescription": "KonKon需要存取您的相機，以便您拍照並將其轉換為日曆事件。",
+      "NSPhotoLibraryUsageDescription": "KonKon需要存取您的相簿，以便您選取圖片並將其轉換為日曆事件。",
+      "NSMicrophoneUsageDescription": "需要麥克風以即時轉錄您的語音並生成聊天內容；錄音僅本地即時處理，不會上傳或保存。",
+      "NSUserTrackingUsageDescription": "您的數據將用於改善個人化體驗和廣告效果。我們承諾保護您的隱私，絕不濫用您的數據。"
+    },
+    "calendarPermission": "KonKon 需要存取您的日曆來同步和管理事件。",
+    "remindersPermission": "KonKon 需要存取您的提醒來建立提醒通知。"
+  },
   "album": {
     "familyMember": "家庭成員",
     "like": "喜歡",
