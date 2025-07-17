@@ -24,7 +24,7 @@ import { UserMessage } from '../../components/chat/UserMessage';
 
 // 自定义 Hook
 import { t } from '@/lib/i18n';
-import { useChat } from '../../hooks/useChat';
+import { useEnhancedChat } from '../../hooks/useEnhancedChat';
 
 export default function ExploreScreen() {
   const { user, loading } = useAuth();
@@ -32,8 +32,8 @@ export default function ExploreScreen() {
   const { top } = useSafeAreaInsets();
   const scrollViewRef = useRef<ScrollView>(null);
   
-  // 聊天功能
-  const { messages, isLoading, sendMessage, clearMessages } = useChat();
+  // 增強聊天功能 - 包含家庭日曆數據
+  const { messages, isLoading, sendMessage, clearMessages, hasEvents, hasFamily, eventsCount } = useEnhancedChat();
 
   useEffect(() => {
     if (!loading && !user) {
@@ -110,6 +110,16 @@ export default function ExploreScreen() {
 
       {/* 配置检查 */}
       <BailianConfig />
+
+      {/* 家庭日曆連接狀態 */}
+      {hasFamily && (
+        <View style={styles.calendarStatus}>
+          <Text style={styles.calendarStatusIcon}>📅</Text>
+          <Text style={styles.calendarStatusText}>
+            已連接家庭日曆 • {eventsCount}個事件
+          </Text>
+        </View>
+      )}
 
       {/* 聊天界面 */}
       <KeyboardAvoidingView 
@@ -258,5 +268,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 8,
     paddingTop: 8,
+  },
+  calendarStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e8f5e8',
+    marginHorizontal: 16,
+    marginTop: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#4CAF50',
+  },
+  calendarStatusIcon: {
+    fontSize: 16,
+    marginRight: 8,
+  },
+  calendarStatusText: {
+    color: '#2E7D32',
+    fontSize: 14,
+    fontWeight: '500',
   },
 });

@@ -13,6 +13,8 @@ export function FirstSuggestions({ onSuggestionPress }: FirstSuggestionsProps) {
     t('firstSuggestions.suggestion3'),
     t('firstSuggestions.suggestion4'),
     t('firstSuggestions.suggestion5'),
+    t('firstSuggestions.suggestion6'),
+    t('firstSuggestions.suggestion7'),
   ];
 
   return (

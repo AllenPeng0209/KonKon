@@ -426,11 +426,13 @@
     "errorDescription": "请在 .env.local 文件中配置以下环境变量："
   },
   "firstSuggestions": {
-    "suggestion1": "帮我安排本周的家庭活动",
-    "suggestion2": "提醒我家人的生日和重要纪念日",
-    "suggestion3": "制定家庭购物清单",
-    "suggestion4": "安排家务分工计划",
-    "suggestion5": "推荐适合家庭的周末活动"
+    "suggestion1": "分析我家近期的日程安排",
+    "suggestion2": "基于我的日程推荐活动",
+    "suggestion3": "帮我优化家庭时间安排",
+    "suggestion4": "提醒重要事件和冲突",
+    "suggestion5": "制定下周家庭计划",
+    "suggestion6": "查看今天的所有安排",
+    "suggestion7": "推荐合适的聚餐时间"
   },
   "eventListModal": {
     "deleteEvent": "删除事件",

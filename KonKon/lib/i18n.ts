@@ -155,6 +155,8 @@ type TranslationKeys =
   | 'languageSelection.languages.ja-JP'
   | 'tabs.record'
   | 'tabs.explore'
+  | 'explore.loading'
+  | 'explore.clear'
   | 'smartButton.parseError'
   | 'home.parseError'
   | 'profile.createOrJoinFamilyTitle'
@@ -217,6 +219,13 @@ type TranslationKeys =
   | 'familyManagement.byInviteCode'
   | 'familyManagement.enterInviteCode'
   | 'familyManagement.joinFamily'
+  | 'firstSuggestions.suggestion1'
+  | 'firstSuggestions.suggestion2'
+  | 'firstSuggestions.suggestion3'
+  | 'firstSuggestions.suggestion4'
+  | 'firstSuggestions.suggestion5'
+  | 'firstSuggestions.suggestion6'
+  | 'firstSuggestions.suggestion7'
   ;
 
 export const t = (key: TranslationKeys, options?: any) => i18n.t(key, options);
