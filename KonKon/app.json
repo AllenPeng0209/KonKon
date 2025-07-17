@@ -8,6 +8,9 @@
     "scheme": "konkon",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "locales": {
+      "ja": "./locales/ja.json"
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.agenthub.konkon",
@@ -18,10 +21,9 @@
         "NSCameraUsageDescription": "KonKon需要访问您的相机，以便您拍照并将其转换为日历事件。",
         "NSPhotoLibraryUsageDescription": "KonKon需要访问您的相册，以便您选择图片并将其转换为日历事件。",
         "NSMicrophoneUsageDescription": "需要麥克風以即時轉錄您的語音並生成聊天內容；錄音僅本地即時處理，不會上傳或保存。",
-        "NSUserTrackingUsageDescription": "您的數據將用於改善個人化體驗和廣告效果。我們承諾保護您的隱私，絕不濫用您的數據。"
-      },
-      "locales": {
-        "ja": "./lib/translations/ja.json"
+        "NSUserTrackingUsageDescription": "您的數據將用於改善個人化體驗和廣告效果。我們承諾保護您的隱私，絕不濫用您的數據。",
+        "NSCalendarsUsageDescription": "KonKon需要访问您的日历来同步和管理事件",
+        "NSRemindersUsageDescription": "KonKon需要访问您的提醒来创建提醒通知"
       }
     },
     "android": {

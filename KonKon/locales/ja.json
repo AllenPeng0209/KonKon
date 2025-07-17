@@ -1,0 +1,13 @@
+{
+  "ios": {
+    "infoPlist": {
+      "NSLocationWhenInUseUsageDescription": "KonKonは、ローカライズされたイベントの推奨とサービスを提供するためにあなたの位置情報を必要とします。",
+      "NSCameraUsageDescription": "KonKonは、写真を撮ってカレンダーイベントに変換するためにカメラへのアクセスを必要とします。",
+      "NSPhotoLibraryUsageDescription": "KonKonは、写真を選択してカレンダーイベントに変換するために写真ライブラリへのアクセスを必要とします。",
+      "NSMicrophoneUsageDescription": "マイクは、あなたの音声をリアルタイムで書き起こし、チャットコンテンツを生成するために必要です。録音はローカルでリアルタイム処理され、アップロードや保存はされません。",
+      "NSUserTrackingUsageDescription": "あなたのデータは、パーソナライズされた体験と広告効果を向上させるために使用されます。私たちはあなたのプライバシーを保護し、データを決して悪用しないことを約束します。",
+      "NSCalendarsUsageDescription": "KonKonは、イベントを同期および管理するためにカレンダーへのアクセスを必要とします。",
+      "NSRemindersUsageDescription": "KonKonは、リマインダー通知を作成するためにリマインダーへのアクセスを必要とします。"
+    }
+  }
+} 
