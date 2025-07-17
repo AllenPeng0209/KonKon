@@ -9,6 +9,7 @@
     }
   },
   "home": {
+    "parseError": "Failed to parse content",
     "all": "All",
     "calendar": "Calendar",
     "expense": "Expense",
@@ -133,7 +134,15 @@
     "eventCreatedSuccess": "Event created successfully!",
     "multipleEventsCreationSuccessMessage": "{{count}} events have been created successfully!",
     "eventUpdatedSuccess": "Event updated successfully!",
-    "eventDeleteSuccess": "Event deleted successfully!"
+    "eventDeleteSuccess": "Event deleted successfully!",
+    "analyzingText": "Analyzing text...",
+    "expenseSaveNotLoggedIn": "You must be logged in to save expenses.",
+    "userStateError": "User state error, please try again.",
+    "expenseSaveFailed": "Failed to save expense: %{error}",
+    "expenseSaved": "Expense saved successfully."
+  },
+  "smartButton": {
+    "parseError": "Oops! I couldn't understand that. Could you try again?"
   },
   "ios": {
     "infoPlist": {

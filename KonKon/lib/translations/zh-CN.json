@@ -9,6 +9,7 @@
     }
   },
   "home": {
+    "parseError": "内容解析失败",
     "all": "全部",
     "calendar": "日历",
     "expense": "开销",
@@ -116,7 +117,15 @@
     "multipleEventsCreationSuccessMessage": "成功创建 {{count}} 个日程！",
     "eventCreatedSuccess": "日程已成功创建！",
     "eventUpdatedSuccess": "日程已成功更新！",
-    "eventDeleteSuccess": "日程已成功删除！"
+    "eventDeleteSuccess": "日程已成功删除！",
+    "analyzingText": "正在分析文本...",
+    "expenseSaveNotLoggedIn": "您必须登录才能保存费用。",
+    "userStateError": "用户状态错误，请重试。",
+    "expenseSaveFailed": "保存费用失败: %{error}",
+    "expenseSaved": "费用已成功保存。"
+  },
+  "smartButton": {
+    "parseError": "哎呀，我没听清，可以再说一次吗？"
   },
   "ios": {
     "infoPlist": {

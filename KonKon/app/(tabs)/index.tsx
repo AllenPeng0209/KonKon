@@ -458,7 +458,7 @@ export default function HomeScreen() {
         handleAIResult(calendarResult);
       }
     } catch (error) {
-      handleTextError(error instanceof Error ? error.message : '未知错误');
+      // handleTextError(); // No longer needed, SmartButton will handle it
     } finally {
       setIsProcessingText(false); // 结束时重置状态
       setLoadingText('');
@@ -545,7 +545,7 @@ export default function HomeScreen() {
       setPendingSummary(result.summary);
       setIsConfirmationModalVisible(true);
     } else {
-      handleTextError(t('home.errorNoEventsFound'));
+      // handleTextError(); // No longer needed, SmartButton will handle it
     }
   };
 
@@ -662,23 +662,8 @@ export default function HomeScreen() {
     }
   };
 
-  // 处理文字输入错误
-  const handleTextError = (error: string) => {
-    let errorMessage = '';
-    switch (error) {
-      case 'image':
-        errorMessage = t('home.imageProcessingError');
-        break;
-      case 'voice':
-        errorMessage = t('home.voiceProcessingError');
-        break;
-      case 'text':
-        errorMessage = t('home.textProcessingError');
-        break;
-      default:
-        errorMessage = error;
-    }
-    Alert.alert(t('home.error'), errorMessage);
+  const handleTextError = () => {
+    Alert.alert(t('home.error'), t('smartButton.parseError'));
   };
 
   // 处理记账保存
@@ -931,9 +916,9 @@ export default function HomeScreen() {
       {/* 顶部标题栏 */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Text style={[styles.headerTitle, styles.activeTab]}>{t('home.recordTab')}</Text>
+          <Text style={[styles.headerTitle, styles.activeTab]}>{t('tabs.record')}</Text>
           <TouchableOpacity onPress={navigateToExplore}>
-            <Text style={styles.headerTitle}>{t('home.exploreTab')}</Text>
+            <Text style={styles.headerTitle}>{t('tabs.explore')}</Text>
           </TouchableOpacity>
         </View>
         <View style={styles.headerRight}>

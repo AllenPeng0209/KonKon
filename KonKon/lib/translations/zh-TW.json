@@ -9,6 +9,7 @@
     }
   },
   "home": {
+    "parseError": "內容解析失敗",
     "all": "全部",
     "calendar": "日曆",
     "expense": "開銷",
@@ -142,7 +143,15 @@
     "eventCreatedSuccess": "日程已成功建立！",
     "multipleEventsCreationSuccessMessage": "成功創建 {{count}} 個日程！",
     "eventUpdatedSuccess": "日程已成功更新！",
-    "eventDeleteSuccess": "日程已成功刪除！"
+    "eventDeleteSuccess": "日程已成功刪除！",
+    "analyzingText": "正在分析文字...",
+    "expenseSaveNotLoggedIn": "您必須登入才能儲存費用。",
+    "userStateError": "使用者狀態錯誤，請重試。",
+    "expenseSaveFailed": "儲存費用失敗: %{error}",
+    "expenseSaved": "費用已成功儲存。"
+  },
+  "smartButton": {
+    "parseError": "哎呀，我沒聽清楚，可以再說一次嗎？"
   },
   "ios": {
     "infoPlist": {

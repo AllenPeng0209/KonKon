@@ -12,7 +12,7 @@ interface LanguageContextType {
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export const LanguageProvider = ({ children }: { children: ReactNode }) => {
-  const [locale, setLocaleState] = useState(Localization.getLocales()[0].languageCode ?? 'en-US');
+  const [locale, setLocaleState] = useState(Localization.getLocales()[0].languageCode ?? 'en');
   const router = useRouter();
 
   useEffect(() => {
@@ -22,7 +22,7 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
         setLocaleState(savedLocale);
         setI18nLocale(savedLocale);
       } else {
-        const systemLocale = Localization.getLocales()[0].languageTag ?? 'en-US';
+        const systemLocale = Localization.getLocales()[0].languageCode ?? 'en';
         setLocaleState(systemLocale);
         setI18nLocale(systemLocale);
       }

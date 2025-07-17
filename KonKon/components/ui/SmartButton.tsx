@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { t } from '@/lib/i18n';
 import { ParsedCalendarResult, processVoiceToCalendar } from '../../lib/bailian_omni_calendar';
 
 interface SmartButtonProps {
@@ -20,7 +21,7 @@ interface SmartButtonProps {
   onTextInputPress?: () => void;
   onTextResult?: (text: string) => void;
   onParseResult?: (result: ParsedCalendarResult) => void;
-  onError?: (error: string) => void;
+  onError?: () => void;
   onPhotoPress?: () => void;
   onAlbumPress?: () => void;
   onManualAddPress?: () => void;
@@ -256,11 +257,9 @@ export default function SmartButton({
           if (onParseResult) {
             onParseResult(result);
           }
-        } catch (e) {
+        } catch (e: any) {
           console.error('Bailian Omni Calendar 解析失败:', e);
-          if (onError) {
-            onError(e instanceof Error ? e.message : '未知错误');
-          }
+          onError?.();
         } finally {
           setIsProcessing(false);
         }

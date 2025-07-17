@@ -7,8 +7,8 @@ import { FlatList, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from
 const LANGUAGES = [
   { code: 'zh-CN', name: t('languageSelection.languages.zh-CN') },
   { code: 'zh-TW', name: t('languageSelection.languages.zh-TW') },
-  { code: 'en-US', name: t('languageSelection.languages.en-US') },
-  { code: 'ja-JP', name: t('languageSelection.languages.ja-JP') },
+  { code: 'en', name: t('languageSelection.languages.en-US') },
+  { code: 'ja', name: t('languageSelection.languages.ja-JP') },
 ];
 
 export default function LanguageSelectionScreen() {
