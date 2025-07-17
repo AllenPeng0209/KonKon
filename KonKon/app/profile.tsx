@@ -71,8 +71,13 @@ export default function ProfileScreen() {
   };
 
   const handleFunction = (func: string) => {
-    // Handle different functions
-    console.log('Function:', func);
+    switch (func) {
+      case 'familySchedule':
+        router.push('/calendar-settings');
+        break;
+      default:
+        console.log('Function:', func);
+    }
   };
 
   return (
