@@ -93,6 +93,7 @@ function ProtectedLayout() {
                 <Stack.Screen name="edit-profile" options={{ headerShown: false }} />
                 <Stack.Screen name="notification-settings" options={{ headerShown: false }} />
                 <Stack.Screen name="language-selection" options={{ headerShown: false }} />
+                <Stack.Screen name="calendar-settings" options={{ headerShown: false }} />
                 <Stack.Screen name="avatar" options={{ headerShown: false, animation: 'slide_from_right' }} />
                 <Stack.Screen name="+not-found" />
               </Stack>

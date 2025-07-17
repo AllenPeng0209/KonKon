@@ -1,6 +1,6 @@
 import { CreateEventData } from '@/hooks/useEvents';
 import { t } from '@/lib/i18n';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import {
     Alert,
     KeyboardAvoidingView,
@@ -14,12 +14,6 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-
-const eventTypes = [
-  { label: t('addEventModal.eventType_calendar'), value: 'calendar', icon: '🔔' },
-  { label: t('addEventModal.eventType_idea'), value: 'idea', icon: '💡' },
-  { label: t('addEventModal.eventType_mood'), value: 'mood', icon: '❤️' },
-];
 
 interface AddEventModalProps {
   visible: boolean;
@@ -51,14 +45,20 @@ export default function AddEventModal({
   const [selectedCalendar, setSelectedCalendar] = useState<string>('personal');
   const [type, setType] = useState('calendar');
 
-  const colorOptions = [
+  const eventTypes = useMemo(() => [
+    { label: t('addEventModal.eventType_calendar'), value: 'calendar', icon: '🔔' },
+    { label: t('addEventModal.eventType_idea'), value: 'idea', icon: '💡' },
+    { label: t('addEventModal.eventType_mood'), value: 'mood', icon: '❤️' },
+  ], []);
+
+  const colorOptions = useMemo(() => [
     { name: t('addEventModal.color_blue'), value: '#007AFF' },
     { name: t('addEventModal.color_red'), value: '#FF3B30' },
     { name: t('addEventModal.color_green'), value: '#34C759' },
     { name: t('addEventModal.color_orange'), value: '#FF9500' },
     { name: t('addEventModal.color_purple'), value: '#AF52DE' },
     { name: t('addEventModal.color_pink'), value: '#FF2D92' },
-  ];
+  ], []);
   const [selectedColor, setSelectedColor] = useState(colorOptions[0].value);
 
   useEffect(() => {
