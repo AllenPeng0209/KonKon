@@ -37,7 +37,7 @@ function ProtectedLayout() {
     }
     if (event.nativeEvent.oldState === State.ACTIVE) {
       const { translationX, translationY } = event.nativeEvent;
-      if (translationX > 100 && Math.abs(translationY) < 50) {
+      if (translationX < -100 && Math.abs(translationY) < 50) {
         router.push('/avatar');
       }
     }
@@ -85,7 +85,7 @@ function ProtectedLayout() {
               <Stack.Screen name="edit-profile" options={{ headerShown: false }} />
               <Stack.Screen name="notification-settings" options={{ headerShown: false }} />
               <Stack.Screen name="language-selection" options={{ headerShown: false }} />
-              <Stack.Screen name="avatar" options={{ headerShown: false, animation: 'slide_from_left' }} />
+              <Stack.Screen name="avatar" options={{ headerShown: false, animation: 'slide_from_right' }} />
               <Stack.Screen name="+not-found" />
             </Stack>
             <StatusBar style="auto" />
