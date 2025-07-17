@@ -957,29 +957,7 @@ export default function HomeScreen() {
         ) : (
           <>
             {/* 日历部分 */}
-            <View style={styles.calendarContainer}>
-              <View style={styles.calendarHeader}>
-                <Text style={styles.monthYear}>{t('home.familyCalendar')}</Text>
-                <Text style={styles.calendarNote}>
-                  {t('home.recordFamilyTime')}{' '}
-                  {hasCalendarPermission && `📱 ${t('home.connectedToSystemCalendar')}`}
-                </Text>
-              </View>
-              
-              {/*
-              <View style={styles.calendarTitleContainer}>
-                <Text style={styles.monthYear}>{t('home.familyCalendar')}</Text>
-                <Text style={styles.slogan}>
-                  {t('home.recordGoodTimes')}
-                  {' '}
-                  <View style={styles.phoneIconContainer}>
-                    <Text style={{ fontSize: 10 }}>📱</Text>
-                  </View>
-                  {' '}
-                  {t('home.connectedToSystemCalendar')}
-                </Text>
-              </View>
-              */}
+           
               <Calendar
                 key={currentMonth}
                 current={currentMonth}
@@ -1022,7 +1000,6 @@ export default function HomeScreen() {
                 disabledByDefault={false}
                 markingType={'dot'}
               />
-            </View>
 
             {/* 今天日程 */}
             <View style={styles.todaySection}>
