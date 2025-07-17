@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useFamily } from '../contexts/FamilyContext';
 import { Database } from '../lib/database.types';
 import { cancelNotificationForEvent, scheduleNotificationForEvent } from '../lib/notifications';
 import { supabase } from '../lib/supabase';
@@ -30,49 +31,19 @@ export interface EventWithShares extends Event {
 
 export const useEvents = () => {
   const { user } = useAuth();
+  const { familyMembers } = useFamily();
   const [events, setEvents] = useState<EventWithShares[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [userFamilies, setUserFamilies] = useState<string[]>([]);
-  const [userFamilyDetails, setUserFamilyDetails] = useState<{ id: string; name: string }[]>([]);
 
-  // 获取用户的家庭/群组列表
-  const fetchUserFamilies = async () => {
-    if (!user) return;
-    
-    try {
-      // 获取用户所在的所有家庭/群组，包含家庭详情
-      const { data: familyMembers, error } = await supabase
-        .from('family_members')
-        .select(`
-          family_id,
-          families (
-            id,
-            name
-          )
-        `)
-        .eq('user_id', user.id);
-      
-      if (error) {
-        // console.error('获取家庭列表失败:', error);
-        return;
-      }
-      
-      const familyIds = familyMembers?.map(member => member.family_id) || [];
-      const familyDetails = familyMembers?.map(member => ({
-        id: member.family_id,
-        name: (member.families as any)?.name || '未知家庭'
-      })) || [];
-      
-      setUserFamilies(familyIds);
-      setUserFamilyDetails(familyDetails);
-    } catch (err) {
-      // console.error('获取家庭列表时出错:', err);
-    }
-  };
+  const userFamilies = familyMembers.map(m => m.family_id);
+  const userFamilyDetails = familyMembers.map(m => ({
+    id: m.family_id,
+    name: m.user?.display_name || '未知家庭' 
+  }));
 
   // 获取事件列表（个人事件 + 分享给用户的事件）
-  const fetchEvents = async (year?: number, month?: number) => {
+  const fetchEvents = useCallback(async (year?: number, month?: number) => {
     if (!user) return;
     
     // console.log('🔄 开始获取事件...', { userId: user.id, year, month, userFamilies });
@@ -195,7 +166,7 @@ export const useEvents = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, userFamilies]);
 
   // 创建事件
   const createEvent = async (eventData: CreateEventData): Promise<string | null> => {
@@ -294,6 +265,11 @@ export const useEvents = () => {
 
       // 从本地状态中移除
       setEvents(prev => prev.filter(e => e.id !== eventId));
+
+      // 重新获取当月事件
+      const currentDate = new Date();
+      fetchEvents(currentDate.getFullYear(), currentDate.getMonth() + 1);
+      
       return true;
     } catch (err) {
       // console.error('删除事件失败:', err);
@@ -516,7 +492,7 @@ export const useEvents = () => {
   // 初始化时获取用户家庭列表
   useEffect(() => {
     if (user) {
-      fetchUserFamilies();
+      // fetchUserFamilies(); // This line is removed as per the edit hint
     }
   }, [user]);
 
@@ -524,23 +500,26 @@ export const useEvents = () => {
   useEffect(() => {
     if (user) {
       // console.log('用户登录，开始获取事件...');
-      fetchEvents();
+      const currentYear = new Date().getFullYear();
+      const currentMonth = new Date().getMonth() + 1;
+      fetchEvents(currentYear, currentMonth);
     }
-  }, [user]);
+  }, [user, fetchEvents]);
 
   // 当家庭列表变化时，重新获取所有事件（包括群组事件和个人事件）
   useEffect(() => {
     if (user) {
       // console.log('家庭列表更新，重新获取事件...', userFamilies);
-      fetchEvents();
+      const currentYear = new Date().getFullYear();
+      const currentMonth = new Date().getMonth() + 1;
+      fetchEvents(currentYear, currentMonth);
     }
-  }, [userFamilies]);
+  }, [userFamilies, fetchEvents]);
 
   return {
     events,
     loading,
     error,
-    userFamilies,
     userFamilyDetails,
     createEvent,
     updateEvent,
@@ -550,6 +529,5 @@ export const useEvents = () => {
     getEventsByDate,
     getMonthEvents,
     fetchEvents,
-    fetchUserFamilies,
   };
 }; 

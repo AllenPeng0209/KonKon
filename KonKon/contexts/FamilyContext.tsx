@@ -51,6 +51,16 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (user) {
+      fetchUserFamily();
+    } else {
+      // 用户登出时清空家庭信息
+      setUserFamily(null);
+      setFamilyMembers([]);
+    }
+  }, [user]);
+
   const fetchUserFamily = async () => {
     if (!user) {
       // console.log('fetchUserFamily: 用户未登录');
@@ -370,15 +380,6 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    if (user) {
-      fetchUserFamily();
-    } else {
-      setUserFamily(null);
-      setFamilyMembers([]);
-    }
-  }, [user]);
 
   return (
     <FamilyContext.Provider
