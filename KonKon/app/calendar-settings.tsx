@@ -25,25 +25,25 @@ interface CalendarStyle {
 const calendarStyles: CalendarStyle[] = [
   // 推荐样式
   {
-    id: 'google-week',
-    name: 'Google Week',
-    description: '类似Google Calendar的周视图，时间网格清晰',
+    id: 'grid-month',
+    name: '网格月历',
+    description: '经典月历网格布局，清晰显示整月日程',
     category: 'recommended',
     icon: '📊',
+    preview: '月视图 | 网格',
+  },
+  {
+    id: 'weekly-grid',
+    name: '周间视图',
+    description: '七天网格展示，时间段安排一目了然',
+    category: 'recommended',
+    icon: '📋',
     preview: '周视图 | 时间轴',
   },
   {
-    id: 'apple-month',
-    name: 'Apple Month',
-    description: '苹果风格的月视图，简洁优雅',
-    category: 'recommended',
-    icon: '🍎',
-    preview: '月视图 | 极简',
-  },
-  {
     id: 'timeline',
-    name: 'Timeline View',
-    description: '时间线视图，适合查看详细日程',
+    name: '时间轴',
+    description: '纵向时间线布局，适合查看详细日程流',
     category: 'recommended',
     icon: '📈',
     preview: '时间线 | 详细',
@@ -51,62 +51,62 @@ const calendarStyles: CalendarStyle[] = [
 
   // 基础样式
   {
-    id: 'day-view',
-    name: 'Day Focus',
+    id: 'day-focus',
+    name: '单日聚焦',
     description: '专注单日视图，显示详细时间安排',
     category: 'basic',
     icon: '📅',
     preview: '单日 | 详细',
   },
   {
-    id: 'agenda',
-    name: 'Agenda List',
-    description: '议程列表样式，按时间顺序排列',
+    id: 'agenda-list',
+    name: '议程列表',
+    description: '事件流列表样式，按时间顺序排列',
     category: 'basic',
-    icon: '📋',
+    icon: '📝',
     preview: '列表 | 时序',
   },
   {
     id: 'compact-month',
-    name: 'Compact Month',
-    description: '紧凑月视图，适合小屏设备',
+    name: '精简月历',
+    description: '紧凑月视图，适合小屏幕设备',
     category: 'basic',
     icon: '📱',
     preview: '月视图 | 紧凑',
   },
   {
-    id: 'large-day',
-    name: 'Large Day',
-    description: '大字体日视图，易读性强',
+    id: 'three-day',
+    name: '三日视图',
+    description: '显示连续三天，平衡详细度和全局感',
     category: 'basic',
-    icon: '🔍',
-    preview: '大字体 | 易读',
+    icon: '📖',
+    preview: '三日 | 平衡',
   },
 
   // 家庭专用
   {
     id: 'family-grid',
-    name: 'Family Grid',
-    description: '家庭成员网格视图，多人日程一览',
+    name: '家庭网格',
+    description: '家庭成员网格视图，多人日程一览无余',
     category: 'family',
     icon: '👨‍👩‍👧‍👦',
     preview: '多人 | 网格',
   },
   {
     id: 'card-month',
-    name: 'Card Month',
-    description: '卡片式月历，现代化设计',
+    name: '卡片月历',
+    description: '卡片式月历，现代化设计风格',
     category: 'family',
     icon: '🎴',
     preview: '卡片 | 现代',
   },
   {
-    id: 'minimal',
-    name: 'Minimal',
-    description: '极简黑白设计，专注内容',
+    id: 'year-overview',
+    name: '年度概览',
+    description: '十二个月缩略视图，适合长期规划',
     category: 'family',
-    icon: '⚫',
-    preview: '极简 | 专注',
+    icon: '🗓️',
+    preview: '年视图 | 概览',
   },
 ];
 
@@ -118,7 +118,7 @@ const categoryInfo = {
 
 export default function CalendarSettingsScreen() {
   const router = useRouter();
-  const [selectedStyle, setSelectedStyle] = useState<string>('google-week');
+  const [selectedStyle, setSelectedStyle] = useState<string>('grid-month');
 
   useEffect(() => {
     loadSelectedStyle();
@@ -139,7 +139,21 @@ export default function CalendarSettingsScreen() {
     try {
       setSelectedStyle(styleId);
       await AsyncStorage.setItem('calendar_style', styleId);
-      Alert.alert('成功', '日历样式已保存');
+      Alert.alert(
+        '成功', 
+        '日历样式已保存',
+        [
+          {
+            text: '确定',
+            onPress: () => {
+              // 延迟返回，让用户看到选择效果
+              setTimeout(() => {
+                router.back();
+              }, 500);
+            }
+          }
+        ]
+      );
     } catch (error) {
       console.error('Error saving calendar style:', error);
       Alert.alert('错误', '保存失败，请重试');

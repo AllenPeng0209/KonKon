@@ -2,6 +2,7 @@ import AddEventModal from '@/components/AddEventModal';
 import AddExpenseModal from '@/components/AddExpenseModal';
 import AddMemoryModal from '@/components/AddMemoryModal';
 import AlbumView from '@/components/AlbumView'; // 新增：导入相簿视图
+import CalendarViewSelector from '@/components/calendar/CalendarViewSelector';
 import { ConfirmationModal } from '@/components/ConfirmationModal';
 import EventListModal from '@/components/EventListModal';
 import FinanceView from '@/components/FinanceView'; // Import the new component
@@ -44,7 +45,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Calendar, DateData } from 'react-native-calendars';
+import { DateData } from 'react-native-calendars';
 import { useAuth } from '../../contexts/AuthContext';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -957,49 +958,32 @@ export default function HomeScreen() {
         ) : (
           <>
             {/* 日历部分 */}
-           
-              <Calendar
-                key={currentMonth}
-                current={currentMonth}
-                markedDates={getCalendarMarkedDates()}
-                onDayPress={handleDatePress}
-                onMonthChange={handleMonthChange}
-                enableSwipeMonths={true}
-                theme={{
-                  backgroundColor: '#ffffff',
-                  calendarBackground: '#ffffff',
-                  textSectionTitleColor: '#2c3e50',
-                  selectedDayBackgroundColor: '#3b82f6',
-                  selectedDayTextColor: '#ffffff',
-                  todayTextColor: '#3b82f6',
-                  dayTextColor: '#2c3e50',
-                  textDisabledColor: '#d1d5db',
-                  dotColor: '#ff6b6b',
-                  selectedDotColor: '#ffffff',
-                  arrowColor: '#3b82f6',
-                  disabledArrowColor: '#d1d5db',
-                  monthTextColor: '#1f2937',
-                  indicatorColor: '#3b82f6',
-                  textDayFontFamily: 'System',
-                  textMonthFontFamily: 'System',
-                  textDayHeaderFontFamily: 'System',
-                  textDayFontWeight: '600',
-                  textMonthFontWeight: '700',
-                  textDayHeaderFontWeight: '600',
-                  textDayFontSize: 16,
-                  textMonthFontSize: 18,
-                  textDayHeaderFontSize: 14,
-                }}
-                style={styles.calendar}
-                hideExtraDays={true}
-                firstDay={1}
-                showWeekNumbers={false}
-                disableMonthChange={false}
-                hideDayNames={false}
-                showSixWeeks={false}
-                disabledByDefault={false}
-                markingType={'dot'}
-              />
+            <CalendarViewSelector
+              events={processedEvents}
+              selectedDate={selectedDate || new Date()}
+              currentMonth={currentMonth}
+              onDatePress={(date: Date) => {
+                const dateData = {
+                  year: date.getFullYear(),
+                  month: date.getMonth() + 1,
+                  day: date.getDate(),
+                  timestamp: date.getTime(),
+                  dateString: date.toISOString().split('T')[0],
+                };
+                handleDatePress(dateData);
+              }}
+              onEventPress={handleEditEvent}
+              onMonthChange={(month: string) => {
+                const dateData = {
+                  year: parseInt(month.split('-')[0]),
+                  month: parseInt(month.split('-')[1]),
+                  day: 1,
+                  timestamp: new Date(month + '-01').getTime(),
+                  dateString: month + '-01',
+                };
+                handleMonthChange(dateData);
+              }}
+            />
 
             {/* 今天日程 */}
             <View style={styles.todaySection}>
@@ -1351,51 +1335,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
-  calendarContainer: {
-    backgroundColor: '#f0f8ff',
-    margin: 16,
-    borderRadius: 20,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 5,
-    borderWidth: 1,
-    borderColor: 'rgba(135, 206, 235, 0.2)',
-  },
-  calendarHeader: {
-    alignItems: 'center',
-    marginBottom: 20,
-    paddingBottom: 8,
-  },
-  monthYear: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#2c3e50',
-    letterSpacing: 0.5,
-  },
-  calendarNote: {
-    fontSize: 15,
-    color: '#6b7280',
-    marginTop: 6,
-    fontWeight: '500',
-    letterSpacing: 0.2,
-  },
-  calendar: {
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
-  },
+
   weekHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
