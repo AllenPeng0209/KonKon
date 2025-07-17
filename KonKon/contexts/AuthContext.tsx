@@ -39,31 +39,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [userFamilyDetails, setUserFamilyDetails] = useState<FamilyDetails[] | null>(null);
 
   useEffect(() => {
-    // 获取初始会话
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      const currentUser = session?.user ?? null;
-      setUser(currentUser);
-      if (currentUser) {
-        fetchUserFamilyDetails(currentUser.id);
-      }
-      setLoading(false);
-    });
+    setLoading(true);
+    console.log('[Auth] AuthProvider mounted. Setting up listener.');
 
-    // 监听认证状态变化
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log(`[Auth] onAuthStateChange event: ${_event}`, session);
       setSession(session);
       const currentUser = session?.user ?? null;
       setUser(currentUser);
       if (currentUser) {
         fetchUserFamilyDetails(currentUser.id);
       } else {
-        setUserFamilyDetails(null); // 清理家庭信息当用户登出
+        setUserFamilyDetails(null);
+        console.log('[Auth] No user session found.');
       }
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      console.log('[Auth] AuthProvider unmounted. Unsubscribing.');
+      subscription.unsubscribe();
+    };
   }, []);
 
   const fetchUserFamilyDetails = async (userId: string) => {
@@ -86,12 +82,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
   
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password:string) => {
+    console.log('[Auth] Attempting sign in...');
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
-    })
-    return { data, error }
+    });
+    if (error) {
+      console.error('[Auth] SignIn Error:', error.message);
+    } else {
+      console.log('[Auth] SignIn Success. Session:', data.session);
+    }
+    return { data, error };
   }
 
   const signUp = async (email: string, password: string) => {
