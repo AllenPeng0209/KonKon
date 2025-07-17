@@ -19,15 +19,14 @@ import { useFamily } from '../contexts/FamilyContext';
 export default function FamilyManagementScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const { 
-    userFamily, 
-    familyMembers, 
-    loading, 
-    error,
+  const {
+    activeFamily,
+    familyMembers,
+    loading,
     removeMember,
     leaveFamily,
     deleteFamily,
-    refreshFamily,
+    refreshFamilies,
   } = useFamily();
 
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -36,7 +35,7 @@ export default function FamilyManagementScreen() {
   // 页面获得焦点时刷新数据
   useFocusEffect(
     React.useCallback(() => {
-      refreshFamily();
+      refreshFamilies();
     }, [])
   );
 
@@ -45,11 +44,11 @@ export default function FamilyManagementScreen() {
   };
 
   const handleShareInviteCode = async () => {
-    if (!userFamily?.invite_code) return;
+    if (!activeFamily?.invite_code) return;
     
     try {
       await Share.share({
-        message: t('familyManagement.shareInviteMessage', { familyName: userFamily.name, inviteCode: userFamily.invite_code }),
+        message: t('familyManagement.shareInviteMessage', { familyName: activeFamily.name, inviteCode: activeFamily.invite_code }),
         title: t('familyManagement.shareInviteTitle'),
       });
     } catch (error) {
@@ -71,7 +70,7 @@ export default function FamilyManagementScreen() {
             if (success) {
               Alert.alert(t('familyManagement.success'), t('familyManagement.memberRemoved'));
             } else {
-              Alert.alert('エラー', error || t('familyManagement.removeMemberFailed'));
+              Alert.alert(t('home.error'), t('familyManagement.removeMemberFailed'));
             }
           },
         },
@@ -95,7 +94,7 @@ export default function FamilyManagementScreen() {
                 { text: t('familyManagement.ok'), onPress: () => router.replace('/profile') }
               ]);
             } else {
-              Alert.alert('エラー', error || t('familyManagement.leaveFamilyFailed'));
+              Alert.alert(t('home.error'), t('familyManagement.leaveFamilyFailed'));
             }
           },
         },
@@ -119,7 +118,7 @@ export default function FamilyManagementScreen() {
                 { text: t('familyManagement.ok'), onPress: () => router.replace('/profile') }
               ]);
             } else {
-              Alert.alert('エラー', error || t('familyManagement.dissolveFamilyFailed'));
+              Alert.alert(t('home.error'), t('familyManagement.dissolveFamilyFailed'));
             }
           },
         },
@@ -127,7 +126,7 @@ export default function FamilyManagementScreen() {
     );
   };
 
-  const isOwner = user && userFamily && userFamily.owner_id === user.id;
+  const isOwner = user && activeFamily && activeFamily.owner_id === user.id;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -140,15 +139,15 @@ export default function FamilyManagementScreen() {
       </View>
 
       <ScrollView style={styles.content}>
-        {userFamily ? (
+        {activeFamily ? (
           <View>
             {/* 家族信息 */}
             <View style={styles.familyInfo}>
-              <Text style={styles.familyName}>{userFamily.name}</Text>
+              <Text style={styles.familyName}>{activeFamily.name}</Text>
               <Text style={styles.memberCount}>{t('familyManagement.memberCount', { count: familyMembers.length })}</Text>
-              {userFamily.invite_code && (
+              {activeFamily.invite_code && (
                 <View style={styles.inviteCodeContainer}>
-                  <Text style={styles.inviteCode}>{t('familyManagement.inviteCode', { code: userFamily.invite_code })}</Text>
+                  <Text style={styles.inviteCode}>{t('familyManagement.inviteCode', { code: activeFamily.invite_code })}</Text>
                   <TouchableOpacity 
                     style={styles.shareButton}
                     onPress={handleShareInviteCode}
@@ -209,7 +208,7 @@ export default function FamilyManagementScreen() {
         </ScrollView>
 
         {/* 操作按钮 - 移到底部 */}
-        {userFamily && (
+        {activeFamily && (
           <View style={styles.bottomActions}>
             {isOwner ? (
               <TouchableOpacity
@@ -265,9 +264,12 @@ export default function FamilyManagementScreen() {
                 
                 <TouchableOpacity 
                   style={styles.inviteOptionButton}
-                  onPress={() => router.push('/join-family')}
+                  onPress={() => {
+                    setShowInviteModal(false);
+                    router.push('/join-family');
+                  }}
                 >
-                  <Text style={styles.inviteOptionText}>{t('familyManagement.enterInviteCode')}</Text>
+                  <Text style={styles.inviteOptionText}>{t('familyManagement.joinFamily')}</Text>
                   <Text style={styles.inviteOptionSubtitle}>{t('familyManagement.byInviteCode')}</Text>
                 </TouchableOpacity>
 

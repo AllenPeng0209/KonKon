@@ -28,14 +28,16 @@ interface FamilyMember {
 }
 
 interface FamilyContextType {
-  userFamily: Family | null;
+  activeFamily: Family | null;
+  userFamilies: Family[];
   familyMembers: FamilyMember[];
   loading: boolean;
   error: string | null;
   
   createFamily: (data: { name: string; description?: string }) => Promise<Family | null>;
   joinFamilyByCode: (inviteCode: string) => Promise<boolean>;
-  refreshFamily: () => Promise<void>;
+  refreshFamilies: () => Promise<void>;
+  switchFamily: (familyId: string) => Promise<void>;
   removeMember: (memberId: string) => Promise<boolean>;
   leaveFamily: () => Promise<boolean>;
   deleteFamily: () => Promise<boolean>;
@@ -46,24 +48,25 @@ const FamilyContext = createContext<FamilyContextType | undefined>(undefined);
 
 export function FamilyProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  const [userFamily, setUserFamily] = useState<Family | null>(null);
+  const [activeFamily, setActiveFamily] = useState<Family | null>(null);
+  const [userFamilies, setUserFamilies] = useState<Family[]>([]);
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
-      fetchUserFamily();
+      fetchUserFamilies();
     } else {
       // 用户登出时清空家庭信息
-      setUserFamily(null);
+      setActiveFamily(null);
+      setUserFamilies([]);
       setFamilyMembers([]);
     }
   }, [user]);
 
-  const fetchUserFamily = async () => {
+  const fetchUserFamilies = async () => {
     if (!user) {
-      // console.log('fetchUserFamily: 用户未登录');
       return;
     }
     
@@ -71,55 +74,57 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       setLoading(true);
       setError(null);
 
-      // console.log('fetchUserFamily: 开始获取家庭信息，用户ID:', user.id);
-
-      // 先获取用户的家庭成员记录（获取最新的一个）
+      // 1. Get all family memberships for the user
       const { data: memberData, error: memberError } = await supabase
         .from('family_members')
-        .select('family_id, role')
+        .select('family_id')
         .eq('user_id', user.id)
-        .order('joined_at', { ascending: false })
-        .limit(1)
-        .single();
+        .order('joined_at', { ascending: false });
 
-      // console.log('fetchUserFamily: 家庭成员查询结果:', { memberData, memberError });
-
-      if (memberError && memberError.code !== 'PGRST116') {
-        // console.error('获取家庭成员信息失败:', memberError);
-        setUserFamily(null);
-        setFamilyMembers([]);
-        return;
+      if (memberError) {
+        throw memberError;
       }
 
-      if (memberData) {
-        // console.log('fetchUserFamily: 找到家庭成员记录，家庭ID:', memberData.family_id);
+      if (memberData && memberData.length > 0) {
+        const familyIds = memberData.map(m => m.family_id);
         
-        // 获取家庭详细信息
-        const { data: familyData, error: familyError } = await supabase
+        // 2. Fetch details for all those families
+        const { data: familiesData, error: familiesError } = await supabase
           .from('families')
           .select('*')
-          .eq('id', memberData.family_id)
-          .single();
+          .in('id', familyIds);
 
-        // console.log('fetchUserFamily: 家庭信息查询结果:', { familyData, familyError });
-
-        if (familyError) {
-          // console.error('获取家庭信息失败:', familyError);
-          setUserFamily(null);
-          setFamilyMembers([]);
-          return;
+        if (familiesError) {
+          throw familiesError;
         }
 
-        setUserFamily(familyData as Family);
-        await fetchFamilyMembers(memberData.family_id);
+        setUserFamilies(familiesData || []);
+        
+        // 3. Set the first family as active and fetch its members
+        const currentActiveFamily = activeFamily 
+          ? familiesData.find(f => f.id === activeFamily.id) 
+          : null;
+
+        if (currentActiveFamily) {
+          setActiveFamily(currentActiveFamily);
+          await fetchFamilyMembers(currentActiveFamily.id);
+        } else if (familiesData && familiesData.length > 0) {
+          const newActiveFamily = familiesData[0];
+          setActiveFamily(newActiveFamily);
+          await fetchFamilyMembers(newActiveFamily.id);
+        } else {
+          setActiveFamily(null);
+          setFamilyMembers([]);
+        }
       } else {
-        // console.log('fetchUserFamily: 用户没有加入任何家庭');
-        setUserFamily(null);
+        // No families found for the user
+        setActiveFamily(null);
+        setUserFamilies([]);
         setFamilyMembers([]);
       }
     } catch (err) {
-      // console.error('获取家庭信息异常:', err);
-      setError('获取家庭信息失败');
+      console.error('获取家庭列表失败:', err);
+      setError('获取家庭列表失败');
     } finally {
       setLoading(false);
     }
@@ -195,10 +200,11 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       if (memberError) {
         // console.error('添加家庭成员失败:', memberError);
         setError(`添加家庭成员失败: ${memberError.message}`);
+        // Consider rolling back family creation here
         return null;
       }
 
-      await fetchUserFamily();
+      await fetchUserFamilies();
       return familyData as Family;
     } catch (err) {
       // console.error('创建家庭异常:', err);
@@ -208,8 +214,6 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     }
   };
-
-
 
   const joinFamilyByCode = async (inviteCode: string) => {
     if (!user) return false;
@@ -242,7 +246,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
         return false;
       }
 
-      await fetchUserFamily();
+      await fetchUserFamilies();
       return true;
     } catch (err) {
       // console.error('加入家庭异常:', err);
@@ -253,12 +257,22 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const refreshFamily = async () => {
-    await fetchUserFamily();
+  const refreshFamilies = async () => {
+    await fetchUserFamilies();
+  };
+
+  const switchFamily = async (familyId: string) => {
+    const familyToSwitch = userFamilies.find(f => f.id === familyId);
+    if (familyToSwitch && familyToSwitch.id !== activeFamily?.id) {
+      setLoading(true);
+      setActiveFamily(familyToSwitch);
+      await fetchFamilyMembers(familyToSwitch.id);
+      setLoading(false);
+    }
   };
 
   const removeMember = async (memberId: string) => {
-    if (!user || !userFamily) return false;
+    if (!user || !activeFamily) return false;
     
     try {
       setLoading(true);
@@ -275,7 +289,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
         return false;
       }
 
-      await fetchUserFamily();
+      await fetchUserFamilies();
       return true;
     } catch (err) {
       // console.error('移除成员异常:', err);
@@ -287,7 +301,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
   };
 
   const leaveFamily = async () => {
-    if (!user || !userFamily) return false;
+    if (!user || !activeFamily) return false;
     
     try {
       setLoading(true);
@@ -297,16 +311,15 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
         .from('family_members')
         .delete()
         .eq('user_id', user.id)
-        .eq('family_id', userFamily.id);
+        .eq('family_id', activeFamily.id);
 
       if (error) {
         // console.error('离开家庭失败:', error);
         setError('离开家庭失败');
         return false;
       }
-
-      setUserFamily(null);
-      setFamilyMembers([]);
+      
+      await fetchUserFamilies();
       return true;
     } catch (err) {
       // console.error('离开家庭异常:', err);
@@ -318,7 +331,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteFamily = async () => {
-    if (!user || !userFamily) return false;
+    if (!user || !activeFamily) return false;
     
     try {
       setLoading(true);
@@ -328,7 +341,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       const { error: membersError } = await supabase
         .from('family_members')
         .delete()
-        .eq('family_id', userFamily.id);
+        .eq('family_id', activeFamily.id);
 
       if (membersError) {
         // console.error('删除家庭成员失败:', membersError);
@@ -340,7 +353,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       const { error: familyError } = await supabase
         .from('families')
         .delete()
-        .eq('id', userFamily.id);
+        .eq('id', activeFamily.id);
 
       if (familyError) {
         // console.error('删除家庭失败:', familyError);
@@ -348,8 +361,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
         return false;
       }
 
-      setUserFamily(null);
-      setFamilyMembers([]);
+      await fetchUserFamilies();
       return true;
     } catch (err) {
       // console.error('解散家庭异常:', err);
@@ -361,7 +373,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
   };
 
   const inviteByEmail = async (email: string) => {
-    if (!user || !userFamily) return false;
+    if (!user || !activeFamily) return false;
     
     try {
       setLoading(true);
@@ -384,13 +396,15 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
   return (
     <FamilyContext.Provider
       value={{
-        userFamily,
+        activeFamily,
+        userFamilies,
         familyMembers,
         loading,
         error,
         createFamily,
         joinFamilyByCode,
-        refreshFamily,
+        refreshFamilies,
+        switchFamily,
         removeMember,
         leaveFamily,
         deleteFamily,

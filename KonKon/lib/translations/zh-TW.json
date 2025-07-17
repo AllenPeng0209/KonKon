@@ -270,7 +270,8 @@
     "familyDissolved": "家庭已解散",
     "dissolveFamilyFailed": "解散家庭失敗",
     "byInviteCode": "透過邀請碼",
-    "enterInviteCode": "輸入邀請碼"
+    "enterInviteCode": "輸入邀請碼",
+    "joinFamily": "加入家庭"
   },
   "joinFamily": {
     "title": "加入家庭",

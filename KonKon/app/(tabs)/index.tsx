@@ -966,6 +966,20 @@ export default function HomeScreen() {
                 </Text>
               </View>
               
+              {/*
+              <View style={styles.calendarTitleContainer}>
+                <Text style={styles.monthYear}>{t('home.familyCalendar')}</Text>
+                <Text style={styles.slogan}>
+                  {t('home.recordGoodTimes')}
+                  {' '}
+                  <View style={styles.phoneIconContainer}>
+                    <Text style={{ fontSize: 10 }}>📱</Text>
+                  </View>
+                  {' '}
+                  {t('home.connectedToSystemCalendar')}
+                </Text>
+              </View>
+              */}
               <Calendar
                 key={currentMonth}
                 current={currentMonth}

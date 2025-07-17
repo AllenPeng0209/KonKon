@@ -13,10 +13,11 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from 'expo-status-bar';
 import { requestTrackingPermissionsAsync } from 'expo-tracking-transparency';
-import { useEffect } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, View, TouchableWithoutFeedback, StyleSheet } from 'react-native';
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
+import Drawer from '../components/Drawer';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { FamilyProvider } from '../contexts/FamilyContext';
 import { LanguageProvider } from '../contexts/LanguageContext';
@@ -29,6 +30,7 @@ function ProtectedLayout() {
   const segments = useSegments();
   const router = useRouter();
   const colorScheme = useColorScheme();
+  const [isDrawerVisible, setDrawerVisible] = useState(false);
 
   const onHandlerStateChange = (event: any) => {
     const currentRoute = segments.join('/');
@@ -37,12 +39,17 @@ function ProtectedLayout() {
     }
     if (event.nativeEvent.oldState === State.ACTIVE) {
       const { translationX, translationY } = event.nativeEvent;
-      if (translationX < -100 && Math.abs(translationY) < 50) {
+      if (translationX > 100 && Math.abs(translationY) < 50) {
+        setDrawerVisible(true);
+      } else if (translationX < -100 && Math.abs(translationY) < 50) {
         router.push('/avatar');
       }
     }
   };
 
+  const closeDrawer = () => {
+    setDrawerVisible(false);
+  };
 
   useEffect(() => {
     if (loading) return;
@@ -69,27 +76,36 @@ function ProtectedLayout() {
     <PanGestureHandler onHandlerStateChange={onHandlerStateChange}>
       <View style={{ flex: 1 }}>
         <FamilyProvider>
-          <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-            <Stack>
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="login" options={{ headerShown: false }} />
-              <Stack.Screen name="register" options={{ headerShown: false }} />
-              <Stack.Screen name="profile" options={{ headerShown: false }} />
-              <Stack.Screen name="create-family" options={{ headerShown: false }} />
-              <Stack.Screen name="family-management" options={{ headerShown: false }} />
-              <Stack.Screen name="join-family" options={{ headerShown: false }} />
-              <Stack.Screen name="settings" options={{ headerShown: false }} />
-              <Stack.Screen name="user-agreement" options={{ headerShown: false }} />
-              <Stack.Screen name="privacy-policy" options={{ headerShown: false }} />
-              <Stack.Screen name="about" options={{ headerShown: false }} />
-              <Stack.Screen name="edit-profile" options={{ headerShown: false }} />
-              <Stack.Screen name="notification-settings" options={{ headerShown: false }} />
-              <Stack.Screen name="language-selection" options={{ headerShown: false }} />
-              <Stack.Screen name="avatar" options={{ headerShown: false, animation: 'slide_from_right' }} />
-              <Stack.Screen name="+not-found" />
-            </Stack>
-            <StatusBar style="auto" />
-          </ThemeProvider>
+          <>
+            <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+              <Stack>
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="login" options={{ headerShown: false }} />
+                <Stack.Screen name="register" options={{ headerShown: false }} />
+                <Stack.Screen name="profile" options={{ headerShown: false }} />
+                <Stack.Screen name="create-family" options={{ headerShown: false }} />
+                <Stack.Screen name="family-management" options={{ headerShown: false }} />
+                <Stack.Screen name="join-family" options={{ headerShown: false }} />
+                <Stack.Screen name="settings" options={{ headerShown: false }} />
+                <Stack.Screen name="user-agreement" options={{ headerShown: false }} />
+                <Stack.Screen name="privacy-policy" options={{ headerShown: false }} />
+                <Stack.Screen name="about" options={{ headerShown: false }} />
+                <Stack.Screen name="edit-profile" options={{ headerShown: false }} />
+                <Stack.Screen name="notification-settings" options={{ headerShown: false }} />
+                <Stack.Screen name="language-selection" options={{ headerShown: false }} />
+                <Stack.Screen name="avatar" options={{ headerShown: false, animation: 'slide_from_right' }} />
+                <Stack.Screen name="+not-found" />
+              </Stack>
+              <StatusBar style="auto" />
+            </ThemeProvider>
+            
+            {isDrawerVisible && (
+              <TouchableWithoutFeedback onPress={closeDrawer}>
+                <View style={StyleSheet.absoluteFill} />
+              </TouchableWithoutFeedback>
+            )}
+            <Drawer isVisible={isDrawerVisible} onClose={closeDrawer} />
+          </>
         </FamilyProvider>
       </View>
     </PanGestureHandler>

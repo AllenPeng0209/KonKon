@@ -222,7 +222,8 @@
     "familyDissolved": "家庭已解散",
     "dissolveFamilyFailed": "解散家庭失败",
     "byInviteCode": "通过邀请码",
-    "enterInviteCode": "输入邀请码"
+    "enterInviteCode": "输入邀请码",
+    "joinFamily": "加入家庭"
   },
   "joinFamily": {
     "title": "加入家庭",

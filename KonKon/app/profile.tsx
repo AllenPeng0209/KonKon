@@ -20,7 +20,7 @@ const { width: screenWidth } = Dimensions.get('window');
 export default function ProfileScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const { userFamily, loading } = useFamily();
+  const { activeFamily, loading } = useFamily();
 
   const handleBack = () => {
     router.push('/(tabs)');
@@ -28,7 +28,7 @@ export default function ProfileScreen() {
 
   const handleVIPBenefits = () => {
     // 根据用户是否有家庭来决定跳转页面
-    if (userFamily) {
+    if (activeFamily) {
       router.push('/family-management');
     } else {
       // 如果没有家族，显示选择对话框
@@ -93,22 +93,22 @@ export default function ProfileScreen() {
             <View style={styles.avatarContainer}>
               <View style={styles.avatar}>
                 <Image
-                  source={{ uri: 'https://via.placeholder.com/80x80/87CEEB/FFFFFF?text=👤' }}
+                  source={{ uri: user?.user_metadata?.avatar_url || 'https://via.placeholder.com/80x80/87CEEB/FFFFFF?text=👤' }}
                   style={styles.avatarImage}
                 />
               </View>
             </View>
             <View style={styles.userDetails}>
               <View style={styles.nameRow}>
-                <Text style={styles.userName}>彭彦纶 Allen</Text>
+                <Text style={styles.userName}>{user?.user_metadata?.display_name || 'Allen'}</Text>
                 <View style={styles.vipBadge}>
                   <Text style={styles.vipText}>🏆VIP</Text>
                 </View>
               </View>
-              <Text style={styles.userId}>ID: TC7JNV34</Text>
+              <Text style={styles.userId}>ID: {user?.id.slice(0, 8).toUpperCase()}</Text>
               <Text style={styles.recordDays}>{t('profile.recordedDays', { days: 0 })}</Text>
             </View>
-            <TouchableOpacity style={styles.editButton}>
+            <TouchableOpacity style={styles.editButton} onPress={() => router.push('/edit-profile')}>
               <Text style={styles.editIcon}>✏️</Text>
             </TouchableOpacity>
           </View>
@@ -118,12 +118,12 @@ export default function ProfileScreen() {
             <View style={styles.vipCardContent}>
               <Text style={styles.vipIcon}>🏡</Text>
               <Text style={styles.vipMessage}>
-                {userFamily ? t('profile.family', { familyName: userFamily.name }) : t('profile.createOrJoin')}
+                {activeFamily ? t('profile.family', { familyName: activeFamily.name }) : t('profile.createOrJoin')}
               </Text>
             </View>
             <TouchableOpacity style={styles.vipButton} onPress={handleVIPBenefits}>
               <Text style={styles.vipButtonText}>
-                {loading ? t('profile.loading') : userFamily ? t('profile.manageFamily') : t('profile.createFamily')}
+                {loading ? t('profile.loading') : activeFamily ? t('profile.manageFamily') : t('profile.createFamily')}
               </Text>
             </TouchableOpacity>
           </View>

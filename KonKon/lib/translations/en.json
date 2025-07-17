@@ -239,7 +239,8 @@
     "familyDissolved": "The family has been dissolved",
     "dissolveFamilyFailed": "Failed to dissolve family",
     "byInviteCode": "By Invite Code",
-    "enterInviteCode": "Enter Invite Code"
+    "enterInviteCode": "Enter Invite Code",
+    "joinFamily": "Join Family"
   },
   "joinFamily": {
     "title": "Join Family",

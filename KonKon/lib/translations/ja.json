@@ -248,7 +248,8 @@
     "familyDissolved": "家族を解散しました",
     "dissolveFamilyFailed": "家族の解散に失敗しました",
     "byInviteCode": "招待コードで",
-    "enterInviteCode": "招待コードを入力"
+    "enterInviteCode": "招待コードを入力",
+    "joinFamily": "家族に参加"
   },
   "joinFamily": {
     "title": "家族に参加",
