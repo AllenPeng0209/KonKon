@@ -116,13 +116,11 @@ export default function FamilyPuzzleView({
   };
 
   const getAllTodayEvents = () => {
-    const targetDayStart = new Date(selectedDate);
-    targetDayStart.setHours(0, 0, 0, 0);
+    const targetDateString = selectedDate.toISOString().split('T')[0];
     
     return events.filter(event => {
-      const eventStartDate = new Date(event.start_ts * 1000);
-      eventStartDate.setHours(0, 0, 0, 0);
-      return eventStartDate.getTime() === targetDayStart.getTime();
+      const eventDateString = new Date(event.start_ts * 1000).toISOString().split('T')[0];
+      return eventDateString === targetDateString;
     }).sort((a, b) => a.start_ts - b.start_ts);
   };
 

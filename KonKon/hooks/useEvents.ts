@@ -19,6 +19,7 @@ export interface CreateEventData {
   color?: string;
   shareToFamilies?: string[]; // 要分享给的家庭群组ID数组
   type?: string;
+  attendees?: string[]; // 参与人用户ID数组
 }
 
 // 事件分享数据结构使用数据库类型
@@ -27,6 +28,15 @@ export interface CreateEventData {
 export interface EventWithShares extends Event {
   shared_families?: string[];
   is_shared?: boolean;
+  attendees?: Array<{
+    user_id: string;
+    status: string;
+    user?: {
+      display_name: string;
+      email: string;
+      avatar_url?: string;
+    };
+  }>;
 }
 
 export const useEvents = () => {
@@ -150,6 +160,45 @@ export const useEvents = () => {
       });
 
       const allEvents = Array.from(eventMap.values()).sort((a, b) => a.start_ts - b.start_ts);
+      
+      // 获取所有事件的参与人信息
+      if (allEvents.length > 0) {
+        const eventIds = allEvents.map(e => e.id);
+        const { data: attendeesData, error: attendeesError } = await supabase
+          .from('event_attendees')
+          .select(`
+            event_id,
+            user_id,
+            status,
+            users (
+              display_name,
+              email,
+              avatar_url
+            )
+          `)
+          .in('event_id', eventIds);
+
+        if (!attendeesError && attendeesData) {
+          // 将参与人数据关联到对应的事件
+          const attendeesMap = new Map<string, any[]>();
+          attendeesData.forEach(attendee => {
+            if (!attendeesMap.has(attendee.event_id)) {
+              attendeesMap.set(attendee.event_id, []);
+            }
+            attendeesMap.get(attendee.event_id)?.push({
+              user_id: attendee.user_id,
+              status: attendee.status,
+              user: attendee.users,
+            });
+          });
+
+          // 将参与人数据附加到事件
+          allEvents.forEach(event => {
+            event.attendees = attendeesMap.get(event.id) || [];
+          });
+        }
+      }
+
       /*
       console.log('✅ 获取事件成功:', { 
         totalEvents: allEvents.length, 
@@ -179,7 +228,7 @@ export const useEvents = () => {
     setError(null);
 
     try {
-      const { title, description, startTime, endTime, location, color, shareToFamilies, type } = eventData;
+      const { title, description, startTime, endTime, location, color, shareToFamilies, type, attendees } = eventData;
 
       const start_ts = Math.floor(startTime.getTime() / 1000);
       const end_ts = endTime ? Math.floor(endTime.getTime() / 1000) : null;
@@ -194,13 +243,12 @@ export const useEvents = () => {
         color,
         type,
       };
-      
+
       if (shareToFamilies && shareToFamilies.length > 0) {
         // For now, let's assume we share to the first family. 
         // This logic can be expanded later.
         eventToInsert.family_id = shareToFamilies[0];
       }
-
 
       const { data: newEvent, error: eventError } = await supabase
         .from('events')
@@ -210,6 +258,24 @@ export const useEvents = () => {
 
       if (eventError) {
         throw eventError;
+      }
+
+      // 处理参与人数据
+      if (attendees && attendees.length > 0) {
+        const attendeeData = attendees.map(userId => ({
+          event_id: newEvent.id,
+          user_id: userId,
+          status: 'accepted', // 默认状态为已接受
+        }));
+
+        const { error: attendeeError } = await supabase
+          .from('event_attendees')
+          .insert(attendeeData);
+
+        if (attendeeError) {
+          console.error('添加参与人失败:', attendeeError);
+          // 参与人添加失败不影响事件创建，只记录错误
+        }
       }
       
       // 4. 如果是分享事件，更新 family_id 或 event_shares 表
@@ -291,7 +357,7 @@ export const useEvents = () => {
     setError(null);
 
     try {
-      const { title, description, startTime, endTime, location, color, shareToFamilies, type } = eventData;
+      const { title, description, startTime, endTime, location, color, shareToFamilies, type, attendees } = eventData;
 
       const start_ts = Math.floor(startTime.getTime() / 1000);
       const end_ts = endTime ? Math.floor(endTime.getTime() / 1000) : null;
@@ -336,6 +402,25 @@ export const useEvents = () => {
             shared_by: user.id,
           }));
           await supabase.from('event_shares').insert(shareData);
+        }
+      }
+
+      // 处理参与人数据
+      if (attendees) {
+        // 先删除旧的参与人记录
+        await supabase
+          .from('event_attendees')
+          .delete()
+          .eq('event_id', eventId);
+
+        if (attendees.length > 0) {
+          // 添加新的参与人记录
+          const attendeeData = attendees.map(userId => ({
+            event_id: eventId,
+            user_id: userId,
+            status: 'accepted', // 默认状态为已接受
+          }));
+          await supabase.from('event_attendees').insert(attendeeData);
         }
       }
 

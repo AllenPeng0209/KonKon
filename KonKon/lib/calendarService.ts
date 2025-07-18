@@ -124,32 +124,68 @@ export class CalendarService {
     allDay?: boolean;
   }): Promise<string | null> {
     try {
+      console.log('开始创建系统事件:', eventData);
+      
+      // 检查 Calendar 模块是否可用
+      const isAvailable = await Calendar.isAvailableAsync();
+      if (!isAvailable) {
+        console.error('Calendar 模块不可用');
+        return null;
+      }
+      
       if (!this.hasPermission) {
+        console.log('没有权限，请求权限...');
         await this.requestPermissions();
       }
       
       if (!this.hasPermission) {
+        console.log('权限被拒绝，无法创建事件');
         return null;
       }
 
       const calendarId = await this.getOrCreateKonKonCalendar();
       if (!calendarId) {
+        console.log('无法获取或创建日历');
         return null;
       }
 
-      const eventId = await Calendar.createEventAsync(calendarId, {
+      console.log('使用日历ID:', calendarId);
+      
+      // 验证事件数据
+      if (!eventData.title || eventData.title.trim() === '') {
+        console.error('事件标题不能为空');
+        return null;
+      }
+      
+      if (!eventData.startDate || !eventData.endDate) {
+        console.error('开始时间和结束时间不能为空');
+        return null;
+      }
+      
+      if (eventData.startDate >= eventData.endDate) {
+        console.error('开始时间必须早于结束时间');
+        return null;
+      }
+
+      const eventToCreate = {
         title: eventData.title,
-        notes: eventData.description,
+        notes: eventData.description || '',
         startDate: eventData.startDate,
         endDate: eventData.endDate,
-        location: eventData.location,
+        location: eventData.location || '',
         allDay: eventData.allDay || false,
         timeZone: 'default',
-      });
+      };
+      
+      console.log('创建事件数据:', eventToCreate);
 
+      const eventId = await Calendar.createEventAsync(calendarId, eventToCreate);
+      
+      console.log('事件创建成功，ID:', eventId);
       return eventId;
     } catch (error) {
       console.error('创建系统事件失败:', error);
+      console.error('错误详情:', JSON.stringify(error, null, 2));
       return null;
     }
   }

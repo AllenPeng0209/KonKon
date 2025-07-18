@@ -1,565 +1,698 @@
-import { t } from '@/lib/i18n';
-import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
-    Alert,
-    Modal,
-    SafeAreaView,
-    ScrollView,
-    Share,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  TextInput,
+  Share,
+  Clipboard,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
-import { useAuth } from '../contexts/AuthContext';
-import { useFamily } from '../contexts/FamilyContext';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { useFamily } from '@/contexts/FamilyContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { t } from '@/lib/i18n';
 
-export default function FamilyManagementScreen() {
+export default function FamilyManagement() {
   const router = useRouter();
   const { user } = useAuth();
   const {
     activeFamily,
+    userFamilies,
     familyMembers,
     loading,
+    error,
+    createFamily,
+    joinFamilyByCode,
+    refreshFamilies,
+    switchFamily,
     removeMember,
     leaveFamily,
     deleteFamily,
-    refreshFamilies,
+    inviteByEmail,
   } = useFamily();
 
-  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showJoinForm, setShowJoinForm] = useState(false);
+  const [showInviteForm, setShowInviteForm] = useState(false);
+  const [familyName, setFamilyName] = useState('');
+  const [familyDescription, setFamilyDescription] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // 页面获得焦点时刷新数据
-  useFocusEffect(
-    React.useCallback(() => {
-      refreshFamilies();
-    }, [])
-  );
+  const handleCreateFamily = useCallback(async () => {
+    if (!familyName.trim()) {
+      Alert.alert('提示', '请输入家庭名称');
+      return;
+    }
 
-  const handleBack = () => {
-    router.back();
-  };
+    setIsSubmitting(true);
+    try {
+      const family = await createFamily({
+        name: familyName.trim(),
+        description: familyDescription.trim() || undefined,
+      });
 
-  const handleShareInviteCode = async () => {
-    if (!activeFamily?.invite_code) return;
-    
+      if (family) {
+        Alert.alert('创建成功', `家庭"${family.name}"已创建成功！`);
+        setShowCreateForm(false);
+        setFamilyName('');
+        setFamilyDescription('');
+      }
+    } catch (error) {
+      console.error('创建家庭失败:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [familyName, familyDescription, createFamily]);
+
+  const handleJoinFamily = useCallback(async () => {
+    if (!inviteCode.trim()) {
+      Alert.alert('提示', '请输入邀请码');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const success = await joinFamilyByCode(inviteCode.trim());
+      if (success) {
+        Alert.alert('加入成功', '您已成功加入家庭！');
+        setShowJoinForm(false);
+        setInviteCode('');
+      }
+    } catch (error) {
+      console.error('加入家庭失败:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [inviteCode, joinFamilyByCode]);
+
+  const handleInviteByEmail = useCallback(async () => {
+    if (!inviteEmail.trim()) {
+      Alert.alert('提示', '请输入邮箱地址');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const success = await inviteByEmail(inviteEmail.trim());
+      if (success) {
+        Alert.alert('邀请成功', '邀请邮件已发送！');
+        setShowInviteForm(false);
+        setInviteEmail('');
+      }
+    } catch (error) {
+      console.error('邮箱邀请失败:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [inviteEmail, inviteByEmail]);
+
+  const handleShareInviteCode = useCallback(async () => {
+    if (!activeFamily?.invite_code) {
+      Alert.alert('提示', '当前家庭没有邀请码');
+      return;
+    }
+
     try {
       await Share.share({
-        message: t('familyManagement.shareInviteMessage', { familyName: activeFamily.name, inviteCode: activeFamily.invite_code }),
-        title: t('familyManagement.shareInviteTitle'),
+        message: `邀请您加入我的家庭"${activeFamily.name}"！\n\n邀请码: ${activeFamily.invite_code}\n\n在 KonKon 应用中输入此邀请码即可加入。`,
+        title: '家庭邀请',
       });
     } catch (error) {
-      console.error(t('familyManagement.shareFailed'), error);
+      console.error('分享失败:', error);
     }
-  };
+  }, [activeFamily]);
 
-  const handleRemoveMember = (memberId: string, memberName: string) => {
+  const handleCopyInviteCode = useCallback(async () => {
+    if (!activeFamily?.invite_code) {
+      Alert.alert('提示', '当前家庭没有邀请码');
+      return;
+    }
+
+    try {
+      await Clipboard.setString(activeFamily.invite_code);
+      Alert.alert('复制成功', '邀请码已复制到剪贴板');
+    } catch (error) {
+      console.error('复制失败:', error);
+    }
+  }, [activeFamily]);
+
+  const handleRemoveMember = useCallback((memberId: string, memberName: string) => {
     Alert.alert(
-      t('familyManagement.removeMemberTitle'),
-      t('familyManagement.removeMemberMessage', { memberName }),
+      '确认移除',
+      `确定要移除成员"${memberName}"吗？`,
       [
-        { text: t('familyManagement.cancel'), style: 'cancel' },
+        { text: '取消', style: 'cancel' },
         {
-          text: t('familyManagement.remove'),
+          text: '确定',
           style: 'destructive',
           onPress: async () => {
             const success = await removeMember(memberId);
             if (success) {
-              Alert.alert(t('familyManagement.success'), t('familyManagement.memberRemoved'));
-            } else {
-              Alert.alert(t('home.error'), t('familyManagement.removeMemberFailed'));
+              Alert.alert('移除成功', '成员已被移除');
             }
           },
         },
       ]
     );
-  };
+  }, [removeMember]);
 
-  const handleLeaveFamily = () => {
+  const handleLeaveFamily = useCallback(() => {
     Alert.alert(
-      t('familyManagement.leaveFamilyTitle'),
-      t('familyManagement.leaveFamilyMessage'),
+      '确认离开',
+      `确定要离开家庭"${activeFamily?.name}"吗？`,
       [
-        { text: t('familyManagement.cancel'), style: 'cancel' },
+        { text: '取消', style: 'cancel' },
         {
-          text: t('familyManagement.leaveFamily'),
+          text: '确定',
           style: 'destructive',
           onPress: async () => {
             const success = await leaveFamily();
             if (success) {
-              Alert.alert(t('familyManagement.success'), t('familyManagement.familyLeft'), [
-                { text: t('familyManagement.ok'), onPress: () => router.replace('/profile') }
-              ]);
-            } else {
-              Alert.alert(t('home.error'), t('familyManagement.leaveFamilyFailed'));
+              Alert.alert('离开成功', '您已离开家庭');
             }
           },
         },
       ]
     );
-  };
+  }, [activeFamily, leaveFamily]);
 
-  const handleDeleteFamily = () => {
+  const handleDeleteFamily = useCallback(() => {
     Alert.alert(
-      t('familyManagement.dissolveFamilyTitle'),
-      t('familyManagement.dissolveFamilyMessage'),
+      '确认解散',
+      `确定要解散家庭"${activeFamily?.name}"吗？此操作无法撤销。`,
       [
-        { text: t('familyManagement.cancel'), style: 'cancel' },
+        { text: '取消', style: 'cancel' },
         {
-          text: t('familyManagement.dissolved'),
+          text: '解散',
           style: 'destructive',
           onPress: async () => {
             const success = await deleteFamily();
             if (success) {
-              Alert.alert(t('familyManagement.success'), t('familyManagement.familyDissolved'), [
-                { text: t('familyManagement.ok'), onPress: () => router.replace('/profile') }
-              ]);
-            } else {
-              Alert.alert(t('home.error'), t('familyManagement.dissolveFamilyFailed'));
+              Alert.alert('解散成功', '家庭已解散');
             }
           },
         },
       ]
     );
-  };
+  }, [activeFamily, deleteFamily]);
 
-  const isOwner = user && activeFamily && activeFamily.owner_id === user.id;
+  const isOwner = activeFamily?.owner_id === user?.id;
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#007AFF" />
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color="#000" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('familyManagement.title')}</Text>
-        <View style={styles.headerRight} />
+        <Text style={styles.title}>家庭管理</Text>
+        <TouchableOpacity onPress={refreshFamilies} style={styles.refreshButton}>
+          <Ionicons name="refresh" size={24} color="#007AFF" />
+        </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content}>
-        {activeFamily ? (
-          <View>
-            {/* 家族信息 */}
-            <View style={styles.familyInfo}>
-              <Text style={styles.familyName}>{activeFamily.name}</Text>
-              <Text style={styles.memberCount}>{t('familyManagement.memberCount', { count: familyMembers.length })}</Text>
-              {activeFamily.invite_code && (
-                <View style={styles.inviteCodeContainer}>
-                  <Text style={styles.inviteCode}>{t('familyManagement.inviteCode', { code: activeFamily.invite_code })}</Text>
-                  <TouchableOpacity 
-                    style={styles.shareButton}
+      <ScrollView
+        style={styles.scrollView}
+        refreshControl={
+          <RefreshControl refreshing={loading} onRefresh={refreshFamilies} />
+        }
+      >
+        {/* 当前家庭 */}
+        {activeFamily && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>当前家庭</Text>
+            <View style={styles.familyCard}>
+              <View style={styles.familyInfo}>
+                <Text style={styles.familyName}>{activeFamily.name}</Text>
+                {activeFamily.description && (
+                  <Text style={styles.familyDescription}>
+                    {activeFamily.description}
+                  </Text>
+                )}
+                <Text style={styles.familyMeta}>
+                  {familyMembers.length} 名成员 • {isOwner ? '您是管理员' : '您是成员'}
+                </Text>
+              </View>
+              
+              {isOwner && (
+                <View style={styles.inviteActions}>
+                  <TouchableOpacity
+                    style={styles.inviteButton}
                     onPress={handleShareInviteCode}
                   >
-                    <Text style={styles.shareButtonText}>{t('familyManagement.share')}</Text>
+                    <Ionicons name="share" size={16} color="#007AFF" />
+                    <Text style={styles.inviteButtonText}>分享邀请</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity
+                    style={styles.inviteButton}
+                    onPress={handleCopyInviteCode}
+                  >
+                    <Ionicons name="copy" size={16} color="#007AFF" />
+                    <Text style={styles.inviteButtonText}>复制邀请码</Text>
                   </TouchableOpacity>
                 </View>
               )}
             </View>
+          </View>
+        )}
 
-            {/* 成员列表 */}
-            <View style={styles.membersSection}>
-              <Text style={styles.sectionTitle}>{t('familyManagement.members')}</Text>
-              {familyMembers.map((member) => (
-                <View key={member.id} style={styles.memberItem}>
-                  <View style={styles.memberInfo}>
-                    <Text style={styles.memberName}>
-                      {member.user?.display_name || member.user?.email || t('familyManagement.unknownUser')}
-                    </Text>
-                    <Text style={styles.memberRole}>
-                      {member.role === 'owner' ? t('familyManagement.owner') : t('familyManagement.members')}
-                    </Text>
-                  </View>
-                  {isOwner && member.user_id !== user.id && (
-                    <TouchableOpacity
-                      style={styles.removeButton}
-                      onPress={() => handleRemoveMember(member.id, member.user?.display_name || member.user?.email || t('familyManagement.unknownUser'))}
-                    >
-                      <Text style={styles.removeButtonText}>{t('familyManagement.remove')}</Text>
-                    </TouchableOpacity>
-                  )}
+        {/* 家庭成员 */}
+        {familyMembers.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>家庭成员</Text>
+            {familyMembers.map((member) => (
+              <View key={member.id} style={styles.memberCard}>
+                <View style={styles.memberInfo}>
+                  <Text style={styles.memberName}>
+                    {member.user?.display_name || member.user?.email || '未知用户'}
+                  </Text>
+                  <Text style={styles.memberRole}>
+                    {member.role === 'owner' ? '管理员' : '成员'}
+                  </Text>
                 </View>
-              ))}
-              
-              {/* 添加成员按钮 */}
-              <TouchableOpacity 
-                style={styles.addMemberButton}
-                onPress={() => setShowInviteModal(true)}
-              >
-                <Text style={styles.addMemberIcon}>+</Text>
-                <Text style={styles.addMemberText}>{t('familyManagement.inviteMember')}</Text>
-              </TouchableOpacity>
-            </View>
-
-
+                {isOwner && member.user_id !== user?.id && (
+                  <TouchableOpacity
+                    style={styles.removeButton}
+                    onPress={() => handleRemoveMember(
+                      member.id,
+                      member.user?.display_name || member.user?.email || '未知用户'
+                    )}
+                  >
+                    <Ionicons name="remove-circle" size={20} color="#FF3B30" />
+                  </TouchableOpacity>
+                )}
+              </View>
+            ))}
           </View>
-        ) : (
-          <View style={styles.noFamily}>
-            <Text style={styles.noFamilyText}>{t('familyManagement.noFamilyFound')}</Text>
+        )}
+
+        {/* 快捷操作 */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>快捷操作</Text>
+          
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => setShowCreateForm(true)}
+          >
+            <Ionicons name="add-circle" size={24} color="#34C759" />
+            <Text style={styles.actionButtonText}>创建新家庭</Text>
+            <Ionicons name="chevron-forward" size={16} color="#C7C7CD" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => setShowJoinForm(true)}
+          >
+            <Ionicons name="person-add" size={24} color="#007AFF" />
+            <Text style={styles.actionButtonText}>加入家庭</Text>
+            <Ionicons name="chevron-forward" size={16} color="#C7C7CD" />
+          </TouchableOpacity>
+
+          {isOwner && (
             <TouchableOpacity
-              style={styles.createButton}
-              onPress={() => router.push('/create-family')}
+              style={styles.actionButton}
+              onPress={() => setShowInviteForm(true)}
             >
-              <Text style={styles.createButtonText}>{t('familyManagement.createFamily')}</Text>
+              <Ionicons name="mail" size={24} color="#FF9500" />
+              <Text style={styles.actionButtonText}>邮箱邀请</Text>
+              <Ionicons name="chevron-forward" size={16} color="#C7C7CD" />
             </TouchableOpacity>
-          </View>
-                  )}
-        </ScrollView>
+          )}
+        </View>
 
-        {/* 操作按钮 - 移到底部 */}
+        {/* 危险操作 */}
         {activeFamily && (
-          <View style={styles.bottomActions}>
-            {isOwner ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>危险操作</Text>
+            
+            {!isOwner && (
               <TouchableOpacity
-                style={[styles.actionButton, styles.deleteButton]}
-                onPress={handleDeleteFamily}
-              >
-                <Text style={styles.deleteButtonText}>{t('familyManagement.dissolveFamily')}</Text>
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity
-                style={[styles.actionButton, styles.leaveButton]}
+                style={[styles.actionButton, styles.dangerButton]}
                 onPress={handleLeaveFamily}
               >
-                <Text style={styles.leaveButtonText}>{t('familyManagement.leaveFamily')}</Text>
+                <Ionicons name="exit" size={24} color="#FF3B30" />
+                <Text style={[styles.actionButtonText, styles.dangerText]}>
+                  离开家庭
+                </Text>
+                <Ionicons name="chevron-forward" size={16} color="#C7C7CD" />
+              </TouchableOpacity>
+            )}
+
+            {isOwner && (
+              <TouchableOpacity
+                style={[styles.actionButton, styles.dangerButton]}
+                onPress={handleDeleteFamily}
+              >
+                <Ionicons name="trash" size={24} color="#FF3B30" />
+                <Text style={[styles.actionButtonText, styles.dangerText]}>
+                  解散家庭
+                </Text>
+                <Ionicons name="chevron-forward" size={16} color="#C7C7CD" />
               </TouchableOpacity>
             )}
           </View>
         )}
+      </ScrollView>
 
-        {/* 邀请模态框 */}
-        <Modal
-          visible={showInviteModal}
-          transparent={true}
-          animationType="slide"
-          onRequestClose={() => setShowInviteModal(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>{t('familyManagement.inviteModalTitle')}</Text>
-                <TouchableOpacity
-                  style={styles.closeButton}
-                  onPress={() => setShowInviteModal(false)}
-                >
-                  <Text style={styles.closeButtonText}>×</Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.inviteOptions}>
-                <TouchableOpacity 
-                  style={styles.inviteOptionButton}
-                  onPress={handleShareInviteCode}
-                >
-                  <Text style={styles.inviteOptionText}>{t('familyManagement.shareInviteCode')}</Text>
-                  <Text style={styles.inviteOptionSubtitle}>{t('familyManagement.byInviteCode')}</Text>
-                </TouchableOpacity>
-
-                <View style={styles.dividerContainer}>
-                  <View style={styles.dividerLine} />
-                  <Text style={styles.dividerText}>OR</Text>
-                  <View style={styles.dividerLine} />
-                </View>
-                
-                <TouchableOpacity 
-                  style={styles.inviteOptionButton}
-                  onPress={() => {
-                    setShowInviteModal(false);
-                    router.push('/join-family');
-                  }}
-                >
-                  <Text style={styles.inviteOptionText}>{t('familyManagement.joinFamily')}</Text>
-                  <Text style={styles.inviteOptionSubtitle}>{t('familyManagement.byInviteCode')}</Text>
-                </TouchableOpacity>
-
-              </View>
-
+      {/* 创建家庭表单 */}
+      {showCreateForm && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>创建家庭</Text>
+            
+            <TextInput
+              style={styles.input}
+              placeholder="家庭名称"
+              value={familyName}
+              onChangeText={setFamilyName}
+              maxLength={50}
+            />
+            
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              placeholder="家庭描述（可选）"
+              value={familyDescription}
+              onChangeText={setFamilyDescription}
+              multiline
+              maxLength={200}
+            />
+            
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => setShowCreateForm(false)}
+              >
+                <Text style={styles.cancelButtonText}>取消</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.confirmButton}
+                onPress={handleCreateFamily}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.confirmButtonText}>创建</Text>
+                )}
+              </TouchableOpacity>
             </View>
           </View>
-        </Modal>
-      </SafeAreaView>
-    );
-  }
+        </View>
+      )}
+
+      {/* 加入家庭表单 */}
+      {showJoinForm && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>加入家庭</Text>
+            
+            <TextInput
+              style={styles.input}
+              placeholder="输入邀请码"
+              value={inviteCode}
+              onChangeText={setInviteCode}
+              maxLength={20}
+            />
+            
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => setShowJoinForm(false)}
+              >
+                <Text style={styles.cancelButtonText}>取消</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.confirmButton}
+                onPress={handleJoinFamily}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.confirmButtonText}>加入</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* 邮箱邀请表单 */}
+      {showInviteForm && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>邮箱邀请</Text>
+            
+            <TextInput
+              style={styles.input}
+              placeholder="输入邮箱地址"
+              value={inviteEmail}
+              onChangeText={setInviteEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+            
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => setShowInviteForm(false)}
+              >
+                <Text style={styles.cancelButtonText}>取消</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.confirmButton}
+                onPress={handleInviteByEmail}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.confirmButtonText}>邀请</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
+    </SafeAreaView>
+  );
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9fafb',
+    backgroundColor: '#F2F2F7',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 16,
+    paddingVertical: 16,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: '#E5E5EA',
   },
   backButton: {
-    padding: 10,
-  },
-  backIcon: {
-    fontSize: 24,
-    color: '#007AFF',
-  },
-  headerTitle: {
-    flex: 1,
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#2c3e50',
-    textAlign: 'center',
-  },
-  headerRight: {
     width: 40,
-  },
-  content: {
-    flex: 1,
-    padding: 20,
-  },
-  familyInfo: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 24,
+    height: 40,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  familyName: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#2c3e50',
-    marginBottom: 8,
-  },
-  memberCount: {
-    fontSize: 16,
-    color: '#6b7280',
-    marginBottom: 16,
-  },
-  inviteCode: {
-    fontSize: 14,
-    color: '#007AFF',
-    fontFamily: 'monospace',
-  },
-  noFamily: {
-    alignItems: 'center',
-    paddingTop: 60,
-  },
-  noFamilyText: {
+  title: {
     fontSize: 18,
-    color: '#6b7280',
-    marginBottom: 24,
-  },
-  createButton: {
-    backgroundColor: '#007AFF',
-    borderRadius: 16,
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-  },
-  createButtonText: {
-    color: '#fff',
-    fontSize: 16,
     fontWeight: '600',
+    color: '#1C1C1E',
   },
-  inviteCodeContainer: {
-    flexDirection: 'row',
+  refreshButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 8,
   },
-  shareButton: {
-    backgroundColor: '#007AFF',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    marginLeft: 8,
+  scrollView: {
+    flex: 1,
   },
-  shareButtonText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  membersSection: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 20,
-    marginTop: 16,
+  section: {
+    marginBottom: 20,
   },
   sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1C1C1E',
+    marginBottom: 12,
+    paddingHorizontal: 20,
+  },
+  familyCard: {
+    backgroundColor: '#fff',
+    marginHorizontal: 20,
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  familyInfo: {
+    marginBottom: 12,
+  },
+  familyName: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#2c3e50',
-    marginBottom: 16,
+    color: '#1C1C1E',
+    marginBottom: 4,
   },
-  memberItem: {
+  familyDescription: {
+    fontSize: 14,
+    color: '#8E8E93',
+    marginBottom: 8,
+  },
+  familyMeta: {
+    fontSize: 12,
+    color: '#8E8E93',
+  },
+  inviteActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  inviteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F2F2F7',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  inviteButtonText: {
+    fontSize: 14,
+    color: '#007AFF',
+    marginLeft: 4,
+  },
+  memberCard: {
+    backgroundColor: '#fff',
+    marginHorizontal: 20,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 8,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   memberInfo: {
     flex: 1,
   },
   memberName: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#2c3e50',
+    fontWeight: '500',
+    color: '#1C1C1E',
+    marginBottom: 2,
   },
   memberRole: {
-    fontSize: 14,
-    color: '#6b7280',
-    marginTop: 2,
+    fontSize: 12,
+    color: '#8E8E93',
   },
   removeButton: {
-    backgroundColor: '#EF4444',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  removeButtonText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  actionsSection: {
-    marginTop: 24,
-    paddingHorizontal: 20,
+    padding: 8,
   },
   actionButton: {
+    backgroundColor: '#fff',
+    marginHorizontal: 20,
     borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginVertical: 8,
-  },
-  deleteButton: {
-    backgroundColor: '#EF4444',
-  },
-  deleteButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  leaveButton: {
-    backgroundColor: '#F59E0B',
-  },
-  leaveButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  addMemberButton: {
+    padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    marginTop: 16,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#007AFF',
-    borderStyle: 'dashed',
-    backgroundColor: '#F8FAFF',
+    marginBottom: 8,
   },
-  addMemberIcon: {
-    fontSize: 24,
-    color: '#007AFF',
-    marginRight: 8,
-  },
-  addMemberText: {
+  actionButtonText: {
     fontSize: 16,
-    color: '#007AFF',
-    fontWeight: '600',
+    color: '#1C1C1E',
+    marginLeft: 12,
+    flex: 1,
   },
-  bottomActions: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+  dangerButton: {
+    backgroundColor: '#FFF5F5',
+  },
+  dangerText: {
+    color: '#FF3B30',
   },
   modalOverlay: {
-    flex: 1,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   modalContent: {
     backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingBottom: 34,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderRadius: 12,
+    padding: 20,
+    width: '90%',
+    maxWidth: 400,
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#2c3e50',
+    fontWeight: '600',
+    color: '#1C1C1E',
+    marginBottom: 20,
+    textAlign: 'center',
   },
-  closeButton: {
-    width: 30,
-    height: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  closeButtonText: {
-    fontSize: 24,
-    color: '#6b7280',
-  },
-  inviteOptions: {
-    padding: 20,
-  },
-  inviteOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    backgroundColor: '#f9fafb',
-    borderRadius: 12,
-    marginBottom: 12,
-  },
-  inviteOptionIcon: {
-    fontSize: 24,
-    marginRight: 16,
-  },
-  inviteOptionText: {
+  input: {
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+    borderRadius: 8,
+    padding: 12,
     fontSize: 16,
-    color: '#2c3e50',
-    fontWeight: '500',
+    marginBottom: 16,
   },
-  inviteOptionButton: {
-    flexDirection: 'column',
-    alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    backgroundColor: '#f9fafb',
-    borderRadius: 12,
-    marginBottom: 12,
+  textArea: {
+    height: 80,
+    textAlignVertical: 'top',
   },
-  inviteOptionSubtitle: {
-    fontSize: 12,
-    color: '#6b7280',
-    marginTop: 4,
-  },
-  dividerContainer: {
+  modalActions: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 16,
+    justifyContent: 'space-between',
   },
-  dividerLine: {
+  cancelButton: {
+    backgroundColor: '#F2F2F7',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
     flex: 1,
-    height: 1,
-    backgroundColor: '#e0e0e0',
+    marginRight: 8,
   },
-  dividerText: {
-    marginHorizontal: 10,
-    fontSize: 14,
-    color: '#6b7280',
+  cancelButtonText: {
+    fontSize: 16,
+    color: '#1C1C1E',
+    textAlign: 'center',
+  },
+  confirmButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+    flex: 1,
+    marginLeft: 8,
+  },
+  confirmButtonText: {
+    fontSize: 16,
+    color: '#fff',
+    textAlign: 'center',
+    fontWeight: '600',
   },
 }); 

@@ -1,151 +1,296 @@
 import { CreateEventData } from '@/hooks/useEvents';
-import { t } from '@/lib/i18n';
-import { useEffect, useState, useMemo } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { BlurView } from 'expo-blur';
+import React, { useState, useEffect } from 'react';
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Modal,
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  ActionSheetIOS,
+  Image,
+  FlatList,
 } from 'react-native';
+import { useAuth } from '@/contexts/AuthContext';
+import { useFamily } from '@/contexts/FamilyContext';
+
+interface User {
+  id: string;
+  name: string;
+  email?: string;
+  avatar_url?: string;
+  isCurrentUser: boolean;
+}
+
+interface AttendeeSelectionModalProps {
+  visible: boolean;
+  onClose: () => void;
+  availableUsers: User[];
+  selectedAttendees: string[];
+  onSelectionChange: (attendeeIds: string[]) => void;
+}
+
+// 参与人选择模态框组件
+function AttendeeSelectionModal({
+  visible,
+  onClose,
+  availableUsers,
+  selectedAttendees,
+  onSelectionChange,
+}: AttendeeSelectionModalProps) {
+  const [tempSelected, setTempSelected] = useState<string[]>([]);
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (visible) {
+      setTempSelected([...selectedAttendees]);
+    }
+  }, [visible, selectedAttendees]);
+
+  const toggleAttendee = (userId: string) => {
+    setTempSelected(prev => {
+      if (prev.includes(userId)) {
+        // 如果是当前用户，不允许取消选择
+        if (userId === user?.id) {
+          Alert.alert('提示', '不能取消选择自己作为参与人');
+          return prev;
+        }
+        return prev.filter(id => id !== userId);
+      } else {
+        return [...prev, userId];
+      }
+    });
+  };
+
+  const handleConfirm = () => {
+    onSelectionChange(tempSelected);
+    onClose();
+  };
+
+  if (!visible) return null;
+
+  return (
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={visible}
+      onRequestClose={onClose}
+    >
+      <BlurView intensity={30} style={styles.modalBackground}>
+        <View style={styles.attendeeModal}>
+          <View style={styles.attendeeModalHeader}>
+            <TouchableOpacity onPress={onClose}>
+              <Text style={styles.cancelButton}>取消</Text>
+            </TouchableOpacity>
+            <Text style={styles.attendeeModalTitle}>选择参与人</Text>
+            <TouchableOpacity onPress={handleConfirm}>
+              <Text style={styles.confirmButton}>确定</Text>
+            </TouchableOpacity>
+          </View>
+
+          <FlatList
+            data={availableUsers}
+            keyExtractor={item => item.id}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={[
+                  styles.attendeeItem,
+                  tempSelected.includes(item.id) && styles.attendeeItemSelected,
+                ]}
+                onPress={() => toggleAttendee(item.id)}
+              >
+                <View style={styles.attendeeItemLeft}>
+                  <View style={styles.attendeeModalAvatar}>
+                    {item.avatar_url ? (
+                      <Image source={{ uri: item.avatar_url }} style={styles.attendeeModalAvatarImage} />
+                    ) : (
+                      <Ionicons name="person" size={24} color="#007AFF" />
+                    )}
+                  </View>
+                  <View style={styles.attendeeInfo}>
+                    <Text style={styles.attendeeModalName}>{item.name}</Text>
+                    {item.isCurrentUser && (
+                      <Text style={styles.attendeeLabel}>我</Text>
+                    )}
+                  </View>
+                </View>
+                {tempSelected.includes(item.id) && (
+                  <Ionicons name="checkmark" size={20} color="#007AFF" />
+                )}
+              </TouchableOpacity>
+            )}
+            style={styles.attendeeList}
+          />
+        </View>
+      </BlurView>
+    </Modal>
+  );
+}
 
 interface AddEventModalProps {
   visible: boolean;
   onClose: () => void;
   onSave: (eventData: CreateEventData) => Promise<void>;
   initialDate?: Date;
-  userFamilies?: Array<{id: string, name: string}>;
+  userFamilies?: Array<{id: string, name: string, [key: string]: any}>;
   editingEvent?: any;
   onUpdate?: (eventId: string, eventData: CreateEventData) => Promise<void>;
 }
 
-export default function AddEventModal({ 
-  visible, 
-  onClose, 
-  onSave, 
+const repeatOptions = [
+  { label: '从不', value: 'never' },
+  { label: '每天', value: 'daily' },
+  { label: '每周', value: 'weekly' },
+  { label: '每月', value: 'monthly' },
+  { label: '每年', value: 'yearly' },
+];
+
+const colors = [
+  '#FF3B30', '#FF9500', '#FFCC02', '#34C759', 
+  '#007AFF', '#5856D6', '#AF52DE'
+];
+
+export default function AddEventModal({
+  visible,
+  onClose,
+  onSave,
   initialDate,
   userFamilies = [],
-  editingEvent = null,
+  editingEvent,
   onUpdate
 }: AddEventModalProps) {
+  const { user } = useAuth();
+  const { familyMembers } = useFamily();
+  
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [date, setDate] = useState(new Date());
-  const [startTime, setStartTime] = useState('');
-  const [endTime, setEndTime] = useState('');
-  const [location, setLocation] = useState('');
+  const [startTime, setStartTime] = useState(new Date());
+  const [endTime, setEndTime] = useState(new Date());
   const [allDay, setAllDay] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showStartTimePicker, setShowStartTimePicker] = useState(false);
+  const [showEndTimePicker, setShowEndTimePicker] = useState(false);
+  const [selectedFamily, setSelectedFamily] = useState<string>('personal');
+  const [selectedColor, setSelectedColor] = useState('#007AFF');
+  const [repeatOption, setRepeatOption] = useState('never');
+  const [selectedAttendees, setSelectedAttendees] = useState<string[]>([]);
+  const [showAttendeeModal, setShowAttendeeModal] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [selectedCalendar, setSelectedCalendar] = useState<string>('personal');
-  const [type, setType] = useState('calendar');
 
-  const eventTypes = useMemo(() => [
-    { label: t('addEventModal.eventType_calendar'), value: 'calendar', icon: '🔔' },
-    { label: t('addEventModal.eventType_idea'), value: 'idea', icon: '💡' },
-    { label: t('addEventModal.eventType_mood'), value: 'mood', icon: '❤️' },
-  ], []);
+  // 获取所有可选的用户列表（当前用户 + 家庭成员）
+  const availableUsers = React.useMemo(() => {
+    const users: User[] = [];
+    
+    // 添加当前用户
+    if (user) {
+      users.push({
+        id: user.id,
+        name: user.user_metadata?.display_name || user.email || '我',
+        email: user.email,
+        avatar_url: user.user_metadata?.avatar_url,
+        isCurrentUser: true,
+      });
+    }
+    
+    // 添加家庭成员
+    familyMembers.forEach(member => {
+      if (member.user_id !== user?.id) {
+        users.push({
+          id: member.user_id,
+          name: member.user?.display_name || member.user?.email || '家庭成员',
+          email: member.user?.email,
+          avatar_url: member.user?.avatar_url,
+          isCurrentUser: false,
+        });
+      }
+    });
+    
+    return users;
+  }, [user, familyMembers]);
 
-  const colorOptions = useMemo(() => [
-    { name: t('addEventModal.color_blue'), value: '#007AFF' },
-    { name: t('addEventModal.color_red'), value: '#FF3B30' },
-    { name: t('addEventModal.color_green'), value: '#34C759' },
-    { name: t('addEventModal.color_orange'), value: '#FF9500' },
-    { name: t('addEventModal.color_purple'), value: '#AF52DE' },
-    { name: t('addEventModal.color_pink'), value: '#FF2D92' },
-  ], []);
-  const [selectedColor, setSelectedColor] = useState(colorOptions[0].value);
+  // 获取已选择的参与人信息
+  const selectedAttendeesInfo = React.useMemo(() => {
+    return availableUsers.filter(user => selectedAttendees.includes(user.id));
+  }, [availableUsers, selectedAttendees]);
 
   useEffect(() => {
     if (visible) {
       if (editingEvent) {
         setTitle(editingEvent.title || '');
         setDescription(editingEvent.description || '');
-        setLocation(editingEvent.location || '');
-        setSelectedColor(editingEvent.color || colorOptions[0].value);
-        setType(editingEvent.type || 'calendar');
+        setSelectedColor(editingEvent.color || '#007AFF');
         
-        const eventDate = new Date(editingEvent.start_ts * 1000);
-        setDate(eventDate);
-        
-        const formatTime = (d: Date) => `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
-        setStartTime(formatTime(new Date(editingEvent.start_ts * 1000)));
-        setEndTime(formatTime(new Date(editingEvent.end_ts * 1000)));
-        
+        if (editingEvent.start_ts) {
+          const eventDate = new Date(editingEvent.start_ts * 1000);
+          setDate(eventDate);
+          setStartTime(eventDate);
+        }
+        if (editingEvent.end_ts) {
+          setEndTime(new Date(editingEvent.end_ts * 1000));
+        }
         if (editingEvent.shared_families && editingEvent.shared_families.length > 0) {
-          setSelectedCalendar(editingEvent.shared_families[0]);
+          setSelectedFamily(editingEvent.shared_families[0]);
+        }
+        // 获取事件的参与人信息
+        if (editingEvent.attendees && editingEvent.attendees.length > 0) {
+          const attendeeIds = editingEvent.attendees.map((attendee: any) => attendee.user_id);
+          setSelectedAttendees(attendeeIds);
         } else {
-          setSelectedCalendar('personal');
+          // 如果没有参与人信息，默认选择创建者
+          setSelectedAttendees([editingEvent.creator_id]);
         }
       } else {
         resetForm();
+        if (initialDate) {
+          setDate(initialDate);
+          const start = new Date(initialDate);
+          start.setHours(9, 0, 0, 0);
+          setStartTime(start);
+          const end = new Date(initialDate);
+          end.setHours(10, 0, 0, 0);
+          setEndTime(end);
+        }
+        // 默认选择当前用户作为参与人
+        if (user) {
+          setSelectedAttendees([user.id]);
+        }
       }
     }
-  }, [visible, editingEvent]);
+  }, [visible, editingEvent, initialDate, user]);
 
   const resetForm = () => {
     setTitle('');
     setDescription('');
-    setDate(initialDate || new Date());
-    setStartTime('');
-    setEndTime('');
-    setLocation('');
+    setDate(new Date());
+    const now = new Date();
+    const start = new Date(now);
+    start.setHours(9, 0, 0, 0);
+    setStartTime(start);
+    const end = new Date(now);
+    end.setHours(10, 0, 0, 0);
+    setEndTime(end);
     setAllDay(false);
-    setSelectedColor(colorOptions[0].value);
-    setType('calendar');
-    setSelectedCalendar('personal');
-  };
-
-  const formatTimeInput = (text: string): string => {
-    const numbers = text.replace(/[^\d]/g, '');
-    if (numbers.length === 0) return '';
-    if (numbers.length <= 2) {
-      return numbers;
-    } else if (numbers.length <= 4) {
-      return `${numbers.slice(0, 2)}:${numbers.slice(2)}`;
-    } else {
-      return `${numbers.slice(0, 2)}:${numbers.slice(2, 4)}`;
-    }
-  };
-
-  const handleStartTimeChange = (text: string) => {
-    const formattedTime = formatTimeInput(text);
-    setStartTime(formattedTime);
-  };
-
-  const handleEndTimeChange = (text: string) => {
-    const formattedTime = formatTimeInput(text);
-    setEndTime(formattedTime);
+    setSelectedFamily('personal');
+    setSelectedColor('#007AFF');
+    setRepeatOption('never');
+    setSelectedAttendees(user ? [user.id] : []);
+    setShowDatePicker(false);
+    setShowStartTimePicker(false);
+    setShowEndTimePicker(false);
   };
 
   const handleSave = async () => {
     if (!title.trim()) {
-      Alert.alert(t('addEventModal.error'), t('addEventModal.titleRequired'));
+      Alert.alert('提示', '请输入事件标题');
       return;
-    }
-
-    if (!allDay && startTime && !isValidTime(startTime)) {
-      Alert.alert(t('addEventModal.error'), t('addEventModal.invalidStartTime'));
-      return;
-    }
-
-    if (!allDay && endTime && !isValidTime(endTime)) {
-      Alert.alert(t('addEventModal.error'), t('addEventModal.invalidEndTime'));
-      return;
-    }
-
-    if (!allDay && startTime && endTime) {
-      const start = timeToMinutes(startTime);
-      const end = timeToMinutes(endTime);
-      if (end <= start) {
-        Alert.alert(t('addEventModal.error'), t('addEventModal.endTimeAfterStartTime'));
-        return;
-      }
     }
 
     setLoading(true);
@@ -153,13 +298,12 @@ export default function AddEventModal({
       const eventData: CreateEventData = {
         title: title.trim(),
         description: description.trim() || undefined,
-        date: date,
-        startTime: allDay ? undefined : startTime || undefined,
-        endTime: allDay ? undefined : endTime || undefined,
-        location: location.trim() || undefined,
+        startTime: allDay ? date : startTime,
+        endTime: allDay ? undefined : endTime,
         color: selectedColor,
-        shareToFamilies: selectedCalendar === 'personal' ? undefined : [selectedCalendar],
-        type,
+        type: 'calendar',
+        shareToFamilies: selectedFamily === 'personal' ? undefined : [selectedFamily],
+        attendees: selectedAttendees,
       };
 
       if (editingEvent && onUpdate) {
@@ -167,402 +311,806 @@ export default function AddEventModal({
       } else {
         await onSave(eventData);
       }
-      
-      handleClose();
+
+      onClose();
+      resetForm();
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : editingEvent ? t('addEventModal.updateFailed') : t('addEventModal.saveFailed');
-      Alert.alert(t('addEventModal.error'), errorMessage);
+      Alert.alert('错误', '保存失败');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleClose = () => {
-    resetForm();
-    onClose();
+
+
+  const onDateChange = (event: any, selectedDate?: Date) => {
+    if (selectedDate) {
+      setDate(selectedDate);
+      
+      // 更新时间日期部分
+      const newStartTime = new Date(startTime);
+      newStartTime.setFullYear(selectedDate.getFullYear());
+      newStartTime.setMonth(selectedDate.getMonth());
+      newStartTime.setDate(selectedDate.getDate());
+      setStartTime(newStartTime);
+      
+      const newEndTime = new Date(endTime);
+      newEndTime.setFullYear(selectedDate.getFullYear());
+      newEndTime.setMonth(selectedDate.getMonth());
+      newEndTime.setDate(selectedDate.getDate());
+      setEndTime(newEndTime);
+    }
   };
 
-  const isValidTime = (time: string): boolean => {
-    const regex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
-    return regex.test(time);
+  const onStartTimeChange = (event: any, selectedTime?: Date) => {
+    if (selectedTime) {
+      setStartTime(selectedTime);
+      // 自动设置结束时间为开始时间+1小时
+      const newEndTime = new Date(selectedTime);
+      newEndTime.setHours(newEndTime.getHours() + 1);
+      setEndTime(newEndTime);
+    }
   };
 
-  const timeToMinutes = (time: string): number => {
-    const [hours, minutes] = time.split(':').map(Number);
-    return hours * 60 + minutes;
+  const onEndTimeChange = (event: any, selectedTime?: Date) => {
+    if (selectedTime) {
+      setEndTime(selectedTime);
+    }
+  };
+
+  const showRepeatOptions = () => {
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: [...repeatOptions.map(r => r.label), '取消'],
+          cancelButtonIndex: repeatOptions.length,
+          title: '重复频率',
+        },
+        (buttonIndex) => {
+          if (buttonIndex < repeatOptions.length) {
+            setRepeatOption(repeatOptions[buttonIndex].value);
+          }
+        }
+      );
+    } else {
+      Alert.alert(
+        '重复频率',
+        '选择重复选项',
+        [
+          ...repeatOptions.map(option => ({
+            text: option.label,
+            onPress: () => setRepeatOption(option.value),
+          })),
+          { text: '取消', style: 'cancel' },
+        ]
+      );
+    }
   };
 
   const formatDate = (date: Date): string => {
-    return date.toLocaleDateString();
+    return date.toLocaleDateString('zh-CN', { 
+      year: 'numeric',
+      month: 'long', 
+      day: 'numeric',
+      weekday: 'long'
+    });
   };
 
-  const adjustDate = (days: number) => {
-    const newDate = new Date(date);
-    newDate.setDate(newDate.getDate() + days);
-    setDate(newDate);
+  const formatTime = (date: Date): string => {
+    return date.toLocaleTimeString('zh-CN', { 
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
   };
+
+  const getRepeatLabel = (value: string): string => {
+    return repeatOptions.find(option => option.value === value)?.label || '从不';
+  };
+
+  if (!visible) return null;
 
   return (
     <Modal
+      animationType="fade"
+      transparent={true}
       visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
+      onRequestClose={onClose}
     >
-      <KeyboardAvoidingView 
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}
-      >
-        <View style={styles.topIndicator} />
-        
-        <View style={styles.header}>
-          <TouchableOpacity onPress={handleClose} style={styles.headerButton}>
-            <Text style={styles.cancelButton}>✕</Text>
-          </TouchableOpacity>
-          <View style={styles.titleContainer}>
-            <Text style={styles.title}>{editingEvent ? t('addEventModal.editEvent') : t('addEventModal.createEvent')}</Text>
-            <Text style={styles.subtitle}>{t('addEventModal.recordGoodTimes')}</Text>
-          </View>
-          <TouchableOpacity 
-            onPress={handleSave} 
-            disabled={loading}
-            style={[styles.headerButton, styles.saveButtonContainer, loading && styles.saveButtonDisabled]}
-          >
-            <Text style={[styles.saveButton, loading && styles.saveButtonTextDisabled]}>
-              {loading ? t('addEventModal.saving') : (editingEvent ? t('addEventModal.update') : t('addEventModal.save'))}
+      <BlurView intensity={30} style={styles.blurContainer}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.centeredView}
+          keyboardVerticalOffset={20}
+        >
+          <View style={styles.modalView}>
+            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+              <Ionicons name="close-circle" size={28} color="#999" />
+            </TouchableOpacity>
+            
+            <Text style={styles.modalTitle}>
+              {editingEvent ? '编辑事件' : '新建事件'}
             </Text>
-          </TouchableOpacity>
-        </View>
 
-        <ScrollView showsVerticalScrollIndicator={false}>
-          <View style={styles.dateSelector}>
-            <TouchableOpacity onPress={() => adjustDate(-1)} style={styles.arrowButton}>
-              <Text style={styles.arrowText}>◀</Text>
-            </TouchableOpacity>
-            <Text style={styles.dateText}>{formatDate(date)}</Text>
-            <TouchableOpacity onPress={() => adjustDate(1)} style={styles.arrowButton}>
-              <Text style={styles.arrowText}>▶</Text>
-            </TouchableOpacity>
-          </View>
-          
-          <View style={styles.eventTypeContainer}>
-            {eventTypes.map(item => (
-              <TouchableOpacity
-                key={item.value}
-                style={[styles.eventTypeButton, type === item.value && styles.eventTypeButtonSelected]}
-                onPress={() => setType(item.value)}
-              >
-                <Text style={styles.eventTypeIcon}>{item.icon}</Text>
-                <Text style={styles.eventTypeText}>{item.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>{t('addEventModal.title')}</Text>
-            <TextInput
-              style={styles.input}
-              value={title}
-              onChangeText={setTitle}
-              placeholder={t('addEventModal.titlePlaceholder')}
-              placeholderTextColor="#c7c7cd"
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>{t('addEventModal.description')}</Text>
-            <TextInput
-              style={[styles.input, styles.multilineInput]}
-              value={description}
-              onChangeText={setDescription}
-              placeholder={t('addEventModal.descriptionPlaceholder')}
-              placeholderTextColor="#c7c7cd"
-              multiline
-            />
-          </View>
-          
-          <View style={styles.switchContainer}>
-            <Text style={styles.label}>{t('addEventModal.allDay')}</Text>
-            <Switch
-              value={allDay}
-              onValueChange={setAllDay}
-              trackColor={{ false: "#767577", true: "#81b0ff" }}
-              thumbColor={allDay ? "#f5dd4b" : "#f4f3f4"}
-            />
-          </View>
-
-          {!allDay && (
-            <View style={styles.timeInputContainer}>
-              <TextInput
-                style={styles.timeInput}
-                value={startTime}
-                onChangeText={handleStartTimeChange}
-                placeholder="09:00"
-                keyboardType="numeric"
-                maxLength={5}
+            <ScrollView style={styles.formContainer} showsVerticalScrollIndicator={false}>
+              {/* 标题输入 */}
+                   <TextInput
+                style={styles.input}
+                placeholder="事件标题"
+                value={title}
+                onChangeText={setTitle}
+                autoFocus={!editingEvent}
               />
-              <Text style={styles.timeSeparator}>-</Text>
-              <TextInput
-                style={styles.timeInput}
-                value={endTime}
-                onChangeText={handleEndTimeChange}
-                placeholder="10:00"
-                keyboardType="numeric"
-                maxLength={5}
-              />
-            </View>
-          )}
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>{t('addEventModal.location')}</Text>
-            <TextInput
-              style={styles.input}
-              value={location}
-              onChangeText={setLocation}
-              placeholder={t('addEventModal.locationPlaceholder')}
-              placeholderTextColor="#c7c7cd"
-            />
-          </View>
+         
+              {/* 日期和时间选择区域 */}
+              <View style={styles.dateTimeSection}>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>{t('addEventModal.color')}</Text>
-            <View style={styles.colorContainer}>
-              {colorOptions.map(color => (
-                <TouchableOpacity
-                  key={color.value}
-                  style={[
-                    styles.colorOption,
-                    { backgroundColor: color.value },
-                    selectedColor === color.value && styles.selectedColor,
-                  ]}
-                  onPress={() => setSelectedColor(color.value)}
-                />
-              ))}
-            </View>
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>{t('addEventModal.share')}</Text>
-            <View style={styles.calendarSelector}>
-              <TouchableOpacity
-                style={[
-                  styles.calendarButton,
-                  selectedCalendar === 'personal' && styles.calendarButtonSelected
-                ]}
-                onPress={() => setSelectedCalendar('personal')}
+                
+              {/* 参与人选择 - 移到顶部 */}
+              <TouchableOpacity 
+                style={styles.attendeeSelectorButton}
+                onPress={() => setShowAttendeeModal(true)}
               >
-                <Text style={styles.calendarButtonText}>{t('addEventModal.personal')}</Text>
+                <View style={styles.attendeeSelectorLeft}>
+                  <Ionicons name="people" size={20} color="#007AFF" />
+                  <Text style={styles.attendeeSelectorLabel}>参与人</Text>
+                </View>
+                <View style={styles.attendeeSelectorRight}>
+                  <View style={styles.attendeeSelectorList}>
+                    {selectedAttendeesInfo.slice(0, 3).map((attendee, index) => (
+                      <View key={attendee.id} style={[styles.attendeeSelectorAvatar, { marginLeft: index > 0 ? -8 : 0 }]}>
+                        {attendee.avatar_url ? (
+                          <Image source={{ uri: attendee.avatar_url }} style={styles.attendeeSelectorAvatarImage} />
+                        ) : (
+                          <Ionicons name="person" size={16} color="#007AFF" />
+                        )}
+                      </View>
+                    ))}
+                    {selectedAttendeesInfo.length > 3 && (
+                      <View style={[styles.attendeeSelectorAvatar, styles.attendeeSelectorMore, { marginLeft: -8 }]}>
+                        <Text style={styles.attendeeSelectorMoreText}>+{selectedAttendeesInfo.length - 3}</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color="#C7C7CD" />
+                </View>
               </TouchableOpacity>
-              {userFamilies.map(family => (
+
+                {/* 日期选择 */}
                 <TouchableOpacity
-                  key={family.id}
-                  style={[
-                    styles.calendarButton,
-                    selectedCalendar === family.id && styles.calendarButtonSelected
-                  ]}
-                  onPress={() => setSelectedCalendar(family.id)}
+                  style={[styles.dateTimeButton, showDatePicker && styles.dateTimeButtonActive]}
+                  onPress={() => {
+                    setShowDatePicker(!showDatePicker);
+                    setShowStartTimePicker(false);
+                    setShowEndTimePicker(false);
+                  }}
                 >
-                  <Text style={styles.calendarButtonText}>{family.name}</Text>
+                  <View style={styles.dateTimeLeft}>
+                    <Ionicons name="calendar" size={20} color="#007AFF" />
+                    <Text style={styles.dateTimeLabel}>日期</Text>
+                  </View>
+                  <Text style={styles.dateTimeValue}>{formatDate(date)}</Text>
                 </TouchableOpacity>
-              ))}
-            </View>
+
+                {/* 内联日期选择器 */}
+                {showDatePicker && (
+                  <View style={styles.inlinePicker}>
+                    <DateTimePicker
+                      value={date}
+                      mode="date"
+                      is24Hour={true}
+                      display="spinner"
+                      onChange={onDateChange}
+                      style={styles.picker}
+                    />
+                  </View>
+                )}
+
+                {/* 全天开关 */}
+                <TouchableOpacity
+                  style={styles.dateTimeButton}
+                  onPress={() => setAllDay(!allDay)}
+                >
+                  <View style={styles.dateTimeLeft}>
+                    <Ionicons name="time" size={20} color="#007AFF" />
+                    <Text style={styles.dateTimeLabel}>全天</Text>
+                  </View>
+                  <View style={[styles.switch, allDay && styles.switchActive]}>
+                    <View style={[styles.switchThumb, allDay && styles.switchThumbActive]} />
+                  </View>
+                </TouchableOpacity>
+
+                {/* 时间选择 */}
+                {!allDay && (
+                  <>
+                    <TouchableOpacity
+                      style={[styles.dateTimeButton, showStartTimePicker && styles.dateTimeButtonActive]}
+                      onPress={() => {
+                        setShowStartTimePicker(!showStartTimePicker);
+                        setShowDatePicker(false);
+                        setShowEndTimePicker(false);
+                      }}
+                    >
+                      <View style={styles.dateTimeLeft}>
+                        <Ionicons name="play" size={20} color="#007AFF" />
+                        <Text style={styles.dateTimeLabel}>开始</Text>
+                      </View>
+                      <Text style={styles.dateTimeValue}>{formatTime(startTime)}</Text>
+                    </TouchableOpacity>
+
+                    {/* 内联开始时间选择器 */}
+                    {showStartTimePicker && (
+                      <View style={styles.inlinePicker}>
+                        <DateTimePicker
+                          value={startTime}
+                          mode="time"
+                          is24Hour={true}
+                          display="spinner"
+                          onChange={onStartTimeChange}
+                          style={styles.picker}
+                        />
+                      </View>
+                    )}
+
+                    <TouchableOpacity
+                      style={[styles.dateTimeButton, showEndTimePicker && styles.dateTimeButtonActive]}
+                      onPress={() => {
+                        setShowEndTimePicker(!showEndTimePicker);
+                        setShowDatePicker(false);
+                        setShowStartTimePicker(false);
+                      }}
+                    >
+                      <View style={styles.dateTimeLeft}>
+                        <Ionicons name="stop" size={20} color="#007AFF" />
+                        <Text style={styles.dateTimeLabel}>结束</Text>
+                      </View>
+                      <Text style={styles.dateTimeValue}>{formatTime(endTime)}</Text>
+                    </TouchableOpacity>
+
+                    {/* 内联结束时间选择器 */}
+                    {showEndTimePicker && (
+                      <View style={styles.inlinePicker}>
+                        <DateTimePicker
+                          value={endTime}
+                          mode="time"
+                          is24Hour={true}
+                          display="spinner"
+                          onChange={onEndTimeChange}
+                          style={styles.picker}
+                        />
+                      </View>
+                    )}
+                  </>
+                )}
+              </View>
+
+              {/* 重复选项 */}
+              <TouchableOpacity
+                style={styles.optionButton}
+                onPress={showRepeatOptions}
+              >
+                <View style={styles.optionLeft}>
+                  <Ionicons name="repeat" size={20} color="#007AFF" />
+                  <Text style={styles.optionLabel}>重复</Text>
+                </View>
+                <View style={styles.optionRight}>
+                  <Text style={styles.optionValue}>{getRepeatLabel(repeatOption)}</Text>
+                  <Ionicons name="chevron-forward" size={16} color="#C7C7CD" />
+                </View>
+              </TouchableOpacity>
+
+              {/* 颜色选择 */}
+              <View style={styles.colorSection}>
+                <Text style={styles.sectionTitle}>颜色标签</Text>
+                <View style={styles.colorGrid}>
+                  {colors.map((color, index) => (
+                    <TouchableOpacity
+                      key={`color-${index}`}
+                      style={[
+                        styles.colorOption,
+                        { backgroundColor: color },
+                        selectedColor === color && styles.selectedColorOption
+                      ]}
+                      onPress={() => setSelectedColor(color)}
+                    >
+                      {selectedColor === color && (
+                        <Ionicons name="checkmark" size={16} color="#fff" />
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* 描述输入 */}
+              <TextInput
+                style={[styles.input, styles.descriptionInput]}
+                placeholder="备注"
+                value={description}
+                onChangeText={setDescription}
+                multiline
+                textAlignVertical="top"
+              />
+
+              {/* 家庭分享选择 */}
+              {userFamilies.length > 0 && (
+                <View style={styles.familySection}>
+                  <Text style={styles.sectionTitle}>分享到</Text>
+                  <Text style={styles.sectionDescription}>选择家庭后，该家庭的所有成员都能看到这个事件</Text>
+                  <View style={styles.familyContainer}>
+                    <TouchableOpacity
+                      style={[
+                        styles.familyButton,
+                        selectedFamily === 'personal' && styles.familyButtonSelected,
+                      ]}
+                      onPress={() => setSelectedFamily('personal')}
+                    >
+                      <Text style={[
+                        styles.familyButtonText,
+                        selectedFamily === 'personal' && styles.familyButtonTextSelected
+                      ]}>
+                        个人
+                      </Text>
+                    </TouchableOpacity>
+                    
+                    {userFamilies.map((family, index) => (
+                      <TouchableOpacity
+                        key={`family-${index}`}
+                        style={[
+                          styles.familyButton,
+                          selectedFamily === family.id && styles.familyButtonSelected,
+                        ]}
+                        onPress={() => setSelectedFamily(family.id)}
+                      >
+                        <Text style={[
+                          styles.familyButtonText,
+                          selectedFamily === family.id && styles.familyButtonTextSelected
+                        ]}>
+                          {family.name}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+
+            </ScrollView>
+
+            <TouchableOpacity
+              style={[styles.saveButton, loading && styles.saveButtonDisabled]}
+              onPress={handleSave}
+              disabled={loading}
+            >
+              <Text style={styles.saveButtonText}>
+                {loading ? '保存中...' : '保存'}
+              </Text>
+            </TouchableOpacity>
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+        </KeyboardAvoidingView>
+      </BlurView>
+
+      {/* 参与人选择模态框 */}
+      <AttendeeSelectionModal
+        visible={showAttendeeModal}
+        onClose={() => setShowAttendeeModal(false)}
+        availableUsers={availableUsers}
+        selectedAttendees={selectedAttendees}
+        onSelectionChange={setSelectedAttendees}
+      />
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  blurContainer: {
     flex: 1,
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 20,
-  },
-  topIndicator: {
-    width: 40,
-    height: 5,
-    borderRadius: 2.5,
-    backgroundColor: '#ccc',
-    alignSelf: 'center',
-    marginTop: 8,
-    marginBottom: 8,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  headerButton: {
-    padding: 8,
-  },
-  cancelButton: {
-    fontSize: 24,
-    color: '#888',
-  },
-  titleContainer: {
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  subtitle: {
-    fontSize: 13,
-    color: '#888',
-    marginTop: 2,
-  },
-  saveButtonContainer: {
-    backgroundColor: '#007AFF',
-    borderRadius: 8,
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-  },
-  saveButton: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  saveButtonDisabled: {
-    backgroundColor: '#a0c7ff',
-  },
-  saveButtonTextDisabled: {
-    color: '#e0e0e0',
-  },
-  dateSelector: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 15,
-  },
-  arrowButton: {
-    padding: 10,
-  },
-  arrowText: {
-    fontSize: 20,
-    color: '#007AFF',
-  },
-  dateText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  eventTypeContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingHorizontal: 15,
-    paddingBottom: 15,
-  },
-  eventTypeButton: {
-    alignItems: 'center',
-    padding: 10,
-    borderRadius: 10,
-    backgroundColor: '#f0f0f0',
-  },
-  eventTypeButtonSelected: {
-    backgroundColor: '#007AFF',
-  },
-  eventTypeIcon: {
-    fontSize: 24,
-  },
-  eventTypeText: {
-    marginTop: 5,
-    color: '#000',
-  },
-  inputGroup: {
-    paddingHorizontal: 20,
-    marginBottom: 15,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: '#f0f2f5',
-    borderRadius: 10,
-    padding: 12,
-    fontSize: 16,
-  },
-  multilineInput: {
-    height: 100,
-    textAlignVertical: 'top',
-  },
-  switchContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-  },
-  timeInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    alignItems: 'center',
   },
-  timeInput: {
+  centeredView: {
     flex: 1,
-    backgroundColor: '#f0f2f5',
-    borderRadius: 10,
-    padding: 12,
-    fontSize: 16,
-    textAlign: 'center',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
   },
-  timeSeparator: {
-    marginHorizontal: 10,
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  colorContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingTop: 5,
-  },
-  colorOption: {
-    width: 40,
-    height: 40,
+  modalView: {
+    margin: 20,
+    backgroundColor: 'white',
     borderRadius: 20,
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  selectedColor: {
-    borderColor: '#fff',
-    elevation: 5,
+    padding: 25,
+    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,
     },
     shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    shadowRadius: 4,
+    elevation: 5,
+    width: '90%',
+    maxHeight: '85%',
   },
-  calendarSelector: {
-    flexDirection: 'row',
-    paddingVertical: 5,
+  closeButton: {
+    position: 'absolute',
+    top: 15,
+    right: 15,
   },
-  calendarButton: {
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    borderRadius: 20,
-    backgroundColor: '#f0f2f5',
-    marginRight: 10,
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    color: '#333',
   },
-  calendarButtonSelected: {
-    backgroundColor: '#007AFF',
+  formContainer: {
+    width: '100%',
   },
-  calendarButtonText: {
+  input: {
+    width: '100%',
+    backgroundColor: '#f2f2f2',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 15,
     fontSize: 16,
-    color: '#000',
   },
-}); 
+  descriptionInput: {
+    height: 80,
+    textAlignVertical: 'top',
+  },
+  dateTimeSection: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 15,
+  },
+  dateTimeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginVertical: 2,
+    borderRadius: 8,
+    backgroundColor: 'white',
+    marginHorizontal: 4,
+  },
+  dateTimeButtonActive: {
+    backgroundColor: '#E3F2FD',
+    borderColor: '#007AFF',
+    borderWidth: 1,
+  },
+  dateTimeLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  dateTimeLabel: {
+    fontSize: 16,
+    color: '#333',
+    marginLeft: 12,
+  },
+  dateTimeValue: {
+    fontSize: 16,
+    color: '#007AFF',
+    fontWeight: '500',
+  },
+  inlinePicker: {
+    backgroundColor: 'white',
+    borderRadius: 8,
+    marginHorizontal: 4,
+    marginVertical: 4,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: '#007AFF',
+  },
+  picker: {
+    height: 120,
+  },
+  switch: {
+    width: 44,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#E9ECEF',
+    justifyContent: 'center',
+    paddingHorizontal: 2,
+  },
+  switchActive: {
+    backgroundColor: '#34C759',
+  },
+  switchThumb: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: 'white',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  switchThumbActive: {
+    transform: [{ translateX: 18 }],
+  },
+  optionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 10,
+    marginBottom: 15,
+  },
+  optionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  optionLabel: {
+    fontSize: 16,
+    color: '#333',
+    marginLeft: 12,
+  },
+  optionRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  optionValue: {
+    fontSize: 16,
+    color: '#007AFF',
+    marginRight: 8,
+  },
+  colorSection: {
+    marginBottom: 15,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 8,
+  },
+  sectionDescription: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 12,
+    lineHeight: 20,
+  },
+  colorGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingHorizontal: 10,
+  },
+  colorOption: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginBottom: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    margin: 4,
+  },
+  selectedColorOption: {
+    transform: [{ scale: 1.2 }],
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  familySection: {
+    marginBottom: 15,
+  },
+  familyContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  familyButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    backgroundColor: '#f2f2f2',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  familyButtonSelected: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
+  },
+  familyButtonText: {
+    fontSize: 14,
+    color: '#333',
+  },
+  familyButtonTextSelected: {
+    color: 'white',
+    fontWeight: '500',
+  },
+  attendeesSection: {
+    marginBottom: 15,
+  },
+  attendeesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  attendeeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    backgroundColor: '#f2f2f2',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  attendeeButtonSelected: {
+    backgroundColor: '#E3F2FD',
+    borderColor: '#007AFF',
+  },
+  attendeeAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  attendeeAvatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 14,
+  },
+  attendeeName: {
+    fontSize: 14,
+    color: '#333',
+    flex: 1,
+  },
+  saveButton: {
+    backgroundColor: '#007AFF',
+    borderRadius: 20,
+    paddingVertical: 15,
+    paddingHorizontal: 30,
+    elevation: 2,
+    marginTop: 10,
+    minWidth: 120,
+  },
+  saveButtonDisabled: {
+    backgroundColor: '#ccc',
+  },
+  saveButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    textAlign: 'center',
+    fontSize: 18,
+  },
+  // New styles for AttendeeSelectionModal
+  modalBackground: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  attendeeModal: {
+    backgroundColor: 'white',
+    borderRadius: 15,
+    width: '90%',
+    maxHeight: '80%',
+    padding: 20,
+    alignItems: 'center',
+  },
+  attendeeModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: 15,
+  },
+  cancelButton: {
+    fontSize: 16,
+    color: '#007AFF',
+  },
+  attendeeModalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  confirmButton: {
+    fontSize: 16,
+    color: '#007AFF',
+  },
+  attendeeList: {
+    width: '100%',
+  },
+  attendeeItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  attendeeItemSelected: {
+    backgroundColor: '#E3F2FD',
+  },
+  attendeeItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  attendeeModalAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    marginRight: 12,
+  },
+  attendeeModalAvatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 18,
+  },
+  attendeeInfo: {
+    flex: 1,
+  },
+  attendeeModalName: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '500',
+  },
+  attendeeLabel: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
+  },
+  // New styles for AttendeeSelectorButton
+  attendeeSelectorButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 10,
+    marginBottom: 15,
+    width: '100%',
+  },
+  attendeeSelectorLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  attendeeSelectorLabel: {
+    fontSize: 16,
+    color: '#333',
+    marginLeft: 12,
+  },
+  attendeeSelectorRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  attendeeSelectorList: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  attendeeSelectorAvatar: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#E0E0E0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  attendeeSelectorAvatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 12,
+  },
+  attendeeSelectorMore: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#E0E0E0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  attendeeSelectorMoreText: {
+    fontSize: 12,
+    color: '#333',
+  },
+});

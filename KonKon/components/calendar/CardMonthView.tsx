@@ -155,20 +155,16 @@ export default function CardMonthView({
                       ))}
                       
                       {events.filter(event => {
-                        const eventDate = new Date(event.start_ts * 1000);
-                        eventDate.setHours(0, 0, 0, 0);
-                        const targetDate = new Date(date);
-                        targetDate.setHours(0, 0, 0, 0);
-                        return eventDate.getTime() === targetDate.getTime();
+                        const eventDateString = new Date(event.start_ts * 1000).toISOString().split('T')[0];
+                        const targetDateString = date.toISOString().split('T')[0];
+                        return eventDateString === targetDateString;
                       }).length > 2 && (
                         <View style={styles.moreEventsChip}>
                           <Text style={styles.moreEventsText}>
                             +{events.filter(event => {
-                              const eventDate = new Date(event.start_ts * 1000);
-                              eventDate.setHours(0, 0, 0, 0);
-                              const targetDate = new Date(date);
-                              targetDate.setHours(0, 0, 0, 0);
-                              return eventDate.getTime() === targetDate.getTime();
+                              const eventDateString = new Date(event.start_ts * 1000).toISOString().split('T')[0];
+                              const targetDateString = date.toISOString().split('T')[0];
+                              return eventDateString === targetDateString;
                             }).length - 2}
                           </Text>
                         </View>

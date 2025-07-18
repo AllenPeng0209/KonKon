@@ -41,7 +41,7 @@ import KitchenRecipeView from './KitchenRecipeView';
 
 // 運動健康類
 import RunningTrackView from './RunningTrackView';
-import MoodDiaryView from './MoodDiaryView';
+// import MoodDiaryView from './MoodDiaryView';  // 移除心情日记功能，还未实现
 import FitnessChallengeView from './FitnessChallengeView';
 
 // 未來科技類
@@ -292,16 +292,16 @@ export default function CalendarViewSelector({
           onEventPress={calendarProps.onEventPress}
           onMonthChange={calendarProps.onMonthChange}
         />;
-      case 'mood-diary':
-        return <MoodDiaryView 
-          events={convertEventsForCustomViews(calendarProps.events)}
-          currentDate={calendarProps.selectedDate}
-          onDateSelect={calendarProps.onDatePress}
-          selectedDate={calendarProps.selectedDate}
-          currentMonth={calendarProps.currentMonth}
-          onEventPress={calendarProps.onEventPress}
-          onMonthChange={calendarProps.onMonthChange}
-        />;
+      // case 'mood-diary':
+      //   return <MoodDiaryView 
+      //     events={convertEventsForCustomViews(calendarProps.events)}
+      //     currentDate={calendarProps.selectedDate}
+      //     onDateSelect={calendarProps.onDatePress}
+      //     selectedDate={calendarProps.selectedDate}
+      //     currentMonth={calendarProps.currentMonth}
+      //     onEventPress={calendarProps.onEventPress}
+      //     onMonthChange={calendarProps.onMonthChange}
+      //   />;  // 移除心情日记功能，还未实现
       case 'fitness-challenge':
         return <FitnessChallengeView 
           events={convertEventsForCustomViews(calendarProps.events)}

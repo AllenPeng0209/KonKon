@@ -47,17 +47,18 @@ import {
 } from 'react-native';
 import { DateData } from 'react-native-calendars';
 import { useAuth } from '../../contexts/AuthContext';
+import { useFamily } from '@/contexts/FamilyContext';
 
 const { width: screenWidth } = Dimensions.get('window');
 
 export default function HomeScreen() {
   const { user, loading } = useAuth();
+  const { userFamilies } = useFamily();
   const router = useRouter();
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState('all'); // 默认值为 'all'
   const [showAddEventModal, setShowAddEventModal] = useState(false);
-  const [showAddExpenseModal, setShowAddExpenseModal] = useState(false);
-  const [editingExpense, setEditingExpense] = useState<any>(null);
+  // 已移除：记账相关状态
   const [showEventListModal, setShowEventListModal] = useState(false);
   const [showVoiceToCalendar, setShowVoiceToCalendar] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -70,8 +71,7 @@ export default function HomeScreen() {
   const [showRecurringEventManager, setShowRecurringEventManager] = useState(false);
   const [selectedParentEventId, setSelectedParentEventId] = useState<string | null>(null);
   const [processedEvents, setProcessedEvents] = useState<any[]>([]);
-  const [expenses, setExpenses] = useState<any[]>([]);
-  const [monthlySummary, setMonthlySummary] = useState({ expense: 0, income: 0 });
+  // 已移除：记账相关状态
   
   // 新增：确认弹窗状态
   const [isConfirmationModalVisible, setIsConfirmationModalVisible] = useState(false);
@@ -121,30 +121,29 @@ export default function HomeScreen() {
     audioFormat: 'wav',
   });
 
-  // 过滤选项，增加 value 字段
+  // 过滤选项，专注于日历功能
   const filterOptions = [
     { label: t('home.all'), value: 'all', icon: '📊', color: '#8E8E93', bgColor: '#F2F2F7' },
-    { label: t('home.album'), value: 'album', icon: '🖼️', color: '#5856D6', bgColor: '#E9E9FF' },
+    // { label: t('home.album'), value: 'album', icon: '🖼️', color: '#5856D6', bgColor: '#E9E9FF' }, // 移除相册功能，还未实现
     { label: t('home.calendar'), value: 'calendar', icon: '🔔', color: '#FF9500', bgColor: '#FFF3E0' },
-    { label: t('home.expense'), value: 'expense', icon: '💰', color: '#4CAF50', bgColor: '#E8F5E9' },
-    { label: t('home.idea'), value: 'idea', icon: '💡', color: '#9C27B0', bgColor: '#F3E5F5' },
-    { label: t('home.mood'), value: 'mood', icon: '❤️', color: '#E91E63', bgColor: '#FCE4EC' },
-  
+    // { label: t('home.expense'), value: 'expense', icon: '💰', color: '#4CAF50', bgColor: '#E8F5E9' }, // 移除记账功能
+    // { label: t('home.idea'), value: 'idea', icon: '💡', color: '#9C27B0', bgColor: '#F3E5F5' }, // 移除想法功能，还未实现
+    // { label: t('home.mood'), value: 'mood', icon: '❤️', color: '#E91E63', bgColor: '#FCE4EC' }, // 移除心情功能，还未实现
   ];
 
   useEffect(() => {
     if (!loading && !user) {
       router.replace('/login');
     } else if (user) {
-      fetchExpenses();
+      // fetchExpenses(); // 移除记账相关功能
     }
   }, [user, loading, router]);
 
   useEffect(() => {
     if (user) {
-      calculateMonthlySummary();
+      // calculateMonthlySummary(); // 移除记账相关功能
     }
-  }, [expenses, user]);
+  }, [user]);
 
   // 初始化日历权限
   useEffect(() => {
@@ -193,40 +192,40 @@ export default function HomeScreen() {
     expandRecurringEvents();
   }, [events, currentMonth, eventsLoading, recurringLoading, getRecurringEventInstances]);
 
-  const fetchExpenses = async () => {
-    if (!user) return;
-    const { data, error } = await supabase
-      .from('expenses')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('date', { ascending: false });
+  // const fetchExpenses = async () => { // 移除记账相关功能
+  //   if (!user) return;
+  //   const { data, error } = await supabase
+  //     .from('expenses')
+  //     .select('*')
+  //     .eq('user_id', user.id)
+  //     .order('date', { ascending: false });
 
-    if (error) {
-      console.error('Error fetching expenses:', error);
-    } else {
-      setExpenses(data || []);
-    }
-  };
+  //   if (error) {
+  //     console.error('Error fetching expenses:', error);
+  //   } else {
+  //     setExpenses(data || []);
+  //   }
+  // };
 
-  const calculateMonthlySummary = () => {
-    const currentMonth = new Date().getMonth();
-    const currentYear = new Date().getFullYear();
-    let totalExpense = 0;
-    let totalIncome = 0;
+  // const calculateMonthlySummary = () => { // 移除记账相关功能
+  //   const currentMonth = new Date().getMonth();
+  //   const currentYear = new Date().getFullYear();
+  //   let totalExpense = 0;
+  //   let totalIncome = 0;
 
-    expenses.forEach(expense => {
-      const expenseDate = new Date(expense.date);
-      if (expenseDate.getMonth() === currentMonth && expenseDate.getFullYear() === currentYear) {
-        if (expense.type === 'expense') {
-          totalExpense += expense.amount;
-        } else if (expense.type === 'income') {
-          totalIncome += expense.amount;
-        }
-      }
-    });
+  //   expenses.forEach(expense => {
+  //     const expenseDate = new Date(expense.date);
+  //     if (expenseDate.getMonth() === currentMonth && expenseDate.getFullYear() === currentYear) {
+  //       if (expense.type === 'expense') {
+  //         totalExpense += expense.amount;
+  //       } else if (expense.type === 'income') {
+  //         totalIncome += expense.amount;
+  //       }
+  //     }
+  //   });
 
-    setMonthlySummary({ expense: totalExpense, income: totalIncome });
-  };
+  //   setMonthlySummary({ expense: totalExpense, income: totalIncome });
+  // };
 
   const initializeCalendarPermissions = async () => {
     try {
@@ -279,14 +278,13 @@ export default function HomeScreen() {
 
   // 处理手动添加
   const handleManualAdd = () => {
-    setSelectedDate(new Date());
-    if (selectedFilter === 'expense') {
-      setEditingExpense(null);
-      setShowAddExpenseModal(true);
-    } else {
-      setEditingEvent(null);
-      setShowAddEventModal(true);
+    // 如果没有选中日期，则使用今天
+    if (!selectedDate) {
+      setSelectedDate(new Date());
     }
+    // 移除记账相关的条件分支
+    setEditingEvent(null);
+    setShowAddEventModal(true);
   };
 
   // 处理语音录制按钮点击
@@ -309,7 +307,7 @@ export default function HomeScreen() {
                 text: t('home.convert'),
                 onPress: () => {
                   if (selectedFilter === 'expense') {
-                    handleVoiceToExpense(base64Data);
+                    // handleVoiceToExpense(base64Data); // 移除记账相关功能
                   } else {
                     handleVoiceToCalendar(base64Data);
                   }
@@ -366,11 +364,11 @@ export default function HomeScreen() {
 
     if (pickerResult.assets && pickerResult.assets.length > 0) {
       // 如果当前是相册视图，则打开 AddMemoryModal
-      if (selectedFilter === 'album') {
-        setInitialMemoryImages(pickerResult.assets);
-        setShowAddMemoryModal(true);
-        return;
-      }
+      // if (selectedFilter === 'album') {
+      //   setInitialMemoryImages(pickerResult.assets);
+      //   setShowAddMemoryModal(true);
+      //   return;
+      // } // 移除相册功能，还未实现
       
       const imageUri = pickerResult.assets[0].uri;
       try {
@@ -381,8 +379,8 @@ export default function HomeScreen() {
         });
         
         if (selectedFilter === 'expense') {
-          const result = await processImageToExpense(base64Image);
-          handleAIExpenseResult(result);
+          // const result = await processImageToExpense(base64Image); // 移除记账相关功能
+          // handleAIExpenseResult(result); // 移除记账相关功能
         } else {
           const result = await processImageToCalendar(base64Image);
           handleAIResult(result);
@@ -429,17 +427,17 @@ export default function HomeScreen() {
   };
 
   // 新增：处理语音转记账
-  const handleVoiceToExpense = async (base64Data: string) => {
-    setLoadingText(t('home.processingVoice'));
-    try {
-      const result = await processVoiceToExpense(base64Data);
-      handleAIExpenseResult(result);
-    } catch (error) {
-      Alert.alert(t('home.error'), t('home.expenseVoiceProcessingFailed'));
-    } finally {
-      clearRecording();
-    }
-  };
+  // const handleVoiceToExpense = async (base64Data: string) => { // 移除记账相关功能
+  //   setLoadingText(t('home.processingVoice'));
+  //   try {
+  //     const result = await processVoiceToExpense(base64Data);
+  //     handleAIExpenseResult(result);
+  //   } catch (error) {
+  //     Alert.alert(t('home.error'), t('home.expenseVoiceProcessingFailed'));
+  //   } finally {
+  //     clearRecording();
+  //   }
+  // };
 
   // 处理文字输入转日程的结果（兼容原有逻辑）
   const handleTextResult = async (result: string) => {
@@ -451,8 +449,8 @@ export default function HomeScreen() {
       // 简单的意图识别
       if (result.match(/记账|消费|收入|花了|赚了|买单|付款/)) {
         console.log('判断为记账意图');
-        const expenseResult = await processTextToExpense(result);
-        handleAIExpenseResult(expenseResult);
+        // const expenseResult = await processTextToExpense(result); // 移除记账相关功能
+        // handleAIExpenseResult(expenseResult); // 移除记账相关功能
       } else {
         console.log('判断为日程意图');
         const calendarResult = await processTextToCalendar(result);
@@ -467,76 +465,76 @@ export default function HomeScreen() {
   };
 
   // 新增：统一处理AI记账结果
-  const handleAIExpenseResult = (result: ParsedExpenseResult) => {
-    if (!user) {
-      Alert.alert(t('home.error'), t('home.userNotLoggedIn'));
-      return;
-    }
-    if (result.expenses && result.expenses.length > 0) {
-      const confidence = Math.round(result.confidence * 100);
+  // const handleAIExpenseResult = (result: ParsedExpenseResult) => { // 移除记账相关功能
+  //   if (!user) {
+  //     Alert.alert(t('home.error'), t('home.userNotLoggedIn'));
+  //     return;
+  //   }
+  //   if (result.expenses && result.expenses.length > 0) {
+  //     const confidence = Math.round(result.confidence * 100);
       
-      if (result.expenses.length === 1) {
-        // 单个记账项目的情况
-        const expense = result.expenses[0];
-        const typeText = expense.type === 'income' ? t('home.income') : t('home.expenseType');
-        const descriptionText = expense.description ? t('home.notes', { description: expense.description }) : '';
+  //     if (result.expenses.length === 1) {
+  //       // 单个记账项目的情况
+  //       const expense = result.expenses[0];
+  //       const typeText = expense.type === 'income' ? t('home.income') : t('home.expenseType');
+  //       const descriptionText = expense.description ? t('home.notes', { description: expense.description }) : '';
         
-        Alert.alert(
-          t('home.parsingSuccess'),
-          t('home.expenseParsingSuccessMessage', {
-            amount: expense.amount,
-            category: expense.category,
-            type: typeText,
-            description: descriptionText,
-            confidence: confidence
-          }),
-          [
-            { text: t('home.cancel'), style: 'cancel' },
-            { 
-              text: t('home.confirmSave'), 
-              onPress: () => handleSaveExpense({
-                amount: expense.amount,
-                category: expense.category,
-                description: expense.description || null,
-                date: expense.date.toISOString().split('T')[0],
-                type: expense.type,
-                user_id: user.id,
-              })
-            }
-          ]
-        );
-      } else {
-        // 多个记账项目的情况
-        let expensesList = '';
-        result.expenses.forEach((expense, index) => {
-          const typeText = expense.type === 'income' ? t('home.income') : t('home.expenseType');
-          expensesList += `${index + 1}. ${expense.amount} 元 (${typeText})\n   📂 ${expense.category}\n`;
-          if (expense.description) {
-            expensesList += `   ${t('home.notes', { description: expense.description })}`;
-          }
-          expensesList += '\n';
-        });
+  //       Alert.alert(
+  //         t('home.parsingSuccess'),
+  //         t('home.expenseParsingSuccessMessage', {
+  //           amount: expense.amount,
+  //           category: expense.category,
+  //           type: typeText,
+  //           description: descriptionText,
+  //           confidence: confidence
+  //         }),
+  //         [
+  //           { text: t('home.cancel'), style: 'cancel' },
+  //           { 
+  //             text: t('home.confirmSave'), 
+  //             onPress: () => handleSaveExpense({
+  //               amount: expense.amount,
+  //               category: expense.category,
+  //               description: expense.description || null,
+  //               date: expense.date.toISOString().split('T')[0],
+  //               type: expense.type,
+  //               user_id: user.id,
+  //             })
+  //           }
+  //         ]
+  //       );
+  //     } else {
+  //       // 多个记账项目的情况
+  //       let expensesList = '';
+  //       result.expenses.forEach((expense, index) => {
+  //         const typeText = expense.type === 'income' ? t('home.income') : t('home.expenseType');
+  //         expensesList += `${index + 1}. ${expense.amount} 元 (${typeText})\n   📂 ${expense.category}\n`;
+  //         if (expense.description) {
+  //           expensesList += `   ${t('home.notes', { description: expense.description })}`;
+  //         }
+  //         expensesList += '\n';
+  //       });
         
-        Alert.alert(
-          t('home.parsingSuccess'),
-          t('home.multipleExpensesParsed', {
-            count: result.expenses.length,
-            list: expensesList,
-            confidence: confidence,
-          }),
-          [
-            { text: t('home.cancel'), style: 'cancel' },
-            { 
-              text: t('home.saveAll'), 
-              onPress: () => handleSaveMultipleExpenses(result.expenses)
-            }
-          ]
-        );
-      }
-    } else {
-      Alert.alert(t('home.parsingFailed'), t('home.noValidInfo'));
-    }
-  };
+  //       Alert.alert(
+  //         t('home.parsingSuccess'),
+  //         t('home.multipleExpensesParsed', {
+  //           count: result.expenses.length,
+  //           list: expensesList,
+  //           confidence: confidence,
+  //         }),
+  //         [
+  //           { text: t('home.cancel'), style: 'cancel' },
+  //           { 
+  //             text: t('home.saveAll'), 
+  //             onPress: () => handleSaveMultipleExpenses(result.expenses)
+  //           }
+  //         ]
+  //       );
+  //     }
+  //   } else {
+  //     Alert.alert(t('home.parsingFailed'), t('home.noValidInfo'));
+  //   }
+  // };
 
   const handleAIResult = (result: ParsedCalendarResult) => {
     console.log('Got AI result:', result);
@@ -628,91 +626,91 @@ export default function HomeScreen() {
   };
 
   // 处理多个记账项目
-  const handleSaveMultipleExpenses = async (expenses: any[]) => {
-    if (!user) {
-      Alert.alert(t('home.error'), t('home.userNotLoggedIn'));
-      return;
-    }
-    setLoadingText(t('home.savingExpenses'));
-    setIsProcessingImage(true);
-    try {
-      const expensesToSave = expenses.map(exp => ({
-        ...exp,
-        user_id: user.id,
-      }));
+  // const handleSaveMultipleExpenses = async (expenses: any[]) => { // 移除记账相关功能
+  //   if (!user) {
+  //     Alert.alert(t('home.error'), t('home.userNotLoggedIn'));
+  //     return;
+  //   }
+  //   setLoadingText(t('home.savingExpenses'));
+  //   setIsProcessingImage(true);
+  //   try {
+  //     const expensesToSave = expenses.map(exp => ({
+  //       ...exp,
+  //       user_id: user.id,
+  //     }));
 
-      const { data: savedExpenses, error } = await supabase
-        .from('expenses')
-        .insert(expensesToSave)
-        .select();
+  //     const { data: savedExpenses, error } = await supabase
+  //       .from('expenses')
+  //       .insert(expensesToSave)
+  //       .select();
 
-      if (error) throw error;
+  //     if (error) throw error;
 
-      if (savedExpenses) {
-        setExpenses(prev => [...prev, ...savedExpenses]);
-      }
+  //     if (savedExpenses) {
+  //       setExpenses(prev => [...prev, ...savedExpenses]);
+  //     }
       
-      Alert.alert(t('home.saveSuccess'), t('home.saveExpensesSuccess', { count: savedExpenses?.length || 0 }));
-    } catch (error: any) {
-      console.error('保存费用失败:', error);
-      Alert.alert(t('home.error'), error.message || t('home.saveExpensesFailed'));
-    } finally {
-      setIsProcessingImage(false);
-      setLoadingText('');
-      setShowAddExpenseModal(false);
-    }
-  };
+  //     Alert.alert(t('home.saveSuccess'), t('home.saveExpensesSuccess', { count: savedExpenses?.length || 0 }));
+  //   } catch (error: any) {
+  //     console.error('保存费用失败:', error);
+  //     Alert.alert(t('home.error'), error.message || t('home.saveExpensesFailed'));
+  //   } finally {
+  //     setIsProcessingImage(false);
+  //     setLoadingText('');
+  //     setShowAddExpenseModal(false);
+  //   }
+  // };
 
   const handleTextError = () => {
     Alert.alert(t('home.error'), t('smartButton.parseError'));
   };
 
   // 处理记账保存
-  const handleSaveExpense = async (expenseData: TablesInsert<'expenses'>) => {
-    // 确保用户已登录
-    if (!user) {
-      Alert.alert(t('home.error'), t('home.expenseSaveNotLoggedIn'));
-      return;
-    }
+  // const handleSaveExpense = async (expenseData: TablesInsert<'expenses'>) => { // 移除记账相关功能
+  //   // 确保用户已登录
+  //   if (!user) {
+  //     Alert.alert(t('home.error'), t('home.expenseSaveNotLoggedIn'));
+  //     return;
+  //   }
 
-    // 使用类型守卫确保 user 不为 null
-    const currentUser = user;
-    if (!currentUser) {
-      Alert.alert(t('home.error'), t('home.userStateError'));
-      return;
-    }
+  //   // 使用类型守卫确保 user 不为 null
+  //   const currentUser = user;
+  //   if (!currentUser) {
+  //     Alert.alert(t('home.error'), t('home.userStateError'));
+  //     return;
+  //   }
 
-    // 检查当前认证状态
-    const { data: { session } } = await supabase.auth.getSession();
-    console.log('当前会话:', session?.user?.id);
-    console.log('当前用户ID:', currentUser.id);
+  //   // 检查当前认证状态
+  //   const { data: { session } } = await supabase.auth.getSession();
+  //   console.log('当前会话:', session?.user?.id);
+  //   console.log('当前用户ID:', currentUser.id);
 
-    // 确保设置正确的 user_id
-    const expenseWithUserId = {
-      ...expenseData,
-      user_id: currentUser.id,
-    };
+  //   // 确保设置正确的 user_id
+  //   const expenseWithUserId = {
+  //     ...expenseData,
+  //     user_id: currentUser.id,
+  //   };
 
-    console.log('保存记账数据:', expenseWithUserId);
+  //   console.log('保存记账数据:', expenseWithUserId);
 
-    // 先测试认证状态
-    const { data: authTest } = await supabase.auth.getUser();
-    console.log('认证用户测试:', authTest);
+  //   // 先测试认证状态
+  //   const { data: authTest } = await supabase.auth.getUser();
+  //   console.log('认证用户测试:', authTest);
 
-    // 尝试直接插入
-    const { data, error } = await supabase
-      .from('expenses')
-      .insert(expenseWithUserId)
-      .select();
-    if (error) {
-      console.error('保存记账失败:', error);
-      Alert.alert(t('home.error'), t('home.expenseSaveFailed', { error: error.message }));
-    } else if (data) {
-      Alert.alert(t('home.success'), t('home.expenseSaved'));
-      setShowAddExpenseModal(false);
-      setExpenses(prev => [data[0], ...prev]);
-    }
-  };
+  //   // 尝试直接插入
+  //   const { data, error } = await supabase
+  //     .from('expenses')
+  //     .insert(expenseWithUserId)
+  //     .select();
+  //   if (error) {
+  //     console.error('保存记账失败:', error);
+  //     Alert.alert(t('home.error'), t('home.expenseSaveFailed', { error: error.message }));
+  //   } else if (data) {
+  //     Alert.alert(t('home.success'), t('home.expenseSaved'));
+  //     setShowAddExpenseModal(false);
+  //     setExpenses(prev => [data[0], ...prev]);
+  //   }
+  // };
 
   // 处理事件创建
   const handleCreateEvent = async (eventData: any) => {
@@ -723,30 +721,35 @@ export default function HomeScreen() {
         // 如果有日历权限，同步到系统日历
         if (hasCalendarPermission) {
           try {
-            const startDate = new Date(eventData.date);
-            let endDate = new Date(eventData.date);
+            // 使用 eventData.startTime 作为开始时间
+            const startDate = new Date(eventData.startTime);
+            let endDate = eventData.endTime ? new Date(eventData.endTime) : new Date(eventData.startTime);
             
-            if (!eventData.allDay && eventData.startTime && eventData.endTime) {
-              // 解析时间
-              const [startHour, startMinute] = eventData.startTime.split(':').map(Number);
-              const [endHour, endMinute] = eventData.endTime.split(':').map(Number);
-              
-              startDate.setHours(startHour, startMinute, 0, 0);
-              endDate.setHours(endHour, endMinute, 0, 0);
-            } else {
-              endDate.setDate(endDate.getDate() + 1);
+            // 如果没有endTime，设置为开始时间+1小时
+            if (!eventData.endTime) {
+              endDate.setTime(startDate.getTime() + 60 * 60 * 1000);
             }
             
-            await CalendarService.createSystemEvent({
+            const systemEventId = await CalendarService.createSystemEvent({
               title: eventData.title,
               description: eventData.description,
               startDate,
               endDate,
               location: eventData.location,
-              allDay: eventData.allDay,
+              allDay: eventData.type === 'todo' ? false : false, // 待办事项不设置全天
             });
+            
+            if (systemEventId) {
+              console.log('系统日历事件创建成功:', systemEventId);
+            } else {
+              console.warn('系统日历事件创建失败，但应用内事件已创建');
+            }
           } catch (calendarError) {
-            // console.log('系统日历同步失败:', calendarError);
+            console.error('系统日历同步失败:', calendarError);
+            // 显示用户友好的错误信息
+            if (calendarError instanceof Error && calendarError.message.includes('saveEventAsync')) {
+              console.warn('系统日历同步功能暂时不可用，但事件已成功保存到应用内');
+            }
             // 不影响主要功能，只记录错误
           }
         }
@@ -813,37 +816,17 @@ export default function HomeScreen() {
     const clickedDate = new Date(dateData.dateString);
     setSelectedDate(clickedDate);
     
-    // 显示该日期的事件
-    const dayEvents = getProcessedEventsByDate(clickedDate);
-    if (dayEvents.length > 0) {
-      setShowEventListModal(true);
-    } else {
-      // 如果没有事件，询问是否要添加新事件
-      Alert.alert(
-        t('home.noEventThisDay'),
-        t('home.addEventPrompt'),
-        [
-          { text: t('home.cancel'), style: 'cancel' },
-          {
-            text: t('home.addEvent'),
-            onPress: () => {
-              setEditingEvent(null); // 清空编辑状态
-              setShowAddEventModal(true);
-            },
-          },
-        ]
-      );
-    }
+    // 不再弹出模态框，而是直接更新选中的日期
+    // 日历视图会自动响应 selectedDate 的变化
+    // 如果需要添加事件，用户可以通过底部的添加按钮操作
   };
 
   const getProcessedEventsByDate = (date: Date) => {
-    const targetDayStart = new Date(date);
-    targetDayStart.setHours(0, 0, 0, 0);
+    const targetDateString = date.toISOString().split('T')[0];
     
     return processedEvents.filter(event => {
-      const eventStartDate = new Date(event.start_ts * 1000);
-      eventStartDate.setHours(0,0,0,0);
-      return eventStartDate.getTime() === targetDayStart.getTime();
+      const eventDateString = new Date(event.start_ts * 1000).toISOString().split('T')[0];
+      return eventDateString === targetDateString;
     });
   };
 
@@ -950,10 +933,8 @@ export default function HomeScreen() {
         </View>
       )}
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {selectedFilter === 'expense' ? (
-          <FinanceView expenses={expenses} monthlySummary={monthlySummary} />
-        ) : selectedFilter === 'album' ? (
+            <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {false ? (
           <AlbumView />
         ) : (
           <>
@@ -985,21 +966,38 @@ export default function HomeScreen() {
               }}
             />
 
-            {/* 今天日程 */}
+            {/* 选中日期的日程 */}
             <View style={styles.todaySection}>
               <View style={styles.todayHeader}>
                 <Text style={styles.todayIcon}>📅</Text>
-                <Text style={styles.todayTitle}>{t('home.today')} {new Date().toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}</Text>
+                <Text style={styles.todayTitle}>
+                  {(() => {
+                    const displayDate = selectedDate || new Date();
+                    const today = new Date();
+                    const isToday = displayDate.toISOString().split('T')[0] === today.toISOString().split('T')[0];
+                    
+                    if (isToday) {
+                      return `${t('home.today')} ${displayDate.toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}`;
+                    } else {
+                      return displayDate.toLocaleDateString(undefined, { 
+                        month: 'long', 
+                        day: 'numeric',
+                        weekday: 'long'
+                      });
+                    }
+                  })()}
+                </Text>
               </View>
               
-              {/* 显示今天的事件，并应用过滤 */}
+              {/* 显示选中日期的事件，并应用过滤 */}
               {(() => {
-                const todayEvents = getProcessedEventsByDate(new Date());
+                const displayDate = selectedDate || new Date();
+                const dayEvents = getProcessedEventsByDate(displayDate);
                 
                 // 根据 selectedFilter 过滤事件
                 const filteredEvents = selectedFilter === 'all'
-                  ? todayEvents
-                  : todayEvents.filter(event => event.type === selectedFilter);
+                  ? dayEvents
+                  : dayEvents.filter(event => event.type === selectedFilter);
 
                 if (filteredEvents.length > 0) {
                   return (
@@ -1042,52 +1040,29 @@ export default function HomeScreen() {
                       ))}
                     </View>
                   );
-                } else if (selectedFilter === 'expense' && expenses.length > 0) {
-                  return (
-                    <View style={styles.eventsContainer}>
-                      <View style={styles.eventsTitleContainer}>
-                        <Text style={styles.eventsTitle}>💰 {t('home.recentExpenses')}</Text>
-                        <View style={styles.eventsCountBadge}>
-                          <Text style={styles.eventsCountText}>{expenses.length}</Text>
-                        </View>
-                      </View>
-                      {expenses.map((expense) => (
-                        <View key={expense.id} style={styles.eventItem}>
-                          <View style={[styles.eventColor, { backgroundColor: expense.type === 'income' ? '#4CAF50' : '#F44336' }]} />
-                          <View style={styles.eventContent}>
-                            <Text style={styles.eventTitle}>{expense.category}: {expense.amount}元</Text>
-                            <Text style={styles.eventDescription}>{expense.description}</Text>
-                            <View style={styles.eventMeta}>
-                              <Text style={styles.eventTime}>
-                                📅 {new Date(expense.date).toLocaleDateString()}
-                              </Text>
-                            </View>
-                          </View>
-                        </View>
-                      ))}
-                    </View>
-                  )
                 } else {
                   return (
                     <View style={styles.aiAssistant}>
                       <View style={styles.aiAvatar}>
-                        <Text style={styles.aiEmoji}>🦝</Text>
+                        <Text style={styles.aiEmoji}>🌟</Text>
                       </View>
                       <View style={styles.aiContent}>
-                        <Text style={styles.aiGreeting}>{t('home.noEventsToday')}</Text>
-                        <Text style={styles.aiSuggestion}>{t('home.manualAddPrompt')}</Text>
+                        <Text style={styles.aiGreeting}>
+                          {selectedDate ? '这一天很清闲哦' : '今天没有安排'}
+                        </Text>
+                        <Text style={styles.aiSuggestion}>可以添加新的日程安排</Text>
                       </View>
                     </View>
                   );
                 }
               })()}
               
-              <TouchableOpacity style={styles.autoRecordButton}>
+              {/* <TouchableOpacity style={styles.autoRecordButton}>
                 <Text style={styles.autoRecordText}>{t('home.smartReminder')} 〉</Text>
-              </TouchableOpacity>
+              </TouchableOpacity> */}
               
               {/* 快捷功能 */}
-              <View style={styles.quickActions}>
+              {/* <View style={styles.quickActions}>
                 <TouchableOpacity style={styles.quickAction}>
                   <Text style={styles.quickActionIcon}>👶</Text>
                   <Text style={styles.quickActionText}>{t('home.kidsSchedule')}</Text>
@@ -1100,7 +1075,7 @@ export default function HomeScreen() {
                   <Text style={styles.quickActionIcon}>🎂</Text>
                   <Text style={styles.quickActionText}>{t('home.anniversaryReminder')}</Text>
                 </TouchableOpacity>
-              </View>
+              </View> */}
             </View>
           </>
         )}
@@ -1132,17 +1107,17 @@ export default function HomeScreen() {
         onSave={handleCreateEvent}
         onUpdate={handleUpdateEvent}
         initialDate={selectedDate || new Date()}
-        userFamilies={userFamilyDetails}
+        userFamilies={userFamilies}
         editingEvent={editingEvent}
       />
 
-      <AddExpenseModal
+      {/* <AddExpenseModal // 移除记账相关功能
         isVisible={showAddExpenseModal}
         onClose={() => setShowAddExpenseModal(false)}
         onSave={handleSaveExpense}
         editingExpense={editingExpense}
         selectedDate={selectedDate}
-      />
+      /> */}
       
       {/* 新增：添加回忆模态框 */}
       <AddMemoryModal
