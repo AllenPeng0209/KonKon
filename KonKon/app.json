@@ -27,6 +27,9 @@
         "NSUserTrackingUsageDescription": "Your data will be used to improve personalized experiences and ad effectiveness. We are committed to protecting your privacy and will never misuse your data.",
         "NSCalendarsUsageDescription": "KonKon needs access to your calendar to sync and manage events.",
         "NSRemindersUsageDescription": "KonKon needs access to your reminders to create reminder notifications."
+      },
+      "entitlements": {
+        "com.apple.developer.applesignin": ["Default"]
       }
     },
     "android": {

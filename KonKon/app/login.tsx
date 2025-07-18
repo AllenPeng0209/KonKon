@@ -13,12 +13,13 @@ import {
     View,
 } from 'react-native'
 import { useAuth } from '../contexts/AuthContext'
+import * as AppleAuthentication from 'expo-apple-authentication'
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const { signIn } = useAuth()
+  const { signIn, signInWithApple } = useAuth()
   const router = useRouter()
 
   const handleLogin = async () => {
@@ -37,6 +38,22 @@ export default function LoginScreen() {
       }
     } catch (error) {
       Alert.alert(t('login.loginFailedTitle'), t('login.unknownError'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleAppleLogin = async () => {
+    setLoading(true)
+    try {
+      const { error } = await signInWithApple()
+      if (error) {
+        Alert.alert('登录失败', error.message || '使用Apple登录失败')
+      } else {
+        router.replace('/(tabs)')
+      }
+    } catch (error) {
+      Alert.alert('登录失败', '使用Apple登录时发生未知错误')
     } finally {
       setLoading(false)
     }
@@ -83,6 +100,17 @@ export default function LoginScreen() {
                 {loading ? t('login.loggingInButton') : t('login.loginButton')}
               </Text>
             </TouchableOpacity>
+            
+            {/* Apple Sign In Button */}
+            {Platform.OS === 'ios' && (
+              <AppleAuthentication.AppleAuthenticationButton
+                buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                cornerRadius={8}
+                style={styles.appleButton}
+                onPress={handleAppleLogin}
+              />
+            )}
           </View>
 
           <View style={styles.footer}>
@@ -161,5 +189,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#007AFF',
     fontWeight: '600',
+  },
+  appleButton: {
+    width: '100%',
+    height: 50,
+    marginTop: 16,
   },
 }) 

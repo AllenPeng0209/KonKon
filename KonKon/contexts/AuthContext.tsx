@@ -3,6 +3,9 @@ import { Session, User } from '@supabase/supabase-js';
 import * as React from 'react';
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import * as Crypto from 'expo-crypto';
+import { Platform } from 'react-native';
 
 type FamilyDetails = Tables<'family_members'> & {
   families: Tables<'families'> | null;
@@ -15,6 +18,7 @@ interface AuthContextType {
   userFamilyDetails: FamilyDetails[] | null;
   signIn: (email: string, password: string) => Promise<any>;
   signUp: (email: string, password: string) => Promise<any>;
+  signInWithApple: () => Promise<any>;
   signOut: () => Promise<void>;
 }
 
@@ -104,9 +108,66 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return { data, error }
   }
 
+  const signInWithApple = async () => {
+    try {
+      // Check if Apple Authentication is available
+      const isAvailable = await AppleAuthentication.isAvailableAsync();
+      if (!isAvailable) {
+        throw new Error('Apple Authentication is not available on this device');
+      }
+
+      // Request Apple authentication
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+
+      console.log('[Auth] Apple credential received:', credential);
+
+      // Create a random nonce
+      const nonce = Math.random().toString(36).substring(2, 15);
+      const hashedNonce = await Crypto.digestStringAsync(
+        Crypto.CryptoDigestAlgorithm.SHA256,
+        nonce,
+        { encoding: Crypto.CryptoEncoding.BASE64 }
+      );
+
+      // Sign in with Supabase
+      const { data, error } = await supabase.auth.signInWithIdToken({
+        provider: 'apple',
+        token: credential.identityToken!,
+        nonce: hashedNonce,
+      });
+
+      if (error) {
+        console.error('[Auth] Apple SignIn Error:', error.message);
+        throw error;
+      }
+
+      console.log('[Auth] Apple SignIn Success:', data);
+      return { data, error: null };
+
+    } catch (error) {
+      console.error('[Auth] Apple SignIn Error:', error);
+      return { data: null, error };
+    }
+  };
+
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut()
-    if (error) throw error
+    console.log('[Auth] 开始退出登录...');
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('[Auth] 退出登录出错:', error);
+        throw error;
+      }
+      console.log('[Auth] 退出登录成功');
+    } catch (error) {
+      console.error('[Auth] 退出登录失败:', error);
+      throw error;
+    }
   }
 
   const value = {
@@ -116,6 +177,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     userFamilyDetails,
     signIn,
     signUp,
+    signInWithApple,
     signOut,
   }
 

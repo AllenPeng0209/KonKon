@@ -336,6 +336,8 @@
     "clearCache": "清除缓存",
     "logout": "退出登录",
     "logoutFailed": "退出失败，请稍后重试",
+    "confirmLogoutTitle": "确认退出",
+    "confirmLogoutMessage": "您确定要退出登录吗？",
     "confirmClearCacheTitle": "确认清除缓存",
     "confirmClearCacheMessage": "您确定要清除%{size}MB的缓存吗？",
     "cancel": "取消",
