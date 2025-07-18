@@ -9,21 +9,24 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "locales": {
-      "ja": "./locales/ja.json"
+      "en": "./lib/translations/en.json",
+      "ja": "./lib/translations/ja.json",
+      "zh-CN": "./lib/translations/zh-CN.json",
+      "zh-TW": "./lib/translations/zh-TW.json"
     },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.agenthub.konkon",
-      "buildNumber": "9",
+      "buildNumber": "10",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSLocationWhenInUseUsageDescription": "KonKon需要您的位置来提供本地化的事件推荐和服务。",
-        "NSCameraUsageDescription": "KonKon需要访问您的相机，以便您拍照并将其转换为日历事件。",
-        "NSPhotoLibraryUsageDescription": "KonKon需要访问您的相册，以便您选择图片并将其转换为日历事件。",
-        "NSMicrophoneUsageDescription": "需要麥克風以即時轉錄您的語音並生成聊天內容；錄音僅本地即時處理，不會上傳或保存。",
-        "NSUserTrackingUsageDescription": "您的數據將用於改善個人化體驗和廣告效果。我們承諾保護您的隱私，絕不濫用您的數據。",
-        "NSCalendarsUsageDescription": "KonKon需要访问您的日历来同步和管理事件",
-        "NSRemindersUsageDescription": "KonKon需要访问您的提醒来创建提醒通知"
+        "NSLocationWhenInUseUsageDescription": "KonKon needs your location to provide localized event recommendations and services.",
+        "NSCameraUsageDescription": "KonKon needs access to your camera to take photos and convert them into calendar events.",
+        "NSPhotoLibraryUsageDescription": "KonKon needs access to your photo library to select pictures and convert them into calendar events.",
+        "NSMicrophoneUsageDescription": "Your microphone is needed to transcribe your voice in real-time and generate chat content. Recordings are processed locally in real-time and are not uploaded or saved.",
+        "NSUserTrackingUsageDescription": "Your data will be used to improve personalized experiences and ad effectiveness. We are committed to protecting your privacy and will never misuse your data.",
+        "NSCalendarsUsageDescription": "KonKon needs access to your calendar to sync and manage events.",
+        "NSRemindersUsageDescription": "KonKon needs access to your reminders to create reminder notifications."
       }
     },
     "android": {
@@ -45,6 +48,7 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
+      "expo-font",
       "expo-router",
       [
         "expo-splash-screen",
@@ -58,8 +62,8 @@
       [
         "expo-calendar",
         {
-          "calendarPermission": "KonKon 需要访问您的日历来同步和管理事件",
-          "remindersPermission": "KonKon 需要访问您的提醒来创建提醒通知"
+          "calendarPermission": "KonKon needs access to your calendar to sync and manage events.",
+          "remindersPermission": "KonKon needs access to your reminders to create reminder notifications."
         }
       ],
       "expo-audio",

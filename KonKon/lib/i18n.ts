@@ -13,8 +13,40 @@ const i18n = new I18n({
   'zh-TW': zhTW,
 });
 
+// 语言映射函数
+const getDeviceLocale = () => {
+  const locales = Localization.getLocales();
+  const primaryLocale = locales[0];
+  
+  // 优先使用完整的区域设置
+  if (primaryLocale.languageTag) {
+    const languageTag = primaryLocale.languageTag;
+    
+    // 直接匹配我们支持的语言
+    if (languageTag === 'zh-CN' || languageTag === 'zh-Hans-CN') return 'zh-CN';
+    if (languageTag === 'zh-TW' || languageTag === 'zh-Hant-TW') return 'zh-TW';
+    if (languageTag === 'ja' || languageTag === 'ja-JP') return 'ja';
+    if (languageTag === 'en' || languageTag.startsWith('en-')) return 'en';
+  }
+  
+  // 回退到基础语言代码
+  const languageCode = primaryLocale.languageCode;
+  if (languageCode === 'zh') {
+    // 根据地区代码判断简繁体
+    if (primaryLocale.regionCode === 'TW' || primaryLocale.regionCode === 'HK') {
+      return 'zh-TW';
+    }
+    return 'zh-CN';
+  }
+  if (languageCode === 'ja') return 'ja';
+  if (languageCode === 'en') return 'en';
+  
+  // 默认返回英文
+  return 'en';
+};
+
 i18n.defaultLocale = 'en';
-i18n.locale = Localization.getLocales()[0].languageCode ?? 'en';
+i18n.locale = getDeviceLocale();
 i18n.enableFallback = true;
 
 type TranslationKeys =
@@ -232,4 +264,6 @@ export const t = (key: TranslationKeys, options?: any) => i18n.t(key, options);
 
 export const setLocale = (locale: string) => {
   i18n.locale = locale;
-}; 
+};
+
+export { getDeviceLocale }; 

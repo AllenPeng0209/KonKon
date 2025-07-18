@@ -146,11 +146,14 @@
   },
   "ios": {
     "infoPlist": {
+      "CFBundleDisplayName": "KonKon",
       "NSLocationWhenInUseUsageDescription": "KonKon needs your location to provide localized event recommendations and services.",
-      "NSCameraUsageDescription": "KonKon needs access to your camera so you can take photos and convert them into calendar events.",
-      "NSPhotoLibraryUsageDescription": "KonKon needs access to your photo library so you can select pictures and convert them into calendar events.",
+      "NSCameraUsageDescription": "KonKon needs access to your camera to take photos and convert them into calendar events.",
+      "NSPhotoLibraryUsageDescription": "KonKon needs access to your photo library to select pictures and convert them into calendar events.",
       "NSMicrophoneUsageDescription": "Your microphone is needed to transcribe your voice in real-time and generate chat content. Recordings are processed locally in real-time and are not uploaded or saved.",
-      "NSUserTrackingUsageDescription": "Your data will be used to improve personalized experiences and ad effectiveness. We are committed to protecting your privacy and will never misuse your data."
+      "NSUserTrackingUsageDescription": "Your data will be used to improve personalized experiences and ad effectiveness. We are committed to protecting your privacy and will never misuse your data.",
+      "NSCalendarsUsageDescription": "KonKon needs access to your calendar to sync and manage events.",
+      "NSRemindersUsageDescription": "KonKon needs access to your reminders to create reminder notifications."
     },
     "calendarPermission": "KonKon needs access to your calendar to sync and manage events.",
     "remindersPermission": "KonKon needs access to your reminders to create reminder notifications."

@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Localization from 'expo-localization';
 import { useRouter } from 'expo-router';
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
-import { setLocale as setI18nLocale } from '../lib/i18n';
+import { setLocale as setI18nLocale, getDeviceLocale } from '../lib/i18n';
 
 interface LanguageContextType {
   locale: string;
@@ -12,7 +12,7 @@ interface LanguageContextType {
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export const LanguageProvider = ({ children }: { children: ReactNode }) => {
-  const [locale, setLocaleState] = useState(Localization.getLocales()[0].languageCode ?? 'en');
+  const [locale, setLocaleState] = useState(getDeviceLocale());
   const router = useRouter();
 
   useEffect(() => {
@@ -22,7 +22,7 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
         setLocaleState(savedLocale);
         setI18nLocale(savedLocale);
       } else {
-        const systemLocale = Localization.getLocales()[0].languageCode ?? 'en';
+        const systemLocale = getDeviceLocale();
         setLocaleState(systemLocale);
         setI18nLocale(systemLocale);
       }
@@ -46,7 +46,7 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
 
 export const useLanguage = () => {
   const context = useContext(LanguageContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useLanguage must be used within a LanguageProvider');
   }
   return context;

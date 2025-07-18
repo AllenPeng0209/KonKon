@@ -155,11 +155,14 @@
   },
   "ios": {
     "infoPlist": {
-      "NSLocationWhenInUseUsageDescription": "KonKonは、地域化されたイベントの推薦やサービスを提供するために、あなたの位置情報を必要とします。",
-      "NSCameraUsageDescription": "KonKonは、写真を撮ってカレンダーイベントに変換するために、あなたのカメラへのアクセスを必要とします。",
-      "NSPhotoLibraryUsageDescription": "KonKonは、写真を選択してカレンダーイベントに変換するために、あなたのフォトライブラリへのアクセスを必要とします。",
-      "NSMicrophoneUsageDescription": "あなたの音声をリアルタイムで文字起こしし、チャットコンテンツを生成するためにマイクが必要です。録音はローカルでリアルタイムに処理され、アップロードや保存はされません。",
-      "NSUserTrackingUsageDescription": "あなたのデータは、パーソナライズされた体験と広告効果を向上させるために使用されます。私たちはあなたのプライバシーを保護し、データを決して悪用しないことをお約束します。"
+      "CFBundleDisplayName": "KonKon",
+      "NSLocationWhenInUseUsageDescription": "KonKonは、ローカライズされたイベントの推奨とサービスを提供するためにあなたの位置情報を必要とします。",
+      "NSCameraUsageDescription": "KonKonは、写真を撮ってカレンダーイベントに変換するためにカメラへのアクセスを必要とします。",
+      "NSPhotoLibraryUsageDescription": "KonKonは、写真を選択してカレンダーイベントに変換するために写真ライブラリへのアクセスを必要とします。",
+      "NSMicrophoneUsageDescription": "マイクは、あなたの音声をリアルタイムで書き起こし、チャットコンテンツを生成するために必要です。録音はローカルでリアルタイム処理され、アップロードや保存はされません。",
+      "NSUserTrackingUsageDescription": "あなたのデータは、パーソナライズされた体験と広告効果を向上させるために使用されます。私たちはあなたのプライバシーを保護し、データを決して悪用しないことを約束します。",
+      "NSCalendarsUsageDescription": "KonKonは、イベントを同期および管理するためにカレンダーへのアクセスを必要とします。",
+      "NSRemindersUsageDescription": "KonKonは、リマインダー通知を作成するためにリマインダーへのアクセスを必要とします。"
     },
     "calendarPermission": "KonKonは、イベントを同期および管理するために、カレンダーへのアクセスが必要です。",
     "remindersPermission": "KonKonは、リマインダー通知を作成するために、リマインダーへのアクセスが必要です。"
