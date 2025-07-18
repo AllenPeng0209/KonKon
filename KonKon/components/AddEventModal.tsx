@@ -178,7 +178,7 @@ export default function AddEventModal({
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showStartTimePicker, setShowStartTimePicker] = useState(false);
   const [showEndTimePicker, setShowEndTimePicker] = useState(false);
-  const [selectedFamily, setSelectedFamily] = useState<string>('personal');
+  const [selectedFamilies, setSelectedFamilies] = useState<string[]>([]);
   const [selectedColor, setSelectedColor] = useState('#007AFF');
   const [repeatOption, setRepeatOption] = useState('never');
   const [selectedAttendees, setSelectedAttendees] = useState<string[]>([]);
@@ -237,7 +237,7 @@ export default function AddEventModal({
           setEndTime(new Date(editingEvent.end_ts * 1000));
         }
         if (editingEvent.shared_families && editingEvent.shared_families.length > 0) {
-          setSelectedFamily(editingEvent.shared_families[0]);
+          setSelectedFamilies(editingEvent.shared_families);
         }
         // 获取事件的参与人信息
         if (editingEvent.attendees && editingEvent.attendees.length > 0) {
@@ -278,7 +278,7 @@ export default function AddEventModal({
     end.setHours(10, 0, 0, 0);
     setEndTime(end);
     setAllDay(false);
-    setSelectedFamily('personal');
+    setSelectedFamilies([]);
     setSelectedColor('#007AFF');
     setRepeatOption('never');
     setSelectedAttendees(user ? [user.id] : []);
@@ -302,7 +302,7 @@ export default function AddEventModal({
         endTime: allDay ? undefined : endTime,
         color: selectedColor,
         type: 'calendar',
-        shareToFamilies: selectedFamily === 'personal' ? undefined : [selectedFamily],
+        shareToFamilies: selectedFamilies.length > 0 ? selectedFamilies : undefined,
         attendees: selectedAttendees,
       };
 
@@ -636,38 +636,38 @@ export default function AddEventModal({
               {userFamilies.length > 0 && (
                 <View style={styles.familySection}>
                   <Text style={styles.sectionTitle}>分享到</Text>
-                  <Text style={styles.sectionDescription}>选择家庭后，该家庭的所有成员都能看到这个事件</Text>
+                  <Text style={styles.sectionDescription}>
+                    {selectedFamilies.length === 0 
+                      ? '选择家庭后，该家庭的所有成员都能看到这个事件（不选择则为个人事件）' 
+                      : `已选择 ${selectedFamilies.length} 个家庭`}
+                  </Text>
                   <View style={styles.familyContainer}>
-                    <TouchableOpacity
-                      style={[
-                        styles.familyButton,
-                        selectedFamily === 'personal' && styles.familyButtonSelected,
-                      ]}
-                      onPress={() => setSelectedFamily('personal')}
-                    >
-                      <Text style={[
-                        styles.familyButtonText,
-                        selectedFamily === 'personal' && styles.familyButtonTextSelected
-                      ]}>
-                        个人
-                      </Text>
-                    </TouchableOpacity>
-                    
                     {userFamilies.map((family, index) => (
                       <TouchableOpacity
                         key={`family-${index}`}
                         style={[
                           styles.familyButton,
-                          selectedFamily === family.id && styles.familyButtonSelected,
+                          selectedFamilies.includes(family.id) && styles.familyButtonSelected,
                         ]}
-                        onPress={() => setSelectedFamily(family.id)}
+                        onPress={() => {
+                          if (selectedFamilies.includes(family.id)) {
+                            // 取消选择
+                            setSelectedFamilies(prev => prev.filter(id => id !== family.id));
+                          } else {
+                            // 添加选择
+                            setSelectedFamilies(prev => [...prev, family.id]);
+                          }
+                        }}
                       >
                         <Text style={[
                           styles.familyButtonText,
-                          selectedFamily === family.id && styles.familyButtonTextSelected
+                          selectedFamilies.includes(family.id) && styles.familyButtonTextSelected
                         ]}>
                           {family.name}
                         </Text>
+                        {selectedFamilies.includes(family.id) && (
+                          <Ionicons name="checkmark" size={16} color="white" style={{ marginLeft: 5 }} />
+                        )}
                       </TouchableOpacity>
                     ))}
                   </View>
