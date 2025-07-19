@@ -1,16 +1,23 @@
 import AddEventModal from '@/components/AddEventModal';
 import AddMemoryModal from '@/components/AddMemoryModal';
-import AlbumView from '@/components/AlbumView'; // 新增：导入相簿视图
+import AlbumView, { Memory } from '@/components/AlbumView';
 import CalendarViewSelector from '@/components/calendar/CalendarViewSelector';
+import ChoreViewSelector from '@/components/chore/ChoreViewSelector';
 import { ConfirmationModal } from '@/components/ConfirmationModal';
 import EventListModal from '@/components/EventListModal';
 import LoadingModal from '@/components/LoadingModal';
+import MealViewSelector from '@/components/meal/MealViewSelector';
+import type { MealRecord } from '@/components/meal/MealViewTypes';
+import MemoryDetailView from '@/components/MemoryDetailView';
 import RecurringEventManager from '@/components/RecurringEventManager';
 import { SuccessModal } from '@/components/SuccessModal';
 import SmartButton from '@/components/ui/SmartButton';
 import { VoiceToCalendar } from '@/components/VoiceToCalendar';
+
+import FamilyHealthDashboard from '@/components/health/FamilyHealthDashboard';
 import { useFamily } from '@/contexts/FamilyContext';
 import { useFeatureSettings } from '@/contexts/FeatureSettingsContext';
+import { useChores } from '@/hooks/useChores';
 import { useEvents } from '@/hooks/useEvents';
 import { useRecurringEvents } from '@/hooks/useRecurringEvents';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
@@ -24,6 +31,7 @@ import {
 import CalendarService from '@/lib/calendarService';
 import { t } from '@/lib/i18n';
 import type { MealPlan } from '@/lib/mealService';
+import mealService from '@/lib/mealService';
 import * as FileSystem from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
@@ -82,11 +90,20 @@ export default function HomeScreen() {
   // 新增：相簿模态框状态
   const [showAddMemoryModal, setShowAddMemoryModal] = useState(false);
   const [initialMemoryImages, setInitialMemoryImages] = useState<ImagePicker.ImagePickerAsset[]>([]);
+  
+  // 相簿詳情狀態
+  const [selectedMemory, setSelectedMemory] = useState<Memory | null>(null);
+  const [showMemoryDetail, setShowMemoryDetail] = useState(false);
 
-  // 新增：餐食管理狀態
+  // 餐食管理狀態
   const [lunchSuggestions, setLunchSuggestions] = useState<MealPlan[]>([]);
   const [isGeneratingMeals, setIsGeneratingMeals] = useState(false);
   const [showMealGenerator, setShowMealGenerator] = useState(false);
+  const [mealRecords, setMealRecords] = useState<MealRecord[]>([]);
+
+  // 家務管理狀態
+  const { tasks, isLoading: choresLoading } = useChores();
+  const [currentChoreMonth, setCurrentChoreMonth] = useState(new Date().toISOString().slice(0, 7));
 
   // 事件管理
   const { 
@@ -140,7 +157,7 @@ export default function HomeScreen() {
     }
     
     if (featureSettings.familyActivities.enabled) {
-      options.push({ label: t('home.activities'), value: 'familyActivities', icon: '🎮', color: '#9C27B0', bgColor: '#F3E5F5' });
+      options.push({ label: t('home.health'), value: 'familyActivities', icon: '🏥', color: '#FF5722', bgColor: '#FFF3E0' });
     }
     
     if (featureSettings.familyAlbum.enabled) {
@@ -162,147 +179,102 @@ export default function HomeScreen() {
     return options;
   })();
 
-  useEffect(() => {
-    if (!loading && !user) {
-      router.replace('/login');
-    } else if (user) {
-      // fetchExpenses(); // 移除记账相关功能
+  // 生成模擬餐食記錄數據
+  const generateMockMealRecords = (): MealRecord[] => {
+    const today = new Date();
+    const records: MealRecord[] = [];
+    
+    // 生成過去7天的數據
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() - i);
+      const dateString = date.toISOString().split('T')[0];
+      
+      // 每天的餐食記錄
+      const dayMeals = [
+        {
+          id: `${dateString}-breakfast`,
+          date: dateString,
+          mealType: 'breakfast' as const,
+          title: ['日式玉子燒定食', '牛奶燕麥粥', '三明治套餐'][Math.floor(Math.random() * 3)],
+          calories: 280 + Math.floor(Math.random() * 100),
+          tags: ['營養均衡', '快手'],
+          time: '08:00',
+          emoji: '🌅',
+          nutrition: {
+            protein: 15 + Math.floor(Math.random() * 10),
+            carbs: 35 + Math.floor(Math.random() * 15),
+            fat: 8 + Math.floor(Math.random() * 8),
+          }
+        },
+        {
+          id: `${dateString}-lunch`,
+          date: dateString,
+          mealType: 'lunch' as const,
+          title: ['親子便當', '簡易炒飯', '健康沙拉'][Math.floor(Math.random() * 3)],
+          calories: 450 + Math.floor(Math.random() * 150),
+          tags: ['便當友善', '15分鐘'],
+          time: '12:30',
+          emoji: '☀️',
+          nutrition: {
+            protein: 25 + Math.floor(Math.random() * 15),
+            carbs: 55 + Math.floor(Math.random() * 25),
+            fat: 12 + Math.floor(Math.random() * 10),
+          }
+        },
+        {
+          id: `${dateString}-dinner`,
+          date: dateString,
+          mealType: 'dinner' as const,
+          title: ['家常炒飯', '蒸蛋湯麵', '番茄義大利麵'][Math.floor(Math.random() * 3)],
+          calories: 480 + Math.floor(Math.random() * 120),
+          tags: ['剩飯活用', '經濟實惠'],
+          time: '18:30',
+          emoji: '🌆',
+          nutrition: {
+            protein: 20 + Math.floor(Math.random() * 15),
+            carbs: 60 + Math.floor(Math.random() * 20),
+            fat: 15 + Math.floor(Math.random() * 12),
+          }
+        }
+      ];
+      
+      // 隨機添加點心
+      if (Math.random() > 0.3) {
+        dayMeals.push({
+          id: `${dateString}-snack`,
+          date: dateString,
+          mealType: 'snack' as const,
+          title: ['手作布丁', '水果拼盤', '優格杯'][Math.floor(Math.random() * 3)],
+          calories: 120 + Math.floor(Math.random() * 80),
+          tags: ['低糖', '健康'],
+          time: '15:00',
+          emoji: '🍰',
+          nutrition: {
+            protein: 5 + Math.floor(Math.random() * 8),
+            carbs: 15 + Math.floor(Math.random() * 15),
+            fat: 3 + Math.floor(Math.random() * 6),
+          }
+        });
+      }
+      
+      records.push(...dayMeals);
     }
-  }, [user, loading, router]);
+    
+    return records;
+  };
 
   useEffect(() => {
-    if (user) {
-      // calculateMonthlySummary(); // 移除记账相关功能
-    }
-  }, [user]);
-
-  // 初始化日历权限
-  useEffect(() => {
-    initializeCalendarPermissions();
+    // 初始化模擬餐食數據
+    setMealRecords(generateMockMealRecords());
   }, []);
-
-  useEffect(() => {
-    const expandRecurringEvents = async () => {
-      if (eventsLoading || recurringLoading) return;
-
-      const singleEvents = events.filter(e => !e.recurrence_rule);
-      const recurringParents = events.filter(e => e.recurrence_rule);
-      
-      const [year, month] = currentMonth.split('-').map(Number);
-      const viewStartDate = new Date(year, month - 1, 1);
-      // 获取当前月份前后各一个月的数据，确保视图边缘的重复事件也能正确显示
-      viewStartDate.setMonth(viewStartDate.getMonth() - 1);
-      const viewEndDate = new Date(year, month, 0);
-      viewEndDate.setMonth(viewEndDate.getMonth() + 1);
-
-      let allInstances: any[] = [];
-
-      for (const parent of recurringParents) {
-        // 确保父事件的开始时间是Date对象
-        const parentStartDate = new Date(parent.start_ts * 1000);
-        // 如果父事件的开始时间在视图结束日期之后，则跳过
-        if(parentStartDate > viewEndDate) continue;
-
-        const instances = await getRecurringEventInstances(parent.id, viewStartDate, viewEndDate);
-        if (!instances) continue;
-        const instancesWithDetails = instances.instances.map((inst: any) => ({
-          ...parent,
-          id: `${parent.id}_${inst.start.toISOString()}`, // 为实例创建唯一ID
-          start_ts: Math.floor(inst.start.getTime() / 1000),
-          end_ts: Math.floor(inst.end.getTime() / 1000),
-          recurrence_rule: null, // 实例本身没有重复规则
-          parent_event_id: parent.id, // 链接回父事件
-          is_instance: true,
-        }));
-        allInstances = allInstances.concat(instancesWithDetails);
-      }
-      
-      setProcessedEvents([...singleEvents, ...allInstances]);
-    };
-
-    expandRecurringEvents();
-  }, [events, currentMonth, eventsLoading, recurringLoading, getRecurringEventInstances]);
-
-  // const fetchExpenses = async () => { // 移除记账相关功能
-  //   if (!user) return;
-  //   const { data, error } = await supabase
-  //     .from('expenses')
-  //     .select('*')
-  //     .eq('user_id', user.id)
-  //     .order('date', { ascending: false });
-
-  //   if (error) {
-  //     console.error('Error fetching expenses:', error);
-  //   } else {
-  //     setExpenses(data || []);
-  //   }
-  // };
-
-  // const calculateMonthlySummary = () => { // 移除记账相关功能
-  //   const currentMonth = new Date().getMonth();
-  //   const currentYear = new Date().getFullYear();
-  //   let totalExpense = 0;
-  //   let totalIncome = 0;
-
-  //   expenses.forEach(expense => {
-  //     const expenseDate = new Date(expense.date);
-  //     if (expenseDate.getMonth() === currentMonth && expenseDate.getFullYear() === currentYear) {
-  //       if (expense.type === 'expense') {
-  //         totalExpense += expense.amount;
-  //       } else if (expense.type === 'income') {
-  //         totalIncome += expense.amount;
-  //       }
-  //     }
-  //   });
-
-  //   setMonthlySummary({ expense: totalExpense, income: totalIncome });
-  // };
-
-  const initializeCalendarPermissions = async () => {
-    try {
-      const hasPermission = await CalendarService.checkPermissions();
-      setHasCalendarPermission(hasPermission);
-      
-      if (!hasPermission) {
-        // 显示权限说明对话框
-        Alert.alert(
-          t('home.calendarPermissionTitle'),
-          t('home.calendarPermissionMessage'),
-          [
-            { text: t('home.notNow'), style: 'cancel' },
-            {
-              text: t('home.grantPermission'),
-              onPress: async () => {
-                const granted = await CalendarService.requestPermissions();
-                setHasCalendarPermission(granted);
-                if (granted) {
-                  Alert.alert(t('home.success'), t('home.permissionGranted'));
-                }
-              },
-            },
-          ]
-        );
-      }
-    } catch (error) {
-      // console.error('初始化日历权限失败:', error);
-    }
-  };
-
-  const navigateToProfile = () => {
-    router.push('/profile');
-  };
-
-  // 跳转到洞察页面
-  const navigateToExplore = () => {
-    router.push('/explore');
-  };
 
   // 处理过滤菜单，使用 value
   const handleFilterSelect = (filterValue: string) => {
     setSelectedFilter(filterValue);
     setShowFilterMenu(false);
     
-    // 餐食管理在當前頁面中顯示，不需要導航
+    // 所有功能都在當前頁面中顯示，不需要導航
   };
 
   const toggleFilterMenu = () => {
@@ -336,6 +308,10 @@ export default function HomeScreen() {
   const closeMealGenerator = () => {
     setShowMealGenerator(false);
     setLunchSuggestions([]);
+  };
+
+  const handleMealPress = (meal: MealRecord) => {
+    router.push('/recipe-detail');
   };
 
   // 处理手动添加
@@ -957,6 +933,15 @@ export default function HomeScreen() {
     fetchEvents(year, monthNum);
   };
 
+  const navigateToProfile = () => {
+    router.push('/profile');
+  };
+
+  // 跳转到洞察页面
+  const navigateToExplore = () => {
+    router.push('/explore');
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       {/* 顶部标题栏 */}
@@ -1015,94 +1000,58 @@ export default function HomeScreen() {
         </View>
       )}
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+            <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {selectedFilter === 'familyRecipes' ? (
-          // 餐食管理內容
-          <View style={styles.mealManagementContainer}>
-            {/* 今日推薦 */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>🌟 今日推薦</Text>
-              <View style={styles.todayRecommendation}>
-                <View style={styles.mealCard}>
-                  <Text style={styles.mealEmoji}>🍱</Text>
-                  <Text style={styles.mealTitle}>親子便當</Text>
-                  <Text style={styles.mealSubtitle}>15分鐘 · 營養均衡</Text>
-                  <Text style={styles.difficultyStars}>⭐⭐☆</Text>
-                </View>
-              </View>
-            </View>
-
-            {/* 快速功能 */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>⚡ 快速功能</Text>
-              <View style={styles.quickActionsGrid}>
-                <TouchableOpacity
-                  style={[styles.quickActionCard, { backgroundColor: '#E74C3C15' }]}
-                  onPress={handleMealGeneratorPress}
-                >
-                  <Text style={styles.quickActionEmoji}>🤖</Text>
-                  <Text style={styles.quickActionLabel}>30秒午餐生成</Text>
-                  <Text style={[styles.quickActionSubtitle, { color: '#E74C3C' }]}>
-                    解決最大痛點
-                  </Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity
-                  style={[styles.quickActionCard, { backgroundColor: '#3498DB15' }]}
-                  onPress={() => Alert.alert('功能開發中', '冰箱掃描功能即將推出')}
-                >
-                  <Text style={styles.quickActionEmoji}>📷</Text>
-                  <Text style={styles.quickActionLabel}>掃描冰箱</Text>
-                  <Text style={[styles.quickActionSubtitle, { color: '#3498DB' }]}>
-                    活用剩餘食材
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.quickActionCard, { backgroundColor: '#2ECC7115' }]}
-                  onPress={() => Alert.alert('功能開發中', '營養追蹤功能即將推出')}
-                >
-                  <Text style={styles.quickActionEmoji}>📊</Text>
-                  <Text style={styles.quickActionLabel}>營養追蹤</Text>
-                  <Text style={[styles.quickActionSubtitle, { color: '#2ECC71' }]}>
-                    健康飲食分析
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.quickActionCard, { backgroundColor: '#9B59B615' }]}
-                  onPress={() => Alert.alert('功能開發中', '智能購物清單即將推出')}
-                >
-                  <Text style={styles.quickActionEmoji}>✨</Text>
-                  <Text style={styles.quickActionLabel}>智能購物清單</Text>
-                  <Text style={[styles.quickActionSubtitle, { color: '#9B59B6' }]}>
-                    自動生成採購
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* 家庭協作 */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>👨‍👩‍👧‍👦 家庭協作</Text>
-              <View style={styles.collaborationCard}>
-                <View style={styles.collaborationItem}>
-                  <Text style={styles.collaborationEmoji}>👩‍🍳</Text>
-                  <Text style={styles.collaborationText}>主廚: 媽媽</Text>
-                </View>
-                <View style={styles.collaborationItem}>
-                  <Text style={styles.collaborationEmoji}>🛒</Text>
-                  <Text style={styles.collaborationText}>採購員: 爸爸</Text>
-                </View>
-                <View style={styles.collaborationItem}>
-                  <Text style={styles.collaborationEmoji}>👨‍🍳</Text>
-                  <Text style={styles.collaborationText}>助手: 小明</Text>
-                </View>
-              </View>
-            </View>
-          </View>
-        ) : false ? (
-          <AlbumView />
+          // 使用新的餐食視圖選擇器
+          <MealViewSelector
+            mealRecords={mealRecords}
+            selectedDate={selectedDate || new Date()}
+            onMealPress={handleMealPress}
+            onDatePress={(date: Date) => setSelectedDate(date)}
+            currentView={(() => {
+              const selectedStyle = featureSettings.familyRecipes?.settings?.selectedStyle;
+              switch (selectedStyle) {
+                case '每日記錄': return 'daily_records';
+                case '週間概覽': return 'weekly_overview';
+                case '營養圖表': return 'nutrition_chart';
+                default: return 'daily_records';
+              }
+            })()}
+          />
+        ) : selectedFilter === 'familyAlbum' ? (
+          <AlbumView 
+            onMemoryPress={(memory) => {
+              setSelectedMemory(memory);
+              setShowMemoryDetail(true);
+            }}
+          />
+        ) : selectedFilter === 'choreAssignment' ? (
+          // 使用家務視圖選擇器
+          <ChoreViewSelector
+            tasks={tasks}
+            selectedDate={selectedDate || new Date()}
+            currentMonth={currentChoreMonth}
+            onDatePress={(date: Date) => setSelectedDate(date)}
+            onTaskPress={(task) => {
+              // TODO: 處理家務任務點擊
+              console.log('Task clicked:', task);
+            }}
+            onMonthChange={(month: string) => setCurrentChoreMonth(month)}
+            style={(() => {
+              const selectedStyle = featureSettings.choreAssignment?.settings?.selectedStyle;
+              switch (selectedStyle) {
+                case '任務看板': return 'task-board';
+                case '日曆網格': return 'calendar-grid';
+                case '家庭儀表板': return 'family-dashboard';
+                case '進度花園': return 'progress-garden';
+                case '統計儀表板': return 'stats-dashboard';
+                default: return 'task-board';
+              }
+            })()}
+          />
+        ) : selectedFilter === 'familyActivities' ? (
+          // 健康管理功能
+          <FamilyHealthDashboard />
         ) : (
           <>
             {/* 日历部分 */}
@@ -1131,6 +1080,17 @@ export default function HomeScreen() {
                 };
                 handleMonthChange(dateData);
               }}
+              style={(() => {
+                const selectedStyle = featureSettings.familySchedule?.settings?.selectedStyle;
+                switch (selectedStyle) {
+                  case '網格月視圖': return 'grid-month';
+                  case '週間網格': return 'weekly-grid';
+                  case '時間線視圖': return 'timeline';
+                  case '家庭花園': return 'family-garden';
+                  case '議程列表': return 'agenda-list';
+                  default: return 'grid-month';
+                }
+              })()}
             />
 
             {/* 选中日期的日程 */}
@@ -1429,6 +1389,22 @@ export default function HomeScreen() {
         title={successTitle}
         message={successMessage}
       />
+      
+      {/* 相簿詳情頁 */}
+      {selectedMemory && (
+        <MemoryDetailView
+          memory={selectedMemory}
+          isVisible={showMemoryDetail}
+          onClose={() => {
+            setShowMemoryDetail(false);
+            setSelectedMemory(null);
+          }}
+          onMemoryUpdate={(updatedMemory) => {
+            // 這裡可以更新本地狀態，但由於我們在AlbumView中處理，
+            // 這個回調主要用於其他可能的狀態同步
+          }}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -2086,5 +2062,161 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#2c3e50',
     fontWeight: '500',
+  },
+  mealRecordsContainer: {
+    padding: 16,
+  },
+  todayMealsSection: {
+    marginBottom: 24,
+  },
+  todayMealsTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#2c3e50',
+    marginBottom: 16,
+    letterSpacing: 0.3,
+  },
+  mealRecordCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.04)',
+  },
+  mealRecordHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  mealTimeInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  mealTimeEmoji: {
+    fontSize: 24,
+    marginRight: 4,
+  },
+  mealTimeLabel: {
+    fontSize: 15,
+    color: '#6b7280',
+    fontWeight: '500',
+  },
+  mealTime: {
+    fontSize: 13,
+    color: '#6b7280',
+    fontWeight: '500',
+  },
+  mealCalories: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  caloriesText: {
+    fontSize: 13,
+    color: '#6b7280',
+    fontWeight: '500',
+  },
+  caloriesUnit: {
+    fontSize: 12,
+    color: '#6b7280',
+    fontWeight: '500',
+  },
+  mealName: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#2c3e50',
+    marginBottom: 6,
+    lineHeight: 24,
+    letterSpacing: 0.2,
+  },
+  mealTags: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  mealTag: {
+    backgroundColor: '#e0e0e0',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    fontSize: 12,
+    color: '#2c3e50',
+    fontWeight: '500',
+  },
+  nutritionSummary: {
+    marginBottom: 24,
+  },
+  nutritionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#2c3e50',
+    marginBottom: 16,
+    letterSpacing: 0.3,
+  },
+  nutritionStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  nutritionItem: {
+    width: '24%',
+    textAlign: 'center',
+  },
+  nutritionValue: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2c3e50',
+    marginBottom: 8,
+  },
+  nutritionLabel: {
+    fontSize: 14,
+    color: '#6b7280',
+    fontWeight: '500',
+  },
+  nutritionProgress: {
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#f0f0f0',
+    marginBottom: 4,
+  },
+  progressBar: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  addMealButton: {
+    backgroundColor: '#007AFF',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  addMealButtonEmoji: {
+    fontSize: 24,
+    marginRight: 10,
+  },
+  addMealButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  snackCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.04)',
   },
 });

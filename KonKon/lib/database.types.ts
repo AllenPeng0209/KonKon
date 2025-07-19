@@ -589,36 +589,51 @@ export type Database = {
       family_memories: {
         Row: {
           ai_generated_image_urls: Json | null
+          comments_count: number
           created_at: string
           family_id: string
           id: string
           image_urls: Json | null
+          is_featured: boolean
+          likes_count: number
           location: string | null
           story: string | null
           tags: Json | null
           user_id: string
+          views_count: number
+          visibility: string
         }
         Insert: {
           ai_generated_image_urls?: Json | null
+          comments_count?: number
           created_at?: string
           family_id: string
           id?: string
           image_urls?: Json | null
+          is_featured?: boolean
+          likes_count?: number
           location?: string | null
           story?: string | null
           tags?: Json | null
           user_id: string
+          views_count?: number
+          visibility?: string
         }
         Update: {
           ai_generated_image_urls?: Json | null
+          comments_count?: number
           created_at?: string
           family_id?: string
           id?: string
           image_urls?: Json | null
+          is_featured?: boolean
+          likes_count?: number
           location?: string | null
           story?: string | null
           tags?: Json | null
           user_id?: string
+          views_count?: number
+          visibility?: string
         }
         Relationships: [
           {
@@ -626,6 +641,133 @@ export type Database = {
             columns: ["family_id"]
             isOneToOne: false
             referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      memory_comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          memory_id: string
+          parent_comment_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          memory_id: string
+          parent_comment_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          memory_id?: string
+          parent_comment_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "memory_comments_memory_id_fkey"
+            columns: ["memory_id"]
+            isOneToOne: false
+            referencedRelation: "family_memories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "memory_comments_parent_comment_id_fkey"
+            columns: ["parent_comment_id"]
+            isOneToOne: false
+            referencedRelation: "memory_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "memory_comments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      memory_likes: {
+        Row: {
+          created_at: string
+          id: string
+          memory_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          memory_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          memory_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "memory_likes_memory_id_fkey"
+            columns: ["memory_id"]
+            isOneToOne: false
+            referencedRelation: "family_memories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "memory_likes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      memory_tags: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          memory_id: string
+          tag_name: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          memory_id: string
+          tag_name: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          memory_id?: string
+          tag_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "memory_tags_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "memory_tags_memory_id_fkey"
+            columns: ["memory_id"]
+            isOneToOne: false
+            referencedRelation: "family_memories"
             referencedColumns: ["id"]
           },
         ]

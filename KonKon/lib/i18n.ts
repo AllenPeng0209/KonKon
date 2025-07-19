@@ -55,6 +55,14 @@ type TranslationKeys =
   | 'home.expense'
   | 'home.idea'
   | 'home.mood'
+  | 'home.assistant'
+  | 'home.chores'
+  | 'home.health'
+  | 'home.activities'
+  | 'home.album'
+  | 'home.shopping'
+  | 'home.finance'
+  | 'home.recipes'
   | 'home.calendarPermissionTitle'
   | 'home.calendarPermissionMessage'
   | 'home.notNow'
@@ -266,4 +274,5 @@ export const setLocale = (locale: string) => {
   i18n.locale = locale;
 };
 
-export { getDeviceLocale }; 
+export { getDeviceLocale };
+

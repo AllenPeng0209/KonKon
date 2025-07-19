@@ -1,14 +1,14 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import AgendaListView from './AgendaListView';
-import { CalendarStyleId, CalendarViewProps } from './CalendarViewTypes';
+import { CalendarEvent, CalendarStyleId, CalendarViewProps } from './CalendarViewTypes';
 import CardMonthView from './CardMonthView';
 import CompactMonthView from './CompactMonthView';
 import DayFocusView from './DayFocusView';
+import FamilyGardenView from './FamilyGardenView';
 import FamilyGridView from './FamilyGridView';
 import FamilyOrbitView from './FamilyOrbitView';
 import FamilyPuzzleView from './FamilyPuzzleView';
-import FamilyGardenView from './FamilyGardenView';
 import GridMonthView from './GridMonthView';
 import ThreeDayView from './ThreeDayView';
 import TimelineView from './TimelineView';
@@ -18,26 +18,26 @@ import YearOverviewView from './YearOverviewView';
 // 視覺創新類
 import CloudFloatingView from './CloudFloatingView';
 import ConstellationWheelView from './ConstellationWheelView';
-import SubwayMapView from './SubwayMapView';
 import GardenPlantView from './GardenPlantView';
+import SubwayMapView from './SubwayMapView';
 
 // 互動遊戲類
-import PuzzlePieceView from './PuzzlePieceView';
 import FishingPondView from './FishingPondView';
+import PuzzlePieceView from './PuzzlePieceView';
 import SpaceExplorationView from './SpaceExplorationView';
 import TreasureMapView from './TreasureMapView';
 
 // 數據可視化類
-import HeatmapView from './HeatmapView';
+import BubbleChartView from './BubbleChartView';
 import GanttChartView from './GanttChartView';
 import HeartbeatView from './HeartbeatView';
-import BubbleChartView from './BubbleChartView';
+import HeatmapView from './HeatmapView';
 
 // 情境主題類
-import SeasonalLandscapeView from './SeasonalLandscapeView';
 import BookshelfView from './BookshelfView';
-import MusicStaffView from './MusicStaffView';
 import KitchenRecipeView from './KitchenRecipeView';
+import MusicStaffView from './MusicStaffView';
+import SeasonalLandscapeView from './SeasonalLandscapeView';
 
 // 運動健康類
 import RunningTrackView from './RunningTrackView';
@@ -45,16 +45,16 @@ import RunningTrackView from './RunningTrackView';
 import FitnessChallengeView from './FitnessChallengeView';
 
 // 未來科技類
-import Cube3DView from './Cube3DView';
 import AIPredictionView from './AIPredictionView';
 import ARView from './ARView';
+import Cube3DView from './Cube3DView';
 
 // 日系家庭專用
-import SeasonalHarmonyView from './SeasonalHarmonyView';
-import FamilyNotebookView from './FamilyNotebookView';
 import BentoBoxView from './BentoBoxView';
+import FamilyNotebookView from './FamilyNotebookView';
 import OrigamiCalendarView from './OrigamiCalendarView';
 import RyokanStyleView from './RyokanStyleView';
+import SeasonalHarmonyView from './SeasonalHarmonyView';
 
 interface CalendarViewSelectorProps extends CalendarViewProps {
   style?: CalendarStyleId;
@@ -113,8 +113,42 @@ export default function CalendarViewSelector({
   const convertEventsForCustomViews = (events: CalendarViewProps['events']) => {
     return events.map(event => ({
       ...event,
-      date: new Date(event.start_ts),
+      date: new Date(event.start_ts * 1000), // 確保正確的時間戳轉換
     }));
+  };
+
+  // 轉換事件數據以適配AR類型的組件
+  const convertEventsForARView = (events: CalendarViewProps['events']) => {
+    return events.map(event => ({
+      id: event.id,
+      title: event.title,
+      start_ts: event.start_ts,
+      end_ts: event.end_ts,
+      importance: 'medium' as const,
+      category: event.type,
+      color: event.color,
+    }));
+  };
+
+  // 創建包裝的回調函數以處理型別轉換
+  const createCustomViewEventHandler = (originalHandler: (event: CalendarEvent) => void) => {
+    return (event: { id: string; title: string; date: Date; [key: string]: any }) => {
+      // 找到原始的 CalendarEvent
+      const originalEvent = calendarProps.events.find(e => e.id === event.id);
+      if (originalEvent) {
+        originalHandler(originalEvent);
+      }
+    };
+  };
+
+  const createARViewEventHandler = (originalHandler: (event: CalendarEvent) => void) => {
+    return (event: { id: string; start_ts: number; end_ts?: number; [key: string]: any }) => {
+      // 找到原始的 CalendarEvent
+      const originalEvent = calendarProps.events.find(e => e.id === event.id);
+      if (originalEvent) {
+        originalHandler(originalEvent);
+      }
+    };
   };
 
   const isValidCalendarStyle = (style: string): boolean => {
@@ -233,10 +267,7 @@ export default function CalendarViewSelector({
           events={convertEventsForCustomViews(calendarProps.events)}
           currentDate={calendarProps.selectedDate}
           onDateSelect={calendarProps.onDatePress}
-          selectedDate={calendarProps.selectedDate}
-          currentMonth={calendarProps.currentMonth}
-          onEventPress={calendarProps.onEventPress}
-          onMonthChange={calendarProps.onMonthChange}
+          onEventPress={createCustomViewEventHandler(calendarProps.onEventPress)}
         />;
       
       // 情境主題類
@@ -245,40 +276,28 @@ export default function CalendarViewSelector({
           events={convertEventsForCustomViews(calendarProps.events)}
           currentDate={calendarProps.selectedDate}
           onDateSelect={calendarProps.onDatePress}
-          selectedDate={calendarProps.selectedDate}
-          currentMonth={calendarProps.currentMonth}
-          onEventPress={calendarProps.onEventPress}
-          onMonthChange={calendarProps.onMonthChange}
+          onEventPress={createCustomViewEventHandler(calendarProps.onEventPress)}
         />;
       case 'bookshelf':
         return <BookshelfView 
           events={convertEventsForCustomViews(calendarProps.events)}
           currentDate={calendarProps.selectedDate}
           onDateSelect={calendarProps.onDatePress}
-          selectedDate={calendarProps.selectedDate}
-          currentMonth={calendarProps.currentMonth}
-          onEventPress={calendarProps.onEventPress}
-          onMonthChange={calendarProps.onMonthChange}
+          onEventPress={createCustomViewEventHandler(calendarProps.onEventPress)}
         />;
       case 'music-staff':
         return <MusicStaffView 
           events={convertEventsForCustomViews(calendarProps.events)}
           currentDate={calendarProps.selectedDate}
           onDateSelect={calendarProps.onDatePress}
-          selectedDate={calendarProps.selectedDate}
-          currentMonth={calendarProps.currentMonth}
-          onEventPress={calendarProps.onEventPress}
-          onMonthChange={calendarProps.onMonthChange}
+          onEventPress={createCustomViewEventHandler(calendarProps.onEventPress)}
         />;
       case 'kitchen-recipe':
         return <KitchenRecipeView 
           events={convertEventsForCustomViews(calendarProps.events)}
           currentDate={calendarProps.selectedDate}
           onDateSelect={calendarProps.onDatePress}
-          selectedDate={calendarProps.selectedDate}
-          currentMonth={calendarProps.currentMonth}
-          onEventPress={calendarProps.onEventPress}
-          onMonthChange={calendarProps.onMonthChange}
+          onEventPress={createCustomViewEventHandler(calendarProps.onEventPress)}
         />;
       
       // 運動健康類
@@ -287,10 +306,7 @@ export default function CalendarViewSelector({
           events={convertEventsForCustomViews(calendarProps.events)}
           currentDate={calendarProps.selectedDate}
           onDateSelect={calendarProps.onDatePress}
-          selectedDate={calendarProps.selectedDate}
-          currentMonth={calendarProps.currentMonth}
-          onEventPress={calendarProps.onEventPress}
-          onMonthChange={calendarProps.onMonthChange}
+          onEventPress={createCustomViewEventHandler(calendarProps.onEventPress)}
         />;
       // case 'mood-diary':
       //   return <MoodDiaryView 
@@ -307,10 +323,7 @@ export default function CalendarViewSelector({
           events={convertEventsForCustomViews(calendarProps.events)}
           currentDate={calendarProps.selectedDate}
           onDateSelect={calendarProps.onDatePress}
-          selectedDate={calendarProps.selectedDate}
-          currentMonth={calendarProps.currentMonth}
-          onEventPress={calendarProps.onEventPress}
-          onMonthChange={calendarProps.onMonthChange}
+          onEventPress={createCustomViewEventHandler(calendarProps.onEventPress)}
         />;
       
       // 未來科技類
@@ -319,23 +332,22 @@ export default function CalendarViewSelector({
           events={convertEventsForCustomViews(calendarProps.events)}
           currentDate={calendarProps.selectedDate}
           onDateSelect={calendarProps.onDatePress}
-          selectedDate={calendarProps.selectedDate}
-          currentMonth={calendarProps.currentMonth}
-          onEventPress={calendarProps.onEventPress}
-          onMonthChange={calendarProps.onMonthChange}
+          onEventPress={createCustomViewEventHandler(calendarProps.onEventPress)}
         />;
       case 'ai-prediction':
         return <AIPredictionView 
           events={convertEventsForCustomViews(calendarProps.events)}
           currentDate={calendarProps.selectedDate}
           onDateSelect={calendarProps.onDatePress}
-          selectedDate={calendarProps.selectedDate}
-          currentMonth={calendarProps.currentMonth}
-          onEventPress={calendarProps.onEventPress}
-          onMonthChange={calendarProps.onMonthChange}
+          onEventPress={createCustomViewEventHandler(calendarProps.onEventPress)}
         />;
       case 'ar-view':
-        return <ARView {...calendarProps} />;
+        return <ARView 
+          events={convertEventsForARView(calendarProps.events)}
+          selectedDate={calendarProps.selectedDate}
+          onDatePress={calendarProps.onDatePress}
+          onEventPress={createARViewEventHandler(calendarProps.onEventPress)}
+        />;
       
       // 日系家庭專用
       case 'seasonal-harmony':

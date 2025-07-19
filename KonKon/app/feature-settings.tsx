@@ -3,15 +3,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-    Alert,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { FeatureSettingsState, useFeatureSettings } from '../contexts/FeatureSettingsContext';
 
@@ -33,6 +33,7 @@ const featureInfoMap: Record<FeatureKey, FeatureInfo> = {
       syncWithSystem: true,
       enableReminders: true,
       reminderMinutes: 15,
+      selectedStyle: '網格月視圖',
     }
   },
   familyAssistant: {
@@ -53,16 +54,17 @@ const featureInfoMap: Record<FeatureKey, FeatureInfo> = {
       enableRewards: true,
       autoRotate: false,
       weeklyReset: true,
+      selectedStyle: '任務看板',
     }
   },
   familyActivities: {
-    name: '親子活動',
-    icon: '🎮',
-    description: '規劃和記錄親子互動時光',
+    name: '健康管理',
+    icon: '🏥',
+    description: '追蹤和管理家庭成員的健康狀況',
     defaultSettings: {
-      suggestActivities: true,
-      trackTime: true,
-      sharePhotos: true,
+      trackHealth: true,
+      medicineReminders: true,
+      healthReports: true,
     }
   },
   familyAlbum: {
@@ -103,6 +105,7 @@ const featureInfoMap: Record<FeatureKey, FeatureInfo> = {
       enableNutritionInfo: true,
       suggestMeals: true,
       shoppingIntegration: true,
+      selectedStyle: '每日記錄',
     }
   },
 };
@@ -158,7 +161,7 @@ export default function FeatureSettingsScreen() {
     router.back();
   };
 
-  const renderSettingItem = (key: string, label: string, type: 'switch' | 'text' | 'number') => {
+  const renderSettingItem = (key: string, label: string, type: 'switch' | 'text' | 'number' | 'navigation', onPress?: () => void) => {
     const value = localSettings[key];
     
     return (
@@ -189,8 +192,49 @@ export default function FeatureSettingsScreen() {
             keyboardType="numeric"
           />
         )}
+        {type === 'navigation' && (
+          <TouchableOpacity onPress={onPress} style={styles.navigationButton}>
+            <Text style={styles.navigationButtonText}>
+              {value || '選擇樣式'}
+            </Text>
+            <Ionicons name="chevron-forward" size={20} color="#007AFF" />
+          </TouchableOpacity>
+        )}
       </View>
     );
+  };
+
+  const handleStyleSelection = () => {
+    Alert.alert(
+      '選擇餐食視圖樣式',
+      '選擇您偏好的餐食管理視圖樣式',
+      [
+        {
+          text: '每日記錄',
+          onPress: () => handleSettingChange('selectedStyle', '每日記錄')
+        },
+        {
+          text: '週間概覽', 
+          onPress: () => handleSettingChange('selectedStyle', '週間概覽')
+        },
+        {
+          text: '營養圖表',
+          onPress: () => handleSettingChange('selectedStyle', '營養圖表')
+        },
+        {
+          text: '取消',
+          style: 'cancel'
+        }
+      ]
+    );
+  };
+
+  const handleCalendarStyleSelection = () => {
+    router.push('/calendar-style-selection');
+  };
+
+  const handleChoreStyleSelection = () => {
+    router.push('/chore-style-selection');
   };
 
   const getSettingItems = () => {
@@ -200,6 +244,7 @@ export default function FeatureSettingsScreen() {
           renderSettingItem('syncWithSystem', t('featureSettings.settings.syncWithSystem'), 'switch'),
           renderSettingItem('enableReminders', t('featureSettings.settings.enableReminders'), 'switch'),
           renderSettingItem('reminderMinutes', t('featureSettings.settings.reminderMinutes'), 'number'),
+          renderSettingItem('selectedStyle', '選擇樣式', 'navigation', handleCalendarStyleSelection),
         ];
       case 'familyAssistant':
         return [
@@ -209,15 +254,16 @@ export default function FeatureSettingsScreen() {
         ];
       case 'choreAssignment':
         return [
-          renderSettingItem('enableRewards', t('featureSettings.settings.enableRewards'), 'switch'),
-          renderSettingItem('autoRotate', t('featureSettings.settings.autoRotate'), 'switch'),
-          renderSettingItem('weeklyReset', t('featureSettings.settings.weeklyReset'), 'switch'),
+          renderSettingItem('enableRewards', '啟用獎勵系統', 'switch'),
+          renderSettingItem('autoRotate', '自動輪換任務', 'switch'),
+          renderSettingItem('weeklyReset', '每週重置', 'switch'),
+          renderSettingItem('selectedStyle', '選擇樣式', 'navigation', handleChoreStyleSelection),
         ];
       case 'familyActivities':
         return [
-          renderSettingItem('suggestActivities', t('featureSettings.settings.suggestActivities'), 'switch'),
-          renderSettingItem('trackTime', t('featureSettings.settings.trackTime'), 'switch'),
-          renderSettingItem('sharePhotos', t('featureSettings.settings.sharePhotos'), 'switch'),
+          renderSettingItem('trackHealth', '健康追蹤', 'switch'),
+          renderSettingItem('medicineReminders', '用藥提醒', 'switch'),
+          renderSettingItem('healthReports', '健康報告', 'switch'),
         ];
       case 'familyAlbum':
         return [
@@ -239,9 +285,10 @@ export default function FeatureSettingsScreen() {
         ];
       case 'familyRecipes':
         return [
-          renderSettingItem('enableNutritionInfo', t('featureSettings.settings.enableNutritionInfo'), 'switch'),
-          renderSettingItem('suggestMeals', t('featureSettings.settings.suggestMeals'), 'switch'),
-          renderSettingItem('shoppingIntegration', t('featureSettings.settings.shoppingIntegration'), 'switch'),
+          renderSettingItem('enableNutritionInfo', '營養資訊', 'switch'),
+          renderSettingItem('suggestMeals', '餐點建議', 'switch'),
+          renderSettingItem('shoppingIntegration', '購物清單整合', 'switch'),
+          renderSettingItem('selectedStyle', '選擇樣式', 'navigation', handleStyleSelection),
         ];
       default:
         return [];
@@ -475,5 +522,15 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  navigationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  navigationButtonText: {
+    fontSize: 16,
+    color: '#007AFF',
+    marginRight: 8,
   },
 }); 
