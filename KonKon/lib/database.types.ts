@@ -255,7 +255,7 @@ export type Database = {
           created_at: string | null
           creator_id: string
           description: string | null
-          end_ts: number | null
+          end_ts: number
           family_id: string | null
           id: string
           location: string | null
@@ -274,7 +274,7 @@ export type Database = {
           created_at?: string | null
           creator_id: string
           description?: string | null
-          end_ts?: number | null
+          end_ts: number
           family_id?: string | null
           id?: string
           location?: string | null
@@ -293,7 +293,7 @@ export type Database = {
           created_at?: string | null
           creator_id?: string
           description?: string | null
-          end_ts?: number | null
+          end_ts?: number
           family_id?: string | null
           id?: string
           location?: string | null
@@ -419,6 +419,64 @@ export type Database = {
           {
             foreignKeyName: "families_owner_id_fkey"
             columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      family_chat_messages: {
+        Row: {
+          content: string
+          created_at: string
+          family_id: string
+          id: string
+          message_type: string
+          metadata: Json | null
+          reply_to_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          family_id: string
+          id?: string
+          message_type?: string
+          metadata?: Json | null
+          reply_to_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          family_id?: string
+          id?: string
+          message_type?: string
+          metadata?: Json | null
+          reply_to_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "family_chat_messages_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "family_chat_messages_reply_to_id_fkey"
+            columns: ["reply_to_id"]
+            isOneToOne: false
+            referencedRelation: "family_chat_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "family_chat_messages_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]

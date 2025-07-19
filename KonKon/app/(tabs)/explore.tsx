@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
     KeyboardAvoidingView,
     Platform,
@@ -15,16 +15,18 @@ import { useAuth } from '../../contexts/AuthContext';
 
 // 聊天组件
 import { AnimatedLogo } from '../../components/chat/AnimatedLogo';
-import { AssistantMessage } from '../../components/chat/AssistantMessage';
+
 import { BailianConfig } from '../../components/chat/BailianConfig';
 import { ChatContainer } from '../../components/chat/ChatContainer';
 import { ChatToolbar } from '../../components/chat/ChatToolbar';
-import { FirstSuggestions } from '../../components/chat/FirstSuggestions';
-import { UserMessage } from '../../components/chat/UserMessage';
+
+import { FamilyChatMessage } from '../../components/chat/FamilyChatMessage';
 
 // 自定义 Hook
 import { t } from '@/lib/i18n';
-import { useEnhancedChat } from '../../hooks/useEnhancedChat';
+
+import { useFamilyChat } from '../../hooks/useFamilyChat';
+import { useEvents } from '../../hooks/useEvents';
 
 export default function ExploreScreen() {
   const { user, loading } = useAuth();
@@ -32,8 +34,22 @@ export default function ExploreScreen() {
   const { top } = useSafeAreaInsets();
   const scrollViewRef = useRef<ScrollView>(null);
   
-  // 增強聊天功能 - 包含家庭日曆數據
-  const { messages, isLoading, sendMessage, clearMessages, hasEvents, hasFamily, eventsCount } = useEnhancedChat();
+  // 只使用家庭群聊功能
+  const {
+    messages: familyMessages,
+    isLoading: isFamilyLoading,
+    isLoadingHistory,
+    sendMessage: sendFamilyMessage,
+    clearChat: clearFamilyChat,
+    saveChatSession,
+    hasFamily: hasFamilyChat,
+    familyName,
+    memberCount,
+  } = useFamilyChat();
+
+  // 获取家庭相关信息用于显示状态
+  const { events } = useEvents();
+  const eventsCount = events.length;
 
   useEffect(() => {
     if (!loading && !user) {
@@ -45,15 +61,13 @@ export default function ExploreScreen() {
     if (scrollViewRef.current) {
       scrollViewRef.current.scrollToEnd({ animated: true });
     }
-  }, [messages]);
+  }, [familyMessages]);
 
   const handleSendMessage = async (message: string) => {
-    await sendMessage(message);
+    await sendFamilyMessage(message);
   };
 
-  const handleSuggestionPress = (suggestion: string) => {
-    handleSendMessage(suggestion);
-  };
+
 
   const navigateToHome = () => {
     router.back();
@@ -63,9 +77,7 @@ export default function ExploreScreen() {
     router.push('/profile');
   };
 
-  const handleClearChat = () => {
-    clearMessages();
-  };
+  // 移除清除聊天功能，因为群聊记录需要保持持久化
 
   if (loading) {
     return (
@@ -90,16 +102,6 @@ export default function ExploreScreen() {
           <Text style={[styles.headerTitle, styles.activeTab]}>{t('tabs.explore')}</Text>
         </View>
         <View style={styles.headerRight}>
-          <View style={styles.clearButtonContainer}>
-            {messages.length > 0 && (
-              <TouchableOpacity 
-                style={styles.clearButton}
-                onPress={handleClearChat}
-              >
-                <Text style={styles.clearButtonText}>{t('explore.clear')}</Text>
-              </TouchableOpacity>
-            )}
-          </View>
           <TouchableOpacity style={styles.avatarButton} onPress={navigateToProfile}>
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>👤</Text>
@@ -111,13 +113,18 @@ export default function ExploreScreen() {
       {/* 配置检查 */}
       <BailianConfig />
 
-      {/* 家庭日曆連接狀態 */}
-      {hasFamily && (
-        <View style={styles.calendarStatus}>
-          <Text style={styles.calendarStatusIcon}>📅</Text>
-          <Text style={styles.calendarStatusText}>
-            已連接家庭日曆 • {eventsCount}個事件
+      {/* 家庭群聊状态 */}
+      {hasFamilyChat && (
+        <View style={[styles.calendarStatus, { backgroundColor: '#FFF3E0', borderLeftColor: '#FF9800' }]}>
+          <Text style={styles.calendarStatusIcon}>👥</Text>
+          <Text style={[styles.calendarStatusText, { color: '#F57C00' }]}>
+            {familyName} • {memberCount}名成员 • {eventsCount}個事件
           </Text>
+          {isLoadingHistory && (
+            <Text style={[styles.calendarStatusText, { color: '#F57C00', fontSize: 12 }]}>
+               • 加载中...
+            </Text>
+          )}
         </View>
       )}
 
@@ -135,32 +142,28 @@ export default function ExploreScreen() {
             onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
             onLayout={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
           >
-            {messages.length === 0 ? (
+            {familyMessages.length === 0 ? (
               <View style={styles.emptyContainer}>
                 <AnimatedLogo />
+                {hasFamilyChat && (
+                  <Text style={styles.emptyText}>
+                    欢迎来到{familyName}群聊！
+                  </Text>
+                )}
               </View>
             ) : (
-              messages.map((message) => (
+              familyMessages.map((message) => (
                 <View key={message.id} style={styles.messageWrapper}>
-                  {message.type === 'user' ? (
-                    <UserMessage>{message.content}</UserMessage>
-                  ) : (
-                    <AssistantMessage isLoading={message.isLoading}>
-                      {message.content}
-                    </AssistantMessage>
-                  )}
+                  <FamilyChatMessage message={message} />
                 </View>
               ))
             )}
           </ScrollView>
 
           <View style={styles.toolbarContainer}>
-            {messages.length === 0 && !isLoading && (
-              <FirstSuggestions onSuggestionPress={handleSuggestionPress} />
-            )}
             <ChatToolbar 
               onSendMessage={handleSendMessage}
-              disabled={isLoading}
+              disabled={isFamilyLoading}
             />
           </View>
         </ChatContainer>
@@ -217,20 +220,7 @@ const styles = StyleSheet.create({
     gap: 12,
     minHeight: 40, // 确保头部右侧有最小高度
   },
-  clearButtonContainer: {
-    minWidth: 60, // 给清空按钮预留固定空间，避免布局跳动
-    alignItems: 'flex-end',
-  },
-  clearButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-    backgroundColor: '#f0f0f0',
-  },
-  clearButtonText: {
-    fontSize: 14,
-    color: '#666',
-  },
+
   avatarButton: {
     padding: 2,
   },
@@ -289,5 +279,12 @@ const styles = StyleSheet.create({
     color: '#2E7D32',
     fontSize: 14,
     fontWeight: '500',
+  },
+
+  emptyText: {
+    fontSize: 16,
+    color: '#666',
+    marginTop: 16,
+    textAlign: 'center',
   },
 });
