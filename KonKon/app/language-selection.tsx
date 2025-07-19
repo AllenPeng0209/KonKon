@@ -4,16 +4,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { FlatList, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-const LANGUAGES = [
-  { code: 'zh-CN', name: t('languageSelection.languages.zh-CN') },
-  { code: 'zh-TW', name: t('languageSelection.languages.zh-TW') },
-  { code: 'en', name: t('languageSelection.languages.en-US') },
-  { code: 'ja', name: t('languageSelection.languages.ja-JP') },
-];
-
 export default function LanguageSelectionScreen() {
   const router = useRouter();
   const { locale, setLocale } = useLanguage();
+
+  // 將語言列表移到組件內部，確保翻譯會動態更新
+  const LANGUAGES = [
+    { code: 'zh-CN', name: t('languageSelection.languages.zh-CN') },
+    { code: 'zh-TW', name: t('languageSelection.languages.zh-TW') },
+    { code: 'en', name: t('languageSelection.languages.en-US') },
+    { code: 'ja', name: t('languageSelection.languages.ja-JP') },
+  ];
 
   const handleBack = () => {
     router.back();

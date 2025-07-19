@@ -20,6 +20,7 @@ import 'react-native-reanimated';
 import Drawer from '../components/Drawer';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { FamilyProvider } from '../contexts/FamilyContext';
+import { FeatureSettingsProvider } from '../contexts/FeatureSettingsContext';
 import { LanguageProvider } from '../contexts/LanguageContext';
 import { registerForPushNotificationsAsync } from '../lib/notifications';
 
@@ -75,8 +76,9 @@ function ProtectedLayout() {
   return (
     <PanGestureHandler onHandlerStateChange={onHandlerStateChange}>
       <View style={{ flex: 1 }}>
-        <FamilyProvider>
-          <>
+        <FeatureSettingsProvider>
+          <FamilyProvider>
+            <>
             <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
               <Stack>
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -94,6 +96,7 @@ function ProtectedLayout() {
                 <Stack.Screen name="notification-settings" options={{ headerShown: false }} />
                 <Stack.Screen name="language-selection" options={{ headerShown: false }} />
                 <Stack.Screen name="calendar-settings" options={{ headerShown: false }} />
+                <Stack.Screen name="feature-settings" options={{ headerShown: false }} />
                 <Stack.Screen name="avatar" options={{ headerShown: false, animation: 'slide_from_right' }} />
                 <Stack.Screen name="+not-found" />
               </Stack>
@@ -106,8 +109,9 @@ function ProtectedLayout() {
               </TouchableWithoutFeedback>
             )}
             <Drawer isVisible={isDrawerVisible} onClose={closeDrawer} />
-          </>
-        </FamilyProvider>
+            </>
+          </FamilyProvider>
+        </FeatureSettingsProvider>
       </View>
     </PanGestureHandler>
   );

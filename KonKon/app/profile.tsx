@@ -71,13 +71,7 @@ export default function ProfileScreen() {
   };
 
   const handleFunction = (func: string) => {
-    switch (func) {
-      case 'familySchedule':
-        router.push('/calendar-settings');
-        break;
-      default:
-        console.log('Function:', func);
-    }
+    router.push(`/feature-settings?feature=${func}`);
   };
 
   return (
@@ -141,17 +135,17 @@ export default function ProfileScreen() {
               <Text style={styles.functionIcon}>📅</Text>
               <Text style={styles.functionText}>{t('profile.familySchedule')}</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.functionItem} onPress={() => handleFunction('memberManagement')}>
-              <Text style={styles.functionIcon}>👥</Text>
-              <Text style={styles.functionText}>{t('profile.memberManagement')}</Text>
+            <TouchableOpacity style={styles.functionItem} onPress={() => handleFunction('familyAssistant')}>
+              <Text style={styles.functionIcon}>🐱</Text>
+              <Text style={styles.functionText}>{t('profile.familyAssistant')}</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.functionItem} onPress={() => handleFunction('houseworkAssignment')}>
+            <TouchableOpacity style={styles.functionItem} onPress={() => handleFunction('choreAssignment')}>
               <Text style={styles.functionIcon}>🏠</Text>
               <Text style={styles.functionText}>{t('profile.choreAssignment')}</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.functionItem} onPress={() => handleFunction('birthdayReminder')}>
-              <Text style={styles.functionIcon}>🎂</Text>
-              <Text style={styles.functionText}>{t('profile.birthdayReminder')}</Text>
+            <TouchableOpacity style={styles.functionItem} onPress={() => handleFunction('familyActivities')}>
+              <Text style={styles.functionIcon}>🎮</Text>
+              <Text style={styles.functionText}>{t('profile.familyActivities')}</Text>
             </TouchableOpacity>
           </View>
           <View style={styles.functionsRow}>
@@ -163,13 +157,13 @@ export default function ProfileScreen() {
               <Text style={styles.functionIcon}>🛒</Text>
               <Text style={styles.functionText}>{t('profile.shoppingList')}</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.functionItem} onPress={() => handleFunction('familyBudget')}>
+            <TouchableOpacity style={styles.functionItem} onPress={() => handleFunction('familyFinance')}>
               <Text style={styles.functionIcon}>💰</Text>
-              <Text style={styles.functionText}>{t('profile.familyBudget')}</Text>
+              <Text style={styles.functionText}>{t('profile.familyFinance')}</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.functionItem} onPress={() => handleFunction('emergencyContact')}>
-              <Text style={styles.functionIcon}>🚨</Text>
-              <Text style={styles.functionText}>{t('profile.emergencyContact')}</Text>
+            <TouchableOpacity style={styles.functionItem} onPress={() => handleFunction('familyRecipes')}>
+              <Text style={styles.functionIcon}>👨‍🍳</Text>
+              <Text style={styles.functionText}>{t('profile.familyRecipes')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -238,6 +232,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   userSection: {
+    marginTop: 30,
     marginBottom: 30,
   },
   userInfo: {

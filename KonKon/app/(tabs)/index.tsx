@@ -48,12 +48,14 @@ import {
 import { DateData } from 'react-native-calendars';
 import { useAuth } from '../../contexts/AuthContext';
 import { useFamily } from '@/contexts/FamilyContext';
+import { useFeatureSettings } from '@/contexts/FeatureSettingsContext';
 
 const { width: screenWidth } = Dimensions.get('window');
 
 export default function HomeScreen() {
   const { user, loading } = useAuth();
   const { userFamilies } = useFamily();
+  const { featureSettings, resetAllSettings } = useFeatureSettings();
   const router = useRouter();
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState('all'); // 默认值为 'all'
@@ -121,15 +123,46 @@ export default function HomeScreen() {
     audioFormat: 'wav',
   });
 
-  // 过滤选项，专注于日历功能
-  const filterOptions = [
-    { label: t('home.all'), value: 'all', icon: '📊', color: '#8E8E93', bgColor: '#F2F2F7' },
-    // { label: t('home.album'), value: 'album', icon: '🖼️', color: '#5856D6', bgColor: '#E9E9FF' }, // 移除相册功能，还未实现
-    { label: t('home.calendar'), value: 'calendar', icon: '🔔', color: '#FF9500', bgColor: '#FFF3E0' },
-    // { label: t('home.expense'), value: 'expense', icon: '💰', color: '#4CAF50', bgColor: '#E8F5E9' }, // 移除记账功能
-    // { label: t('home.idea'), value: 'idea', icon: '💡', color: '#9C27B0', bgColor: '#F3E5F5' }, // 移除想法功能，还未实现
-    // { label: t('home.mood'), value: 'mood', icon: '❤️', color: '#E91E63', bgColor: '#FCE4EC' }, // 移除心情功能，还未实现
-  ];
+  // 动态生成过滤选项，基于启用的功能
+  const filterOptions = (() => {
+    const options = [
+      { label: t('home.all'), value: 'all', icon: '📊', color: '#8E8E93', bgColor: '#F2F2F7' },
+    ];
+
+    // 始终保持日历功能
+    options.push({ label: t('home.calendar'), value: 'calendar', icon: '🔔', color: '#FF9500', bgColor: '#FFF3E0' });
+
+    // 根据启用的功能添加选项
+    if (featureSettings.familyAssistant.enabled) {
+      options.push({ label: t('home.assistant'), value: 'familyAssistant', icon: '🐱', color: '#007AFF', bgColor: '#E3F2FD' });
+    }
+    
+    if (featureSettings.choreAssignment.enabled) {
+      options.push({ label: t('home.chores'), value: 'choreAssignment', icon: '🏠', color: '#4CAF50', bgColor: '#E8F5E9' });
+    }
+    
+    if (featureSettings.familyActivities.enabled) {
+      options.push({ label: t('home.activities'), value: 'familyActivities', icon: '🎮', color: '#9C27B0', bgColor: '#F3E5F5' });
+    }
+    
+    if (featureSettings.familyAlbum.enabled) {
+      options.push({ label: t('home.album'), value: 'familyAlbum', icon: '📸', color: '#5856D6', bgColor: '#E9E9FF' });
+    }
+    
+    if (featureSettings.shoppingList.enabled) {
+      options.push({ label: t('home.shopping'), value: 'shoppingList', icon: '🛒', color: '#FF5722', bgColor: '#FFF3E0' });
+    }
+    
+    if (featureSettings.familyFinance.enabled) {
+      options.push({ label: t('home.finance'), value: 'familyFinance', icon: '💰', color: '#4CAF50', bgColor: '#E8F5E9' });
+    }
+    
+    if (featureSettings.familyRecipes.enabled) {
+      options.push({ label: t('home.recipes'), value: 'familyRecipes', icon: '👨‍🍳', color: '#FF6B35', bgColor: '#FFF3E0' });
+    }
+
+    return options;
+  })();
 
   useEffect(() => {
     if (!loading && !user) {
@@ -911,7 +944,27 @@ export default function HomeScreen() {
             <Text style={styles.filterButtonText}>{filterOptions.find(opt => opt.value === selectedFilter)?.label}</Text>
             <Text style={styles.filterIcon}>▼</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.avatarButton} onPress={navigateToProfile}>
+          <TouchableOpacity 
+            style={styles.avatarButton} 
+            onPress={navigateToProfile}
+            onLongPress={async () => {
+              Alert.alert(
+                '重置功能設置',
+                '確定要重置所有功能設置到默認狀態嗎？',
+                [
+                  { text: '取消', style: 'cancel' },
+                  { 
+                    text: '確定', 
+                    style: 'destructive',
+                    onPress: async () => {
+                      await resetAllSettings();
+                      Alert.alert('完成', '所有功能設置已重置');
+                    }
+                  }
+                ]
+              );
+            }}
+          >
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>👤</Text>
             </View>
