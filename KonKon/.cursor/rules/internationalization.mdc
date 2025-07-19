@@ -1,0 +1,85 @@
+---
+description: 國際化和多語言支持規範
+---
+
+# 國際化 (i18n) 規範
+
+## 翻譯文件管理
+
+### 支持的語言
+- 英文 (en): [lib/translations/en.json](mdc:lib/translations/en.json)
+- 繁體中文 (zh-TW): [lib/translations/zh-TW.json](mdc:lib/translations/zh-TW.json)
+- 簡體中文 (zh-CN): [lib/translations/zh-CN.json](mdc:lib/translations/zh-CN.json)
+- 日文 (ja): [lib/translations/ja.json](mdc:lib/translations/ja.json)
+
+### 配置文件
+- Expo 配置：[app.json](mdc:app.json) 中的 `locales` 部分
+- i18n 服務：[lib/i18n.ts](mdc:lib/i18n.ts)
+- 語言 Context：[contexts/LanguageContext.tsx](mdc:contexts/LanguageContext.tsx)
+
+## 翻譯鍵規範
+
+### 命名規則
+```json
+{
+  "screen_name": {
+    "title": "頁面標題",
+    "subtitle": "頁面副標題",
+    "buttons": {
+      "save": "保存",
+      "cancel": "取消"
+    },
+    "messages": {
+      "success": "操作成功",
+      "error": "操作失敗"
+    }
+  }
+}
+```
+
+### 組織結構
+- 按屏幕/功能模塊組織翻譯鍵
+- 使用嵌套結構避免鍵名衝突
+- 通用文本放在 `common` 部分
+
+## 使用方法
+
+### 在組件中使用翻譯
+```typescript
+import { useTranslation } from '@/lib/i18n';
+
+const Component = () => {
+  const { t } = useTranslation();
+  
+  return (
+    <Text>{t('screen_name.title')}</Text>
+  );
+};
+```
+
+### 語言切換
+```typescript
+import { useLanguage } from '@/contexts/LanguageContext';
+
+const LanguageSelector = () => {
+  const { currentLanguage, changeLanguage } = useLanguage();
+  
+  const handleLanguageChange = (lang: string) => {
+    changeLanguage(lang);
+  };
+};
+```
+
+## 新增翻譯的流程
+
+1. 在英文翻譯文件中添加新鍵值對
+2. 在其他語言文件中添加相應翻譯
+3. 確保所有語言文件的鍵結構一致
+4. 測試不同語言環境下的顯示效果
+
+## 注意事項
+
+- 文本長度在不同語言中可能差異很大
+- 考慮文本方向（RTL 語言支持）
+- 日期、數字格式的本地化
+- 圖片和圖標可能需要本地化版本

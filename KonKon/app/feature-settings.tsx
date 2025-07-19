@@ -1,19 +1,19 @@
 import { t } from '@/lib/i18n';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import {
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-  Switch,
-  TextInput,
-  Alert,
-} from 'react-native';
-import { useFeatureSettings, FeatureSettingsState } from '../contexts/FeatureSettingsContext';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
+import {
+    Alert,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native';
+import { FeatureSettingsState, useFeatureSettings } from '../contexts/FeatureSettingsContext';
 
 type FeatureKey = keyof FeatureSettingsState;
 
@@ -96,9 +96,9 @@ const featureInfoMap: Record<FeatureKey, FeatureInfo> = {
     }
   },
   familyRecipes: {
-    name: '家庭食譜',
-    icon: '👨‍🍳',
-    description: '記錄和分享家庭美食食譜',
+    name: '餐食管理',
+    icon: '🍽️',
+    description: 'AI智能餐食規劃，解決家庭用餐難題',
     defaultSettings: {
       enableNutritionInfo: true,
       suggestMeals: true,

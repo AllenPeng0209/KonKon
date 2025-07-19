@@ -1,0 +1,43 @@
+---
+alwaysApply: true
+---
+
+# KonKon 項目結構指南
+
+KonKon 是一個基於 React Native/Expo 的家庭日曆管理應用。
+
+## 核心文件結構
+
+- 主應用入口：[app/_layout.tsx](mdc:app/_layout.tsx)
+- 標籤頁導航：[app/(tabs)/](mdc:app/(tabs)/)
+- 設置文件：[app.json](mdc:app.json)
+- TypeScript 配置：[tsconfig.json](mdc:tsconfig.json)
+
+## 關鍵目錄說明
+
+### `/app/` - 應用頁面
+使用 Expo Router 進行路由管理，包含所有應用頁面和佈局
+
+### `/components/` - 可重用組件
+- `/calendar/` - 日曆視圖組件（30多種不同的日曆展示方式）
+- `/chat/` - 聊天相關組件
+- `/ui/` - 基礎 UI 組件
+
+### `/lib/` - 核心業務邏輯
+- [supabase.ts](mdc:lib/supabase.ts) - Supabase 數據庫連接
+- [bailian.ts](mdc:lib/bailian.ts) - 百煉 AI 集成
+- [calendarService.ts](mdc:lib/calendarService.ts) - 日曆服務
+- `/translations/` - 國際化翻譯文件
+
+### `/contexts/` - React Context
+- [AuthContext.tsx](mdc:contexts/AuthContext.tsx) - 用戶認證
+- [FamilyContext.tsx](mdc:contexts/FamilyContext.tsx) - 家庭管理
+- [LanguageContext.tsx](mdc:contexts/LanguageContext.tsx) - 語言設置
+
+### `/hooks/` - 自定義 Hook
+包含各種可重用的 React Hook
+
+## 數據庫
+- 主數據庫：Supabase PostgreSQL
+- 遷移文件：[supabase/migrations/](mdc:supabase/migrations/)
+- 類型定義：[lib/database.types.ts](mdc:lib/database.types.ts)

@@ -1,0 +1,107 @@
+---
+description: Supabase 數據庫和 API 使用規範
+---
+
+# 數據庫和 API 規範
+
+## Supabase 配置
+
+### 核心文件
+- 數據庫連接：[lib/supabase.ts](mdc:lib/supabase.ts)
+- 類型定義：[lib/database.types.ts](mdc:lib/database.types.ts)
+- 遷移文件：[supabase/migrations/](mdc:supabase/migrations/)
+
+### 數據庫遷移
+- 所有 DDL 變更必須通過遷移文件進行
+- 遷移文件命名格式：`001_description.sql`
+- 參考現有遷移：
+  - [001_add_event_exceptions.sql](mdc:supabase/migrations/001_add_event_exceptions.sql)
+  - [002_create_expenses_table.sql](mdc:supabase/migrations/002_create_expenses_table.sql)
+
+## 數據訪問模式
+
+### 類型安全的查詢
+```typescript
+import { supabase } from '@/lib/supabase';
+import type { Database } from '@/lib/database.types';
+
+// 使用生成的類型
+type Event = Database['public']['Tables']['events']['Row'];
+type InsertEvent = Database['public']['Tables']['events']['Insert'];
+type UpdateEvent = Database['public']['Tables']['events']['Update'];
+
+// 類型安全的查詢示例
+const { data: events, error } = await supabase
+  .from('events')
+  .select('*')
+  .eq('family_id', familyId);
+```
+
+### 服務層模式
+- 將數據庫操作抽象到服務文件中
+- 參考：[lib/calendarService.ts](mdc:lib/calendarService.ts)
+- 使用統一的錯誤處理
+
+### 實時訂閱
+```typescript
+// 實時數據訂閱示例
+const subscription = supabase
+  .channel('events-changes')
+  .on('postgres_changes', 
+    { event: '*', schema: 'public', table: 'events' },
+    (payload) => {
+      // 處理數據變更
+    }
+  )
+  .subscribe();
+```
+
+## AI 服務集成
+
+### 百煉 AI 服務
+- 配置：[lib/bailian.ts](mdc:lib/bailian.ts)
+- 多模態日曆：[lib/bailian_omni_calendar.ts](mdc:lib/bailian_omni_calendar.ts)
+- 測試腳本：[scripts/test-bailian.js](mdc:scripts/test-bailian.js)
+
+### OpenAI 服務
+- 配置：[lib/openai.ts](mdc:lib/openai.ts)
+- 用於語音轉文字和智能建議
+
+## 緩存策略
+
+### 家庭聊天緩存
+- 實現：[lib/familyChatCache.ts](mdc:lib/familyChatCache.ts)
+- 本地緩存減少 API 調用
+
+## 錯誤處理
+
+### 統一錯誤處理模式
+```typescript
+try {
+  const { data, error } = await supabase
+    .from('table')
+    .select();
+    
+  if (error) {
+    console.error('Database error:', error);
+    throw new Error(`數據庫操作失敗: ${error.message}`);
+  }
+  
+  return data;
+} catch (error) {
+  // 統一錯誤處理
+  throw error;
+}
+```
+
+## 性能優化
+
+### 查詢優化
+- 使用適當的索引
+- 限制返回的列數
+- 使用分頁避免大量數據載入
+- 合理使用 `select()` 指定需要的字段
+
+### 批量操作
+- 使用 `upsert()` 進行批量插入/更新
+- 避免在循環中進行數據庫操作

@@ -1,34 +1,29 @@
 import AddEventModal from '@/components/AddEventModal';
-import AddExpenseModal from '@/components/AddExpenseModal';
 import AddMemoryModal from '@/components/AddMemoryModal';
 import AlbumView from '@/components/AlbumView'; // 新增：导入相簿视图
 import CalendarViewSelector from '@/components/calendar/CalendarViewSelector';
 import { ConfirmationModal } from '@/components/ConfirmationModal';
 import EventListModal from '@/components/EventListModal';
-import FinanceView from '@/components/FinanceView'; // Import the new component
 import LoadingModal from '@/components/LoadingModal';
 import RecurringEventManager from '@/components/RecurringEventManager';
 import { SuccessModal } from '@/components/SuccessModal';
 import SmartButton from '@/components/ui/SmartButton';
 import { VoiceToCalendar } from '@/components/VoiceToCalendar';
+import { useFamily } from '@/contexts/FamilyContext';
+import { useFeatureSettings } from '@/contexts/FeatureSettingsContext';
 import { useEvents } from '@/hooks/useEvents';
 import { useRecurringEvents } from '@/hooks/useRecurringEvents';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import {
   CalendarEvent,
   ParsedCalendarResult,
-  ParsedExpenseResult,
   processImageToCalendar,
-  processImageToExpense,
   processTextToCalendar,
-  processTextToExpense,
-  processVoiceToCalendar,
-  processVoiceToExpense
+  processVoiceToCalendar
 } from '@/lib/bailian_omni_calendar';
 import CalendarService from '@/lib/calendarService';
-import { TablesInsert } from '@/lib/database.types';
 import { t } from '@/lib/i18n';
-import { supabase } from '@/lib/supabase';
+import type { MealPlan } from '@/lib/mealService';
 import * as FileSystem from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
@@ -47,8 +42,6 @@ import {
 } from 'react-native';
 import { DateData } from 'react-native-calendars';
 import { useAuth } from '../../contexts/AuthContext';
-import { useFamily } from '@/contexts/FamilyContext';
-import { useFeatureSettings } from '@/contexts/FeatureSettingsContext';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -89,6 +82,11 @@ export default function HomeScreen() {
   // 新增：相簿模态框状态
   const [showAddMemoryModal, setShowAddMemoryModal] = useState(false);
   const [initialMemoryImages, setInitialMemoryImages] = useState<ImagePicker.ImagePickerAsset[]>([]);
+
+  // 新增：餐食管理狀態
+  const [lunchSuggestions, setLunchSuggestions] = useState<MealPlan[]>([]);
+  const [isGeneratingMeals, setIsGeneratingMeals] = useState(false);
+  const [showMealGenerator, setShowMealGenerator] = useState(false);
 
   // 事件管理
   const { 
@@ -158,7 +156,7 @@ export default function HomeScreen() {
     }
     
     if (featureSettings.familyRecipes.enabled) {
-      options.push({ label: t('home.recipes'), value: 'familyRecipes', icon: '👨‍🍳', color: '#FF6B35', bgColor: '#FFF3E0' });
+      options.push({ label: t('home.recipes'), value: 'familyRecipes', icon: '🍽️', color: '#FF6B35', bgColor: '#FFF3E0' });
     }
 
     return options;
@@ -303,10 +301,41 @@ export default function HomeScreen() {
   const handleFilterSelect = (filterValue: string) => {
     setSelectedFilter(filterValue);
     setShowFilterMenu(false);
+    
+    // 餐食管理在當前頁面中顯示，不需要導航
   };
 
   const toggleFilterMenu = () => {
     setShowFilterMenu(!showFilterMenu);
+  };
+
+  // 餐食管理相關功能
+  const generateLunchSuggestions = async () => {
+    if (!user) return;
+    
+    setIsGeneratingMeals(true);
+    try {
+      const suggestions = await mealService.generateLunchSuggestions(user.id, {
+        servings: 2,
+        available_time: 15,
+        cuisine_preference: '家常'
+      });
+      setLunchSuggestions(suggestions);
+    } catch (error) {
+      console.error('生成午餐建議失敗:', error);
+      Alert.alert('錯誤', '無法生成午餐建議，請稍後重試');
+    } finally {
+      setIsGeneratingMeals(false);
+    }
+  };
+
+  const handleMealGeneratorPress = () => {
+    setShowMealGenerator(true);
+  };
+
+  const closeMealGenerator = () => {
+    setShowMealGenerator(false);
+    setLunchSuggestions([]);
   };
 
   // 处理手动添加
@@ -986,8 +1015,93 @@ export default function HomeScreen() {
         </View>
       )}
 
-            <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {false ? (
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {selectedFilter === 'familyRecipes' ? (
+          // 餐食管理內容
+          <View style={styles.mealManagementContainer}>
+            {/* 今日推薦 */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>🌟 今日推薦</Text>
+              <View style={styles.todayRecommendation}>
+                <View style={styles.mealCard}>
+                  <Text style={styles.mealEmoji}>🍱</Text>
+                  <Text style={styles.mealTitle}>親子便當</Text>
+                  <Text style={styles.mealSubtitle}>15分鐘 · 營養均衡</Text>
+                  <Text style={styles.difficultyStars}>⭐⭐☆</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* 快速功能 */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>⚡ 快速功能</Text>
+              <View style={styles.quickActionsGrid}>
+                <TouchableOpacity
+                  style={[styles.quickActionCard, { backgroundColor: '#E74C3C15' }]}
+                  onPress={handleMealGeneratorPress}
+                >
+                  <Text style={styles.quickActionEmoji}>🤖</Text>
+                  <Text style={styles.quickActionLabel}>30秒午餐生成</Text>
+                  <Text style={[styles.quickActionSubtitle, { color: '#E74C3C' }]}>
+                    解決最大痛點
+                  </Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={[styles.quickActionCard, { backgroundColor: '#3498DB15' }]}
+                  onPress={() => Alert.alert('功能開發中', '冰箱掃描功能即將推出')}
+                >
+                  <Text style={styles.quickActionEmoji}>📷</Text>
+                  <Text style={styles.quickActionLabel}>掃描冰箱</Text>
+                  <Text style={[styles.quickActionSubtitle, { color: '#3498DB' }]}>
+                    活用剩餘食材
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.quickActionCard, { backgroundColor: '#2ECC7115' }]}
+                  onPress={() => Alert.alert('功能開發中', '營養追蹤功能即將推出')}
+                >
+                  <Text style={styles.quickActionEmoji}>📊</Text>
+                  <Text style={styles.quickActionLabel}>營養追蹤</Text>
+                  <Text style={[styles.quickActionSubtitle, { color: '#2ECC71' }]}>
+                    健康飲食分析
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.quickActionCard, { backgroundColor: '#9B59B615' }]}
+                  onPress={() => Alert.alert('功能開發中', '智能購物清單即將推出')}
+                >
+                  <Text style={styles.quickActionEmoji}>✨</Text>
+                  <Text style={styles.quickActionLabel}>智能購物清單</Text>
+                  <Text style={[styles.quickActionSubtitle, { color: '#9B59B6' }]}>
+                    自動生成採購
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* 家庭協作 */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>👨‍👩‍👧‍👦 家庭協作</Text>
+              <View style={styles.collaborationCard}>
+                <View style={styles.collaborationItem}>
+                  <Text style={styles.collaborationEmoji}>👩‍🍳</Text>
+                  <Text style={styles.collaborationText}>主廚: 媽媽</Text>
+                </View>
+                <View style={styles.collaborationItem}>
+                  <Text style={styles.collaborationEmoji}>🛒</Text>
+                  <Text style={styles.collaborationText}>採購員: 爸爸</Text>
+                </View>
+                <View style={styles.collaborationItem}>
+                  <Text style={styles.collaborationEmoji}>👨‍🍳</Text>
+                  <Text style={styles.collaborationText}>助手: 小明</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        ) : false ? (
           <AlbumView />
         ) : (
           <>
@@ -1186,6 +1300,70 @@ export default function HomeScreen() {
         }}
         initialImages={initialMemoryImages}
       />
+
+      {/* 餐食生成器模態框 */}
+      <Modal visible={showMealGenerator} animationType="slide">
+        <SafeAreaView style={styles.mealGeneratorContainer}>
+          <View style={styles.mealGeneratorHeader}>
+            <TouchableOpacity onPress={closeMealGenerator}>
+              <Text style={styles.closeButton}>✕</Text>
+            </TouchableOpacity>
+            <Text style={styles.mealGeneratorTitle}>30秒智能午餐生成器</Text>
+            <View />
+          </View>
+          
+          <View style={styles.mealGeneratorContent}>
+            <Text style={styles.aiDescription}>
+              🤖 解決74.1%家庭主婦的最大痛點
+            </Text>
+            <Text style={styles.aiSubtitle}>
+              輸入家庭需求，AI立即推薦3-5個15分鐘可完成的午餐選項
+            </Text>
+            
+            <TouchableOpacity 
+              style={[styles.generateMealButton, isGeneratingMeals && styles.generateMealButtonDisabled]}
+              onPress={generateLunchSuggestions}
+              disabled={isGeneratingMeals}
+            >
+              <Text style={styles.generateMealButtonText}>
+                {isGeneratingMeals ? '🤖 AI 生成中...' : '🚀 開始生成午餐方案'}
+              </Text>
+            </TouchableOpacity>
+            
+            {lunchSuggestions.length > 0 && (
+              <ScrollView style={styles.suggestionsContainer} showsVerticalScrollIndicator={false}>
+                <Text style={styles.suggestionsTitle}>💡 AI 推薦午餐方案</Text>
+                {lunchSuggestions.map((suggestion) => (
+                  <TouchableOpacity 
+                    key={suggestion.id} 
+                    style={styles.suggestionCard}
+                    onPress={() => Alert.alert(
+                      `${suggestion.title} 詳情`,
+                      `🕐 料理時間：${suggestion.cooking_time}分鐘\n👥 份數：${suggestion.servings}人份\n🍽️ 料理類型：${suggestion.cuisine_type}\n⭐ 難度：${'⭐'.repeat(suggestion.difficulty)}\n\n📝 食材：\n${suggestion.ingredients.map(ing => `• ${ing.name} ${ing.amount} ${ing.unit}`).join('\n')}\n\n👨‍🍳 做法：\n${suggestion.instructions.map((step, index) => `${index + 1}. ${step}`).join('\n')}`
+                    )}
+                  >
+                    <View style={styles.suggestionHeader}>
+                      <Text style={styles.suggestionTitleText}>{suggestion.title}</Text>
+                      <View style={styles.suggestionMeta}>
+                        <Text style={styles.suggestionTime}>⏱️ {suggestion.cooking_time}分</Text>
+                        <Text style={styles.suggestionDifficulty}>{'⭐'.repeat(suggestion.difficulty)}</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.suggestionDescription}>
+                      {suggestion.cuisine_type} · {suggestion.servings}人份 · {suggestion.nutrition.calories}卡
+                    </Text>
+                    <View style={styles.suggestionTags}>
+                      {suggestion.tags.map((tag) => (
+                        <Text key={tag} style={styles.suggestionTag}>#{tag}</Text>
+                      ))}
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
+          </View>
+        </SafeAreaView>
+      </Modal>
 
       {/* 事件列表模态框 */}
       <EventListModal
@@ -1668,4 +1846,245 @@ const styles = StyleSheet.create({
   },
   
   // No longer need filterMenuContainer or the complex structure inside it
+  mealManagementContainer: {
+    padding: 16,
+  },
+  section: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#2c3e50',
+    marginBottom: 16,
+    letterSpacing: 0.3,
+  },
+  todayRecommendation: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  mealCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    width: '48%', // 两列布局
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.04)',
+  },
+  mealEmoji: {
+    fontSize: 36,
+    marginBottom: 8,
+  },
+  mealTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2c3e50',
+    marginBottom: 4,
+  },
+  mealSubtitle: {
+    fontSize: 13,
+    color: '#6b7280',
+    marginBottom: 8,
+  },
+  difficultyStars: {
+    fontSize: 14,
+    color: '#FFD700', // 金色星星
+  },
+  quickActionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  quickActionCard: {
+    width: '48%', // 两列布局
+    backgroundColor: '#f0f0f0',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.04)',
+  },
+  quickActionEmoji: {
+    fontSize: 36,
+    marginBottom: 8,
+  },
+  quickActionLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2c3e50',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  quickActionSubtitle: {
+    fontSize: 12,
+    color: '#6b7280',
+    textAlign: 'center',
+  },
+  collaborationCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.04)',
+  },
+  collaborationItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  collaborationEmoji: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  collaborationText: {
+    fontSize: 15,
+    color: '#2c3e50',
+    fontWeight: '500',
+  },
+  mealGeneratorContainer: {
+    flex: 1,
+    backgroundColor: '#f9fafb',
+  },
+  mealGeneratorHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 8,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0, 0, 0, 0.06)',
+  },
+  closeButton: {
+    fontSize: 24,
+    color: '#6b7280',
+  },
+  mealGeneratorTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#2c3e50',
+    letterSpacing: 0.3,
+  },
+  mealGeneratorContent: {
+    flex: 1,
+    padding: 16,
+  },
+  aiDescription: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2c3e50',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  aiSubtitle: {
+    fontSize: 14,
+    color: '#6b7280',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  generateMealButton: {
+    backgroundColor: '#007AFF',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  generateMealButtonDisabled: {
+    backgroundColor: '#ccc',
+    opacity: 0.7,
+  },
+  generateMealButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  suggestionsContainer: {
+    paddingHorizontal: 10,
+  },
+  suggestionsTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#2c3e50',
+    marginBottom: 16,
+    letterSpacing: 0.3,
+  },
+  suggestionCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.04)',
+  },
+  suggestionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  suggestionTitleText: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#2c3e50',
+    flex: 1,
+    marginRight: 10,
+  },
+  suggestionMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  suggestionTime: {
+    fontSize: 13,
+    color: '#6b7280',
+    fontWeight: '500',
+    marginRight: 8,
+  },
+  suggestionDifficulty: {
+    fontSize: 13,
+    color: '#FFD700', // 金色星星
+  },
+  suggestionDescription: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginBottom: 8,
+    lineHeight: 20,
+    letterSpacing: 0.1,
+  },
+  suggestionTags: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  suggestionTag: {
+    backgroundColor: '#e0e0e0',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    fontSize: 12,
+    color: '#2c3e50',
+    fontWeight: '500',
+  },
 });

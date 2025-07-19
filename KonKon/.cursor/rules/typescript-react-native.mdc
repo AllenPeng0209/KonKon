@@ -1,0 +1,60 @@
+---
+globs: *.ts,*.tsx
+---
+
+# TypeScript 和 React Native 代碼規範
+
+## TypeScript 規則
+
+### 類型定義
+- 使用 [lib/database.types.ts](mdc:lib/database.types.ts) 中的 Supabase 生成類型
+- 為組件 props 定義明確的接口
+- 使用嚴格的 TypeScript 配置 ([tsconfig.json](mdc:tsconfig.json))
+
+### 組件規範
+```typescript
+// 組件 props 接口示例
+interface ComponentProps {
+  title: string;
+  onPress?: () => void;
+  isVisible: boolean;
+}
+
+// 使用 React.FC 類型
+const Component: React.FC<ComponentProps> = ({ title, onPress, isVisible }) => {
+  // 組件邏輯
+};
+```
+
+## React Native 最佳實踐
+
+### 樣式管理
+- 使用 [constants/Colors.ts](mdc:constants/Colors.ts) 進行顏色管理
+- 使用 [hooks/useThemeColor.ts](mdc:hooks/useThemeColor.ts) 處理主題顏色
+- 使用 [components/ThemedView.tsx](mdc:components/ThemedView.tsx) 和 [components/ThemedText.tsx](mdc:components/ThemedText.tsx) 的主題化組件
+
+### 導航
+- 使用 Expo Router 進行路由管理
+- 頁面文件應放在 `/app/` 目錄下
+- 使用 TypeScript 的 typed routes 功能
+
+### 狀態管理
+- 使用 React Context 進行全局狀態管理
+- Hook 應放在 `/hooks/` 目錄下
+- Context 應放在 `/contexts/` 目錄下
+
+### 平台特定代碼
+- 使用 `.ios.tsx` 和 `.android.tsx` 後綴進行平台特定實現
+- 參考 [components/ui/IconSymbol.ios.tsx](mdc:components/ui/IconSymbol.ios.tsx)
+
+## 命名規範
+
+### 文件命名
+- 組件文件：PascalCase (例如：`AddEventModal.tsx`)
+- Hook 文件：camelCase 以 `use` 開頭 (例如：`useEvents.ts`)
+- 工具文件：camelCase (例如：`calendarService.ts`)
+
+### 變量命名
+- 使用 camelCase
+- 布爾值使用 `is`, `has`, `can` 前綴
+- 常量使用 UPPER_SNAKE_CASE

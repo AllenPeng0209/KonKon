@@ -1,0 +1,120 @@
+---
+description: 日曆功能和視圖組件開發規範
+---
+
+# 日曆功能開發規範
+
+## 日曆視圖架構
+
+### 視圖選擇器
+- 主控制組件：[components/calendar/CalendarViewSelector.tsx](mdc:components/calendar/CalendarViewSelector.tsx)
+- 視圖類型定義：[components/calendar/CalendarViewTypes.ts](mdc:components/calendar/CalendarViewTypes.ts)
+
+### 核心視圖組件
+KonKon 提供了 30+ 種獨特的日曆視圖，主要類別包括：
+
+#### 傳統視圖
+- [GridMonthView.tsx](mdc:components/calendar/GridMonthView.tsx) - 網格月視圖
+- [CompactMonthView.tsx](mdc:components/calendar/CompactMonthView.tsx) - 緊湊月視圖
+- [WeeklyGridView.tsx](mdc:components/calendar/WeeklyGridView.tsx) - 週視圖
+- [TimelineView.tsx](mdc:components/calendar/TimelineView.tsx) - 時間軸視圖
+
+#### 創新視圖
+- [BentoBoxView.tsx](mdc:components/calendar/BentoBoxView.tsx) - 便當盒佈局
+- [ConstellationWheelView.tsx](mdc:components/calendar/ConstellationWheelView.tsx) - 星座輪視圖
+- [FamilyOrbitView.tsx](mdc:components/calendar/FamilyOrbitView.tsx) - 家庭軌道視圖
+- [SeasonalHarmonyView.tsx](mdc:components/calendar/SeasonalHarmonyView.tsx) - 季節和諧視圖
+
+#### 3D 和互動視圖
+- [Cube3DView.tsx](mdc:components/calendar/Cube3DView.tsx) - 3D 立方體視圖
+- [ARView.tsx](mdc:components/calendar/ARView.tsx) - AR 增強現實視圖
+- [SpaceExplorationView.tsx](mdc:components/calendar/SpaceExplorationView.tsx) - 太空探索視圖
+
+## 事件管理
+
+### 核心服務
+- 事件服務：[lib/calendarService.ts](mdc:lib/calendarService.ts)
+- 重複事件引擎：[lib/recurrenceEngine.ts](mdc:lib/recurrenceEngine.ts)
+- Hook：[hooks/useEvents.ts](mdc:hooks/useEvents.ts)
+
+### 重複事件處理
+- 管理組件：[components/RecurringEventManager.tsx](mdc:components/RecurringEventManager.tsx)
+- 規則編輯器：[components/RecurrenceRuleEditor.tsx](mdc:components/RecurrenceRuleEditor.tsx)
+- Hook：[hooks/useRecurringEvents.ts](mdc:hooks/useRecurringEvents.ts)
+
+### 事件類型和組件
+- 添加事件模態：[components/AddEventModal.tsx](mdc:components/AddEventModal.tsx)
+- 添加支出模態：[components/AddExpenseModal.tsx](mdc:components/AddExpenseModal.tsx)
+- 添加回憶模態：[components/AddMemoryModal.tsx](mdc:components/AddMemoryModal.tsx)
+- 事件列表模態：[components/EventListModal.tsx](mdc:components/EventListModal.tsx)
+
+## 開發新視圖指南
+
+### 視圖組件結構
+```typescript
+interface CalendarViewProps {
+  events: Event[];
+  selectedDate: Date;
+  onDateSelect: (date: Date) => void;
+  onEventPress: (event: Event) => void;
+  familyMembers: FamilyMember[];
+  viewSettings?: ViewSettings;
+}
+
+const NewCalendarView: React.FC<CalendarViewProps> = ({
+  events,
+  selectedDate,
+  onDateSelect,
+  onEventPress,
+  familyMembers,
+  viewSettings
+}) => {
+  // 視圖實現
+};
+```
+
+### 視圖註冊流程
+1. 在 `components/calendar/` 目錄創建新視圖組件
+2. 在 [CalendarViewTypes.ts](mdc:components/calendar/CalendarViewTypes.ts) 中添加視圖類型
+3. 在 [CalendarViewSelector.tsx](mdc:components/calendar/CalendarViewSelector.tsx) 中註冊視圖
+
+## 語音到日曆功能
+
+### 核心組件
+- 語音輸入：[components/VoiceToCalendar.tsx](mdc:components/VoiceToCalendar.tsx)
+- 語音錄製 Hook：[hooks/useVoiceRecorder.ts](mdc:hooks/useVoiceRecorder.ts)
+- WebSocket ASR：參考 [WEBSOCKET_ASR_IMPLEMENTATION.md](mdc:WEBSOCKET_ASR_IMPLEMENTATION.md)
+
+## AI 驅動功能
+
+### 智能建議
+- 使用百煉 AI 進行事件智能創建
+- AI 預測視圖：[components/calendar/AIPredictionView.tsx](mdc:components/calendar/AIPredictionView.tsx)
+- 多模態日曆支持：[lib/bailian_omni_calendar.ts](mdc:lib/bailian_omni_calendar.ts)
+
+## 設計原則
+
+### 用戶體驗
+- 每個視圖都應該有獨特的使用場景
+- 保持視圖間的一致性操作體驗
+- 支持觸摸手勢和交互動畫
+
+### 性能優化
+- 使用虛擬化處理大量事件數據
+- 實現懶加載避免視圖切換卡頓
+- 合理使用 React.memo 和 useMemo 優化渲染
+
+### 可訪問性
+- 支持屏幕閱讀器
+- 提供鍵盤導航支持
+- 確保足夠的對比度和觸摸目標大小
+
+## 調試和故障排除
+
+### 調試工具
+- 事件顯示調試：[DEBUG_EVENT_DISPLAY.md](mdc:DEBUG_EVENT_DISPLAY.md)
+- 事件顯示調試報告：[EVENT_DISPLAY_DEBUG_REPORT.md](mdc:EVENT_DISPLAY_DEBUG_REPORT.md)
+
+### 測試
+- 日曆 API 測試：[test_calendar_api.js](mdc:test_calendar_api.js)
+- 確保在不同視圖間切換時數據一致性
