@@ -15,6 +15,12 @@ import SmartButton from '@/components/ui/SmartButton';
 import { VoiceToCalendar } from '@/components/VoiceToCalendar';
 
 import FamilyHealthDashboard from '@/components/health/FamilyHealthDashboard';
+import ShoppingViewSelector, {
+  FamilyMember,
+  ShoppingBudget,
+  ShoppingItem,
+  Store,
+} from '@/components/shopping/ShoppingViewSelector';
 import { useFamily } from '@/contexts/FamilyContext';
 import { useFeatureSettings } from '@/contexts/FeatureSettingsContext';
 import { useChores } from '@/hooks/useChores';
@@ -104,6 +110,52 @@ export default function HomeScreen() {
   // 家務管理狀態
   const { tasks, isLoading: choresLoading } = useChores();
   const [currentChoreMonth, setCurrentChoreMonth] = useState(new Date().toISOString().slice(0, 7));
+
+  // 购物管理状态
+  const [shoppingItems, setShoppingItems] = useState<ShoppingItem[]>([
+    { id: '1', name: '牛乳', category: 'dairy', quantity: 2, unit: '本', estimatedPrice: 250, priority: 'high', completed: false, addedBy: 'user1', addedDate: new Date() },
+    { id: '2', name: '卵', category: 'dairy', quantity: 1, unit: 'パック', estimatedPrice: 220, priority: 'high', completed: false, addedBy: 'user1', addedDate: new Date() },
+    { id: '3', name: '食パン', category: 'pantry', quantity: 1, unit: '斤', estimatedPrice: 180, priority: 'medium', completed: true, addedBy: 'user2', addedDate: new Date(), completedDate: new Date(), actualPrice: 175 },
+    { id: '4', name: 'キャベツ', category: 'produce', quantity: 1, unit: '玉', estimatedPrice: 150, priority: 'medium', completed: false, addedBy: 'user1', addedDate: new Date() },
+    { id: '5', name: '鶏もも肉', category: 'meat', quantity: 300, unit: 'g', estimatedPrice: 400, priority: 'low', completed: false, addedBy: 'user2', addedDate: new Date(), assignedTo: 'user2' },
+    { id: '6', name: 'トイレットペーパー', category: 'household', quantity: 1, unit: 'パック', estimatedPrice: 450, priority: 'high', completed: true, addedBy: 'user1', addedDate: new Date(), completedDate: new Date(), actualPrice: 430, assignedTo: 'user1' },
+    { id: '7', name: 'シャンプー詰替', category: 'household', quantity: 1, unit: '袋', estimatedPrice: 500, priority: 'low', completed: false, addedBy: 'user1', addedDate: new Date(), },
+  ]);
+
+  const [shoppingStores, setShoppingStores] = useState<Store[]>([
+    { id: 's1', name: 'ライフ スーパー', location: '近所', categories: ['produce', 'meat', 'dairy', 'pantry', 'frozen', 'snacks', 'household'], currentDeals: [
+        { id: 'd1', storeName: 'ライフ スーパー', itemName: '卵', originalPrice: 250, discountPrice: 220, discountPercent: 12, validUntil: new Date(), category: 'dairy' },
+        { id: 'd2', storeName: 'ライフ スーパー', itemName: '鶏もも肉', originalPrice: 450, discountPrice: 400, discountPercent: 11, validUntil: new Date(), category: 'meat' }
+    ], averagePrices: {}, distance: 0.5, isFrequentlyUsed: true },
+    { id: 's2', name: 'セブンイレブン', location: '駅前', categories: ['dairy', 'snacks'], currentDeals: [], averagePrices: {}, distance: 1.2, isFrequentlyUsed: false }
+  ]);
+
+  const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([
+      { id: 'user1', name: 'ママ', avatar: '👩', shoppingPreference: ['produce', 'dairy'], assignedItems: ['6'] },
+      { id: 'user2', name: 'パパ', avatar: '👨', shoppingPreference: ['meat', 'snacks'], assignedItems: ['5'] },
+  ]);
+
+  const [shoppingBudget, setShoppingBudget] = useState<ShoppingBudget>({
+    monthly: 50000,
+    weekly: 12000,
+    spent: 605,
+    remaining: 49395,
+    categories: { household: 430, pantry: 175 },
+  });
+
+  const handleItemToggle = (itemId: string) => {
+    setShoppingItems(items => items.map(item => item.id === itemId ? { ...item, completed: !item.completed, completedDate: !item.completed ? new Date() : undefined } : item));
+  };
+  const handleItemAdd = (item: Omit<ShoppingItem, 'id'>) => {
+    const newItem = { ...item, id: Math.random().toString(), ...item };
+    setShoppingItems(items => [...items, newItem]);
+  };
+  const handleItemDelete = (itemId: string) => {
+    setShoppingItems(items => items.filter(item => item.id !== itemId));
+  };
+  const handleAssignMember = (itemId: string, memberId: string) => {
+    setShoppingItems(items => items.map(item => item.id === itemId ? { ...item, assignedTo: memberId } : item));
+  };
 
   // 事件管理
   const { 
@@ -1052,6 +1104,28 @@ export default function HomeScreen() {
         ) : selectedFilter === 'familyActivities' ? (
           // 健康管理功能
           <FamilyHealthDashboard />
+        ) : selectedFilter === 'shoppingList' ? (
+          <ShoppingViewSelector
+            shoppingItems={shoppingItems}
+            stores={shoppingStores}
+            familyMembers={familyMembers}
+            budget={shoppingBudget}
+            onItemToggle={handleItemToggle}
+            onItemAdd={handleItemAdd}
+            onItemDelete={handleItemDelete}
+            onAssignMember={handleAssignMember}
+            style={(() => {
+                const selectedStyle = featureSettings.shoppingList?.settings?.selectedStyle;
+                switch (selectedStyle) {
+                    case '智能清单': return 'smart-list';
+                    case '家庭看板': return 'family-board';
+                    case '商店优惠': return 'store-deals';
+                    case '预算跟踪': return 'budget-tracker';
+                    case '历史分析': return 'history-analyzer';
+                    default: return 'smart-list';
+                }
+            })()}
+          />
         ) : (
           <>
             {/* 日历部分 */}
