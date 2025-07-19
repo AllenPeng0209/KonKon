@@ -197,51 +197,51 @@ export default function FeatureSettingsScreen() {
     switch (featureKey) {
       case 'familySchedule':
         return [
-          renderSettingItem('syncWithSystem', '與系統日曆同步', 'switch'),
-          renderSettingItem('enableReminders', '啟用提醒', 'switch'),
-          renderSettingItem('reminderMinutes', '提前提醒時間（分鐘）', 'number'),
+          renderSettingItem('syncWithSystem', t('featureSettings.settings.syncWithSystem'), 'switch'),
+          renderSettingItem('enableReminders', t('featureSettings.settings.enableReminders'), 'switch'),
+          renderSettingItem('reminderMinutes', t('featureSettings.settings.reminderMinutes'), 'number'),
         ];
       case 'familyAssistant':
         return [
-          renderSettingItem('voiceEnabled', '語音功能', 'switch'),
-          renderSettingItem('autoRespond', '自動回應', 'switch'),
-          renderSettingItem('language', '語言設置', 'text'),
+          renderSettingItem('voiceEnabled', t('featureSettings.settings.voiceEnabled'), 'switch'),
+          renderSettingItem('autoRespond', t('featureSettings.settings.autoRespond'), 'switch'),
+          renderSettingItem('language', t('featureSettings.settings.language'), 'text'),
         ];
       case 'choreAssignment':
         return [
-          renderSettingItem('enableRewards', '啟用獎勵系統', 'switch'),
-          renderSettingItem('autoRotate', '自動輪換任務', 'switch'),
-          renderSettingItem('weeklyReset', '每週重置', 'switch'),
+          renderSettingItem('enableRewards', t('featureSettings.settings.enableRewards'), 'switch'),
+          renderSettingItem('autoRotate', t('featureSettings.settings.autoRotate'), 'switch'),
+          renderSettingItem('weeklyReset', t('featureSettings.settings.weeklyReset'), 'switch'),
         ];
       case 'familyActivities':
         return [
-          renderSettingItem('suggestActivities', '建議活動', 'switch'),
-          renderSettingItem('trackTime', '追蹤活動時間', 'switch'),
-          renderSettingItem('sharePhotos', '分享照片', 'switch'),
+          renderSettingItem('suggestActivities', t('featureSettings.settings.suggestActivities'), 'switch'),
+          renderSettingItem('trackTime', t('featureSettings.settings.trackTime'), 'switch'),
+          renderSettingItem('sharePhotos', t('featureSettings.settings.sharePhotos'), 'switch'),
         ];
       case 'familyAlbum':
         return [
-          renderSettingItem('autoBackup', '自動備份', 'switch'),
-          renderSettingItem('enableSharing', '啟用分享', 'switch'),
-          renderSettingItem('qualityLevel', '圖片品質', 'text'),
+          renderSettingItem('autoBackup', t('featureSettings.settings.autoBackup'), 'switch'),
+          renderSettingItem('enableSharing', t('featureSettings.settings.enableSharing'), 'switch'),
+          renderSettingItem('qualityLevel', t('featureSettings.settings.qualityLevel'), 'text'),
         ];
       case 'shoppingList':
         return [
-          renderSettingItem('syncAcrossDevices', '跨設備同步', 'switch'),
-          renderSettingItem('enableCategories', '啟用分類', 'switch'),
-          renderSettingItem('budgetTracking', '預算追蹤', 'switch'),
+          renderSettingItem('syncAcrossDevices', t('featureSettings.settings.syncAcrossDevices'), 'switch'),
+          renderSettingItem('enableCategories', t('featureSettings.settings.enableCategories'), 'switch'),
+          renderSettingItem('budgetTracking', t('featureSettings.settings.budgetTracking'), 'switch'),
         ];
       case 'familyFinance':
         return [
-          renderSettingItem('enableBudgetAlerts', '預算提醒', 'switch'),
-          renderSettingItem('monthlyBudget', '月度預算', 'number'),
-          renderSettingItem('trackCategories', '分類追蹤', 'switch'),
+          renderSettingItem('enableBudgetAlerts', t('featureSettings.settings.enableBudgetAlerts'), 'switch'),
+          renderSettingItem('monthlyBudget', t('featureSettings.settings.monthlyBudget'), 'number'),
+          renderSettingItem('trackCategories', t('featureSettings.settings.trackCategories'), 'switch'),
         ];
       case 'familyRecipes':
         return [
-          renderSettingItem('enableNutritionInfo', '營養資訊', 'switch'),
-          renderSettingItem('suggestMeals', '餐點建議', 'switch'),
-          renderSettingItem('shoppingIntegration', '購物清單整合', 'switch'),
+          renderSettingItem('enableNutritionInfo', t('featureSettings.settings.enableNutritionInfo'), 'switch'),
+          renderSettingItem('suggestMeals', t('featureSettings.settings.suggestMeals'), 'switch'),
+          renderSettingItem('shoppingIntegration', t('featureSettings.settings.shoppingIntegration'), 'switch'),
         ];
       default:
         return [];
@@ -255,7 +255,7 @@ export default function FeatureSettingsScreen() {
         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#007AFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>功能設置</Text>
+        <Text style={styles.headerTitle}>{t('featureSettings.title')}</Text>
         <View style={styles.headerRight} />
       </View>
 
@@ -272,7 +272,7 @@ export default function FeatureSettingsScreen() {
           
           {/* 主開關 */}
           <View style={styles.mainToggle}>
-            <Text style={styles.toggleLabel}>啟用此功能</Text>
+            <Text style={styles.toggleLabel}>{t('featureSettings.enableFeature')}</Text>
             <Switch
               value={isEnabled}
               onValueChange={handleToggleFeature}
@@ -285,17 +285,16 @@ export default function FeatureSettingsScreen() {
         {/* 功能設置 */}
         {isEnabled && (
           <View style={styles.settingsSection}>
-            <Text style={styles.sectionTitle}>功能設置</Text>
+            <Text style={styles.sectionTitle}>{t('featureSettings.settingsSection')}</Text>
             {getSettingItems()}
           </View>
         )}
 
         {/* 功能介紹 */}
         <View style={styles.infoSection}>
-          <Text style={styles.sectionTitle}>功能說明</Text>
+          <Text style={styles.sectionTitle}>{t('featureSettings.infoSection')}</Text>
           <Text style={styles.infoText}>
-            啟用此功能後，您將在首頁的篩選選項中看到 "{featureInfo.name}" 選項，
-            可以快速查看相關的內容和活動。
+            {t('featureSettings.infoText', { featureName: featureInfo.name })}
           </Text>
         </View>
       </ScrollView>
