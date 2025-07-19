@@ -14,7 +14,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from 'expo-status-bar';
 import { requestTrackingPermissionsAsync } from 'expo-tracking-transparency';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, View, TouchableWithoutFeedback, StyleSheet } from 'react-native';
+import { ActivityIndicator, StyleSheet, TouchableWithoutFeedback, View } from 'react-native';
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 import Drawer from '../components/Drawer';
@@ -97,6 +97,7 @@ function ProtectedLayout() {
                 <Stack.Screen name="language-selection" options={{ headerShown: false }} />
                 <Stack.Screen name="calendar-settings" options={{ headerShown: false }} />
                 <Stack.Screen name="feature-settings" options={{ headerShown: false }} />
+                <Stack.Screen name="finance-management" options={{ headerShown: false }} />
                 <Stack.Screen name="avatar" options={{ headerShown: false, animation: 'slide_from_right' }} />
                 <Stack.Screen name="+not-found" />
               </Stack>

@@ -3,11 +3,11 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
-    "start": "expo start",
+    "start": "node --max-old-space-size=8192 $(which expo) start",
     "reset-project": "node ./scripts/reset-project.js",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "expo start --web",
+    "android": "node --max-old-space-size=8192 $(which expo) start --android",
+    "ios": "node --max-old-space-size=8192 $(which expo) start --ios",
+    "web": "node --max-old-space-size=8192 $(which expo) start --web",
     "lint": "expo lint",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -15,6 +15,7 @@
     "test-bailian": "node ./scripts/test-bailian.js",
     "test-bailian-omni": "echo '✅ bailian_omni_calendar 接口验证通过' && echo '📋 主要功能: 语音/文本到日程转换, API连接测试, 音频格式支持' && echo '🔧 使用模型: qwen2.5-omni-7b' && echo '🎯 API端点: dashscope-intl.aliyuncs.com/compatible-mode/v1'",
     "generate-apple-secret": "node ./scripts/generate-apple-client-secret.js",
+    "monitor-memory": "node ./scripts/monitor-memory.js",
     "claude": "node ./scripts/claude-helper.js",
     "claude:docs": "node ./scripts/claude-helper.js --docs",
     "claude:help": "node ./scripts/claude-helper.js --help"

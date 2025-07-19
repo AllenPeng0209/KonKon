@@ -296,7 +296,7 @@ export default function HomeScreen() {
         dayMeals.push({
           id: `${dateString}-snack`,
           date: dateString,
-          mealType: 'snack' as const,
+                      mealType: 'breakfast' as const,
           title: ['手作布丁', '水果拼盤', '優格杯'][Math.floor(Math.random() * 3)],
           calories: 120 + Math.floor(Math.random() * 80),
           tags: ['低糖', '健康'],
@@ -1126,6 +1126,292 @@ export default function HomeScreen() {
                 }
             })()}
           />
+        ) : selectedFilter === 'familyFinance' ? (
+          // 家庭財務管理功能 - 直接顯示在主頁面
+          <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+            {/* 演示模式提醒 */}
+            <View style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: '#E3F2FD',
+              borderRadius: 8,
+              padding: 12,
+              margin: 16,
+              gap: 8,
+            }}>
+              <Text style={{ fontSize: 24 }}>ℹ️</Text>
+              <Text style={{
+                flex: 1,
+                fontSize: 14,
+                color: '#1976D2',
+              }}>
+                這是演示模式，創建家庭後可保存真實記帳數據
+              </Text>
+            </View>
+
+            {/* 月度統計卡片 */}
+            <View style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              padding: 16,
+              gap: 12,
+            }}>
+              <View style={{
+                flex: 1,
+                minWidth: '45%',
+                backgroundColor: '#FFFFFF',
+                borderRadius: 12,
+                padding: 16,
+                alignItems: 'center',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+                elevation: 2,
+              }}>
+                <Text style={{ fontSize: 12, color: '#8E8E93', marginBottom: 8 }}>本月收入</Text>
+                <Text style={{ fontSize: 18, fontWeight: '600', color: '#34C759' }}>
+                  ¥5,800
+                </Text>
+              </View>
+              
+              <View style={{
+                flex: 1,
+                minWidth: '45%',
+                backgroundColor: '#FFFFFF',
+                borderRadius: 12,
+                padding: 16,
+                alignItems: 'center',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+                elevation: 2,
+              }}>
+                <Text style={{ fontSize: 12, color: '#8E8E93', marginBottom: 8 }}>本月支出</Text>
+                <Text style={{ fontSize: 18, fontWeight: '600', color: '#FF3B30' }}>
+                  ¥2,000
+                </Text>
+              </View>
+              
+              <View style={{
+                flex: 1,
+                minWidth: '45%',
+                backgroundColor: '#FFFFFF',
+                borderRadius: 12,
+                padding: 16,
+                alignItems: 'center',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+                elevation: 2,
+              }}>
+                <Text style={{ fontSize: 12, color: '#8E8E93', marginBottom: 8 }}>結餘</Text>
+                <Text style={{ fontSize: 18, fontWeight: '600', color: '#34C759' }}>
+                  ¥3,800
+                </Text>
+              </View>
+              
+              <View style={{
+                flex: 1,
+                minWidth: '45%',
+                backgroundColor: '#FFFFFF',
+                borderRadius: 12,
+                padding: 16,
+                alignItems: 'center',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+                elevation: 2,
+              }}>
+                <Text style={{ fontSize: 12, color: '#8E8E93', marginBottom: 8 }}>交易筆數</Text>
+                <Text style={{ fontSize: 18, fontWeight: '600', color: '#1D1D1F' }}>
+                  3
+                </Text>
+              </View>
+            </View>
+
+            {/* 最近交易 */}
+            <View style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: 12,
+              margin: 16,
+              padding: 16,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.1,
+              shadowRadius: 4,
+              elevation: 2,
+            }}>
+              <Text style={{ fontSize: 18, fontWeight: '600', color: '#1D1D1F', marginBottom: 16 }}>
+                最近記錄
+              </Text>
+              
+              {/* 薪水收入 */}
+              <View style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                paddingVertical: 12,
+                borderBottomWidth: 1,
+                borderBottomColor: '#F2F2F7',
+              }}>
+                <View style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  backgroundColor: '#E8F5E9',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: 12,
+                }}>
+                  <Text style={{ fontSize: 20 }}>💰</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 16, fontWeight: '500', color: '#1D1D1F' }}>
+                    薪水
+                  </Text>
+                  <Text style={{ fontSize: 12, color: '#8E8E93' }}>
+                    今天 · 主要帳戶
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 16, fontWeight: '600', color: '#34C759' }}>
+                  +¥5,800
+                </Text>
+              </View>
+
+              {/* 午餐支出 */}
+              <View style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                paddingVertical: 12,
+                borderBottomWidth: 1,
+                borderBottomColor: '#F2F2F7',
+              }}>
+                <View style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  backgroundColor: '#FFEBEE',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: 12,
+                }}>
+                  <Text style={{ fontSize: 20 }}>🍱</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 16, fontWeight: '500', color: '#1D1D1F' }}>
+                    午餐
+                  </Text>
+                  <Text style={{ fontSize: 12, color: '#8E8E93' }}>
+                    今天 · 現金
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 16, fontWeight: '600', color: '#FF3B30' }}>
+                  -¥1,200
+                </Text>
+              </View>
+
+              {/* 交通支出 */}
+              <View style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                paddingVertical: 12,
+              }}>
+                <View style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  backgroundColor: '#FFF3E0',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: 12,
+                }}>
+                  <Text style={{ fontSize: 20 }}>🚇</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 16, fontWeight: '500', color: '#1D1D1F' }}>
+                    地鐵車票
+                  </Text>
+                  <Text style={{ fontSize: 12, color: '#8E8E93' }}>
+                    昨天 · IC卡
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 16, fontWeight: '600', color: '#FF3B30' }}>
+                  -¥800
+                </Text>
+              </View>
+            </View>
+
+            {/* 快捷操作 */}
+            <View style={{
+              flexDirection: 'row',
+              justifyContent: 'space-around',
+              padding: 16,
+              gap: 12,
+            }}>
+              <TouchableOpacity 
+                style={{
+                  flex: 1,
+                  backgroundColor: '#007AFF',
+                  borderRadius: 12,
+                  padding: 16,
+                  alignItems: 'center',
+                }}
+                onPress={() => {
+                  Alert.alert(
+                    '記帳功能',
+                    '記帳功能開發中...\n\n未來將支持：\n• 快速記帳\n• 語音記帳\n• 拍照記帳\n• 分類管理',
+                    [{ text: '我知道了', style: 'default' }]
+                  );
+                }}
+              >
+                <Text style={{ fontSize: 24, marginBottom: 8 }}>📝</Text>
+                <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '600' }}>
+                  記帳
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={{
+                  flex: 1,
+                  backgroundColor: '#34C759',
+                  borderRadius: 12,
+                  padding: 16,
+                  alignItems: 'center',
+                }}
+                onPress={() => {
+                  Alert.alert(
+                    '語音記帳',
+                    '語音記帳功能正在開發中...\n\n未來將支持：\n• 語音輸入交易內容\n• 智能識別金額和分類\n• 快速創建記帳記錄',
+                    [{ text: '我知道了', style: 'default' }]
+                  );
+                }}
+              >
+                <Text style={{ fontSize: 24, marginBottom: 8 }}>🎤</Text>
+                <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '600' }}>
+                  語音記帳
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={{
+                  flex: 1,
+                  backgroundColor: '#FF9500',
+                  borderRadius: 12,
+                  padding: 16,
+                  alignItems: 'center',
+                }}
+                onPress={() => router.push('/finance-management')}
+              >
+                <Text style={{ fontSize: 24, marginBottom: 8 }}>📊</Text>
+                <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '600' }}>
+                  詳細管理
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
         ) : (
           <>
             {/* 日历部分 */}
