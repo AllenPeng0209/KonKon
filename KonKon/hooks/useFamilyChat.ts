@@ -12,6 +12,7 @@ import { sendBailianMessage, BailianMessage } from '@/lib/bailian';
 import { getCurrentLocation } from '@/lib/location';
 import { useEvents } from './useEvents';
 import { nanoid } from '@/lib/nanoid';
+import { supabase } from '@/lib/supabase';
 
 export function useFamilyChat() {
   const { user } = useAuth();
@@ -21,6 +22,41 @@ export function useFamilyChat() {
   const [messages, setMessages] = useState<UIFamilyChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [currentUserDetails, setCurrentUserDetails] = useState<{display_name: string; avatar_url: string | null} | null>(null);
+
+  // 获取当前用户详情（缓存）
+  useEffect(() => {
+    const fetchCurrentUserDetails = async () => {
+      if (!user) {
+        setCurrentUserDetails(null);
+        return;
+      }
+
+      try {
+        const { data: userDetails } = await supabase
+          .from('users')
+          .select('display_name, avatar_url')
+          .eq('id', user.id)
+          .single();
+
+        if (userDetails) {
+          setCurrentUserDetails(userDetails);
+        }
+      } catch (error) {
+        console.warn('获取用户详情失败:', error);
+        // 从家庭成员信息中查找当前用户
+        const currentMember = familyMembers.find(m => m.user_id === user.id);
+        if (currentMember?.user) {
+          setCurrentUserDetails({
+            display_name: currentMember.user.display_name,
+            avatar_url: currentMember.user.avatar_url || null
+          });
+        }
+      }
+    };
+
+    fetchCurrentUserDetails();
+  }, [user, familyMembers]);
 
   // 加载聊天历史
   const loadChatHistory = useCallback(async () => {
@@ -32,7 +68,10 @@ export function useFamilyChat() {
         family_id: activeFamily.id,
         limit: 50
       });
-      setMessages(history);
+      
+      // 限制初始加载的消息数量，防止内存溢出
+      const limitedHistory = history.slice(-50);
+      setMessages(limitedHistory);
     } catch (error) {
       console.error('加载聊天历史失败:', error);
     } finally {
@@ -112,14 +151,14 @@ export function useFamilyChat() {
   const sendMessage = useCallback(async (content: string) => {
     if (!activeFamily || !user || isLoading) return;
 
-    // 立即在UI中显示用户消息，提升响应速度
+    // 立即在UI中显示用户消息，使用缓存的用户信息
     const userMessage: UIFamilyChatMessage = {
       id: nanoid(),
       type: 'user',
       content,
       user_id: user.id,
-      user_name: (user as any).display_name || user.email,
-      user_avatar: (user as any).avatar_url,
+      user_name: currentUserDetails?.display_name || user.email?.split('@')[0] || '我',
+      user_avatar: currentUserDetails?.avatar_url,
       created_at: new Date().toISOString(),
     };
 
@@ -133,8 +172,15 @@ export function useFamilyChat() {
       isLoading: true,
     };
 
-    // 立即更新UI
-    setMessages(prev => [...prev, userMessage, loadingMessage]);
+    // 立即更新UI，同时管理内存
+    setMessages(prev => {
+      const updatedMessages = [...prev, userMessage, loadingMessage];
+      // 如果消息过多，保留最新的80条
+      if (updatedMessages.length > 100) {
+        return updatedMessages.slice(-80);
+      }
+      return updatedMessages;
+    });
     setIsLoading(true);
 
     try {
@@ -237,7 +283,7 @@ ${eventsInfo}
     } finally {
       setIsLoading(false);
     }
-  }, [activeFamily, user, isLoading, formatEventsForAI, formatFamilyInfoForAI]);
+  }, [activeFamily, user, isLoading, formatEventsForAI, formatFamilyInfoForAI, currentUserDetails]);
 
   // 保存聊天会话
   const saveChatSession = useCallback(async () => {
@@ -276,7 +322,14 @@ ${eventsInfo}
           if (prev.find(msg => msg.id === newMessage.id)) {
             return prev;
           }
-          return [...prev, newMessage];
+          
+          // 限制内存中的消息数量，超过100条时保留最新的80条
+          const updatedMessages = [...prev, newMessage];
+          if (updatedMessages.length > 100) {
+            return updatedMessages.slice(-80);
+          }
+          
+          return updatedMessages;
         });
       },
       (messageId) => {

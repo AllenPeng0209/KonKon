@@ -12,109 +12,92 @@ export function FamilyChatMessage({ message }: FamilyChatMessageProps) {
   const isOwnMessage = message.user_id === user?.id;
   const isAssistant = message.type === 'assistant';
 
-  // 生成用户头像颜色（根据用户ID）
+  // 生成用户头像颜色（基于用户ID哈希）
   const getUserAvatarColor = (userId: string) => {
     const colors = [
-      '#FF6B6B', // 红色
-      '#4ECDC4', // 青色
-      '#45B7D1', // 蓝色
-      '#96CEB4', // 绿色
-      '#FFEAA7', // 黄色
-      '#DDA0DD', // 紫色
-      '#FF8A65', // 橙色
-      '#81C784', // 浅绿色
-      '#64B5F6', // 浅蓝色
-      '#FFB74D'  // 浅橙色
+      '#4A90E2', // 蓝色
+      '#7ED321', // 绿色
+      '#F5A623', // 橙色
+      '#D0021B', // 红色
+      '#9013FE', // 紫色
+      '#50E3C2', // 青色
+      '#F8E71C', // 黄色
+      '#BD10E0', // 粉紫色
+      '#B8E986', // 浅绿色
+      '#FF6900'  // 橙红色
     ];
-    const hash = userId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    
+    // 简单哈希函数
+    let hash = 0;
+    for (let i = 0; i < userId.length; i++) {
+      hash = userId.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    hash = Math.abs(hash);
+    
     return colors[hash % colors.length];
   };
 
-  // 获取用户名首字母
-  const getUserInitial = () => {
-    if (isAssistant) return '🤖';
-    const name = message.user_name || '未知';
-    return name[0]?.toUpperCase() || '?';
+  // 渲染头像
+  const renderAvatar = () => {
+    if (isAssistant) {
+      return (
+        <Image 
+          source={require('../../assets/images/cat-avatar.png')} 
+          style={[styles.avatar, styles.assistantAvatarImage]}
+          defaultSource={require('../../assets/images/icon.png')}
+        />
+      );
+    }
+
+    // 如果有头像URL，优先显示图片
+    if (message.user_avatar) {
+      return (
+        <Image 
+          source={{ uri: message.user_avatar }} 
+          style={styles.avatar}
+          defaultSource={require('../../assets/images/icon.png')}
+        />
+      );
+    }
+
+    // 否则显示彩色字母头像
+    const avatarColor = getUserAvatarColor(message.user_id || 'default');
+    const userInitial = message.user_name?.[0]?.toUpperCase() || '?';
+
+    return (
+      <View style={[styles.avatar, { backgroundColor: avatarColor }]}>
+        <Text style={styles.avatarText}>{userInitial}</Text>
+      </View>
+    );
   };
 
   return (
-    <View style={[
-      styles.container,
-      isOwnMessage && !isAssistant ? styles.ownMessage : styles.otherMessage
-    ]}>
-      {/* 所有消息都显示头像和用户名 */}
-      <View style={[
-        styles.userInfo,
-        isOwnMessage && !isAssistant ? styles.ownUserInfo : styles.otherUserInfo
-      ]}>
-        <View style={[
-          styles.avatar,
-          isAssistant ? styles.assistantAvatar : {
-            backgroundColor: getUserAvatarColor(message.user_id || 'default')
-          }
-        ]}>
-          {message.user_avatar && !isAssistant ? (
-            <Image 
-              source={{ uri: message.user_avatar }} 
-              style={styles.avatarImage}
-              defaultSource={require('../../assets/images/icon.png')} // 默认头像
-            />
-          ) : (
-            <Text style={[
-              styles.avatarText,
-              isAssistant ? styles.assistantAvatarText : styles.userAvatarText
-            ]}>
-              {getUserInitial()}
+    <View style={styles.container}>
+      {isOwnMessage && !isAssistant ? (
+        // 自己的消息：右侧绿色气泡，无头像
+        <View style={styles.ownMessageWrapper}>
+          <View style={styles.ownMessageBubble}>
+            <Text style={styles.ownMessageText}>{message.content}</Text>
+            {message.isLoading && <Text style={styles.loadingDots}>...</Text>}
+          </View>
+        </View>
+      ) : (
+        // 他人的消息：左侧白色气泡，带头像和用户名
+        <View style={styles.otherMessageWrapper}>
+          <View style={styles.avatarContainer}>
+            {renderAvatar()}
+          </View>
+          
+          <View style={styles.messageColumn}>
+            <Text style={styles.senderName}>
+              {isAssistant ? '喵萌助手' : message.user_name || '未知用户'}
             </Text>
-          )}
-        </View>
-        <Text style={[
-          styles.userName,
-          isAssistant ? styles.assistantName : 
-          isOwnMessage ? styles.ownUserName : styles.otherUserName
-        ]}>
-          {isAssistant ? '喵萌助手' : 
-           isOwnMessage ? '我' : 
-           message.user_name || '未知用户'}
-        </Text>
-      </View>
-
-      {/* 消息内容 */}
-      <View style={[
-        styles.messageContent,
-        isOwnMessage && !isAssistant ? styles.ownMessageContent : 
-        isAssistant ? styles.assistantMessageContent : styles.otherMessageContent
-      ]}>
-        <Text style={[
-          styles.messageText,
-          isOwnMessage && !isAssistant ? styles.ownMessageText : 
-          isAssistant ? styles.assistantMessageText : styles.otherMessageText
-        ]}>
-          {message.content}
-        </Text>
-        
-        {/* 时间戳和状态 */}
-        <View style={styles.messageFooter}>
-          <Text style={[
-            styles.timestamp,
-            isOwnMessage && !isAssistant ? styles.ownTimestamp : styles.otherTimestamp
-          ]}>
-            {new Date(message.created_at).toLocaleTimeString('zh-CN', {
-              hour: '2-digit',
-              minute: '2-digit'
-            })}
-          </Text>
-          {/* 在线状态指示器（可选） */}
-          {!isAssistant && (
-            <View style={[styles.statusDot, { backgroundColor: getUserAvatarColor(message.user_id || 'default') }]} />
-          )}
-        </View>
-      </View>
-
-      {/* 加载状态 */}
-      {message.isLoading && (
-        <View style={styles.loadingIndicator}>
-          <Text style={styles.loadingText}>...</Text>
+            
+            <View style={styles.otherMessageBubble}>
+              <Text style={styles.otherMessageText}>{message.content}</Text>
+              {message.isLoading && <Text style={styles.loadingDots}>...</Text>}
+            </View>
+          </View>
         </View>
       )}
     </View>
@@ -123,152 +106,110 @@ export function FamilyChatMessage({ message }: FamilyChatMessageProps) {
 
 const styles = StyleSheet.create({
   container: {
-    marginVertical: 4,
-    marginHorizontal: 16,
+    marginVertical: 6,
+    paddingHorizontal: 12,
   },
-  ownMessage: {
+  // 自己的消息样式
+  ownMessageWrapper: {
     alignItems: 'flex-end',
+
+    marginBottom: 4,
   },
-  otherMessage: {
+  ownMessageBubble: {
+    backgroundColor: '#007AFF', // iOS蓝色
+    maxWidth: '70%',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderTopRightRadius: 2, // 微信特色的小角
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 1,
+    elevation: 1,
+  },
+  ownMessageText: {
+    fontSize: 16,
+    lineHeight: 20,
+    color: '#FFFFFF', // 白色文字在蓝色背景上更清晰
+  },
+  // 他人的消息样式
+  otherMessageWrapper: {
+    flexDirection: 'row',
     alignItems: 'flex-start',
-  },
-  userInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
     marginBottom: 4,
   },
-  ownUserInfo: {
-    flexDirection: 'row-reverse', // 自己的消息头像在右边
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  otherUserInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  assistantInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
+  avatarContainer: {
+    marginRight: 8,
+    marginTop: 20, // 对齐消息气泡顶部
   },
   avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 4, // 微信头像是圆角矩形，不是圆形
     backgroundColor: '#E0E0E0',
     justifyContent: 'center',
     alignItems: 'center',
-    marginHorizontal: 8,
-    overflow: 'hidden', // 确保图片不会溢出圆形边界
   },
-  avatarImage: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+  defaultAvatar: {
+    backgroundColor: '#C0C0C0',
   },
   assistantAvatar: {
     backgroundColor: '#E8F5E8',
   },
-  avatarText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
+  assistantAvatarImage: {
+    backgroundColor: '#FFF5F5', // 淡粉色背景突出猫咪
+    borderRadius: 4,
   },
-  userAvatarText: {
-    fontSize: 14,
-    fontWeight: '600',
+  avatarText: {
+    fontSize: 16,
+    fontWeight: '500',
     color: '#FFFFFF', // 白色文字在彩色背景上
   },
   assistantAvatarText: {
-    fontSize: 16, // AI助手图标稍大
-  },
-  userName: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 18,
     fontWeight: '500',
   },
-  ownUserName: {
-    fontSize: 12,
-    color: '#007AFF',
-    fontWeight: '600',
+  messageColumn: {
+    flex: 1,
+    maxWidth: '70%',
   },
-  otherUserName: {
+  senderName: {
     fontSize: 12,
-    color: '#333',
-    fontWeight: '500',
+    color: '#999',
+    marginBottom: 4,
+    fontWeight: '400',
   },
-  assistantName: {
-    fontSize: 12,
-    color: '#4CAF50',
-    fontWeight: '600',
-  },
-  messageContent: {
-    maxWidth: '80%',
+  otherMessageBubble: {
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 16,
-  },
-  ownMessageContent: {
-    backgroundColor: '#007AFF',
-    borderBottomRightRadius: 4,
-  },
-  otherMessageContent: {
-    backgroundColor: '#F0F0F0',
-    borderBottomLeftRadius: 4,
-  },
-  assistantMessageContent: {
-    backgroundColor: '#F0FFF0',
-    borderBottomLeftRadius: 4,
-    borderLeftWidth: 3,
-    borderLeftColor: '#4CAF50',
-  },
-  messageText: {
-    fontSize: 16,
-    lineHeight: 20,
-  },
-  ownMessageText: {
-    color: '#FFFFFF',
+    borderRadius: 8,
+    borderTopLeftRadius: 2, // 微信特色的小角
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 1,
+    elevation: 1,
+    borderWidth: 0.5,
+    borderColor: '#E5E5E5',
   },
   otherMessageText: {
+    fontSize: 16,
+    lineHeight: 20,
     color: '#000000',
   },
-  assistantMessageText: {
-    color: '#2E7D32',
-  },
-  messageFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-    justifyContent: 'space-between',
-  },
-  timestamp: {
-    fontSize: 10,
-    opacity: 0.7,
-  },
-  ownTimestamp: {
-    fontSize: 10,
-    opacity: 0.8,
-    color: '#FFFFFF',
-  },
-  otherTimestamp: {
-    fontSize: 10,
-    opacity: 0.7,
-    color: '#666',
-  },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginLeft: 6,
-    opacity: 0.6,
-  },
-  loadingIndicator: {
-    marginTop: 8,
-    alignItems: 'center',
-  },
-  loadingText: {
+  loadingDots: {
     fontSize: 16,
-    color: '#999',
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 4,
   },
 }); 
+; 

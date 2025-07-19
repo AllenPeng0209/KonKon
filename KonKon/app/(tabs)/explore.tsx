@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
     KeyboardAvoidingView,
     Platform,
@@ -21,6 +21,7 @@ import { ChatContainer } from '../../components/chat/ChatContainer';
 import { ChatToolbar } from '../../components/chat/ChatToolbar';
 
 import { FamilyChatMessage } from '../../components/chat/FamilyChatMessage';
+import { ChatTimeStamp } from '../../components/chat/ChatTimeStamp';
 
 // 自定义 Hook
 import { t } from '@/lib/i18n';
@@ -67,6 +68,23 @@ export default function ExploreScreen() {
     await sendFamilyMessage(message);
   };
 
+  // 判断是否需要显示时间戳
+  const shouldShowTimestamp = (currentMessage: any, previousMessage: any, index: number) => {
+    if (index === 0) return true; // 第一条消息总是显示时间
+    
+    const currentTime = new Date(currentMessage.created_at);
+    const previousTime = new Date(previousMessage.created_at);
+    
+    // 如果是不同的日期，显示时间戳
+    if (currentTime.toDateString() !== previousTime.toDateString()) {
+      return true;
+    }
+    
+    // 如果间隔超过5分钟，显示时间戳
+    const timeDiff = currentTime.getTime() - previousTime.getTime();
+    return timeDiff > 5 * 60 * 1000; // 5分钟
+  };
+
 
 
   const navigateToHome = () => {
@@ -93,40 +111,30 @@ export default function ExploreScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* 顶部标题栏 */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <TouchableOpacity onPress={navigateToHome}>
-            <Text style={styles.headerTitle}>{t('tabs.record')}</Text>
+      {/* 微信风格群聊标题栏 */}
+      {hasFamilyChat && (
+        <View style={styles.wechatHeader}>
+          <TouchableOpacity style={styles.backButton} onPress={navigateToHome}>
+            <Text style={styles.backButtonText}>←</Text>
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, styles.activeTab]}>{t('tabs.explore')}</Text>
-        </View>
-        <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.avatarButton} onPress={navigateToProfile}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>👤</Text>
-            </View>
+          
+          <View style={styles.headerCenter}>
+            <Text style={styles.groupTitle}>
+              {familyName}（{memberCount}人）
+            </Text>
+            {isLoadingHistory && (
+              <Text style={styles.loadingHint}>正在加载聊天记录...</Text>
+            )}
+          </View>
+
+          <TouchableOpacity style={styles.moreButton} onPress={navigateToProfile}>
+            <Text style={styles.moreButtonText}>•••</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      )}
 
       {/* 配置检查 */}
       <BailianConfig />
-
-      {/* 家庭群聊状态 */}
-      {hasFamilyChat && (
-        <View style={[styles.calendarStatus, { backgroundColor: '#FFF3E0', borderLeftColor: '#FF9800' }]}>
-          <Text style={styles.calendarStatusIcon}>👥</Text>
-          <Text style={[styles.calendarStatusText, { color: '#F57C00' }]}>
-            {familyName} • {memberCount}名成员 • {eventsCount}個事件
-          </Text>
-          {isLoadingHistory && (
-            <Text style={[styles.calendarStatusText, { color: '#F57C00', fontSize: 12 }]}>
-               • 加载中...
-            </Text>
-          )}
-        </View>
-      )}
 
       {/* 聊天界面 */}
       <KeyboardAvoidingView 
@@ -152,10 +160,15 @@ export default function ExploreScreen() {
                 )}
               </View>
             ) : (
-              familyMessages.map((message) => (
-                <View key={message.id} style={styles.messageWrapper}>
-                  <FamilyChatMessage message={message} />
-                </View>
+              familyMessages.map((message, index) => (
+                <React.Fragment key={message.id}>
+                  {shouldShowTimestamp(message, familyMessages[index - 1], index) && (
+                    <ChatTimeStamp timestamp={message.created_at} />
+                  )}
+                  <View style={styles.messageWrapper}>
+                    <FamilyChatMessage message={message} />
+                  </View>
+                </React.Fragment>
               ))
             )}
           </ScrollView>
@@ -175,76 +188,28 @@ export default function ExploreScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#EDEDED', // 微信背景色
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#EDEDED',
   },
   loadingText: {
     fontSize: 16,
     color: '#666',
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 8, // 减少顶部padding
-    paddingBottom: 8,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginRight: 20,
-    color: '#999',
-  },
-  activeTab: {
-    color: '#000',
-    borderBottomWidth: 2,
-    borderBottomColor: '#007AFF',
-    paddingBottom: 4,
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    minHeight: 40, // 确保头部右侧有最小高度
-  },
 
-  avatarButton: {
-    padding: 2,
-  },
-  avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#e0e0e0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarText: {
-    fontSize: 16,
-  },
   messagesContainer: {
     flex: 1,
   },
   messagesContentContainer: {
     flexGrow: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: 0, // 移除水平padding，由消息组件自己控制
     paddingTop: 24,
     paddingBottom: 16,
     justifyContent: 'flex-end',
-    gap: 16,
   },
   messageWrapper: {
     // 消息包装器样式
@@ -280,11 +245,65 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
+  // 微信风格标题栏样式
+  wechatHeader: {
+    backgroundColor: 'rgba(248, 248, 248, 0.98)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+    height: 56,
+  },
+  backButton: {
+    padding: 8,
+    minWidth: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  backButtonText: {
+    fontSize: 24,
+    color: '#007AFF',
+    fontWeight: '600',
+    lineHeight: 24,
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  groupTitle: {
+    fontSize: 17,
+    color: '#000',
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  loadingHint: {
+    fontSize: 11,
+    color: '#999',
+    marginTop: 1,
+    textAlign: 'center',
+  },
+  moreButton: {
+    padding: 8,
+    minWidth: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  moreButtonText: {
+    fontSize: 16,
+    color: '#007AFF',
+    fontWeight: '700',
+    letterSpacing: 2,
+    lineHeight: 16,
+  },
 
   emptyText: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 16,
+    fontSize: 14,
+    color: '#999',
+    marginTop: 20,
     textAlign: 'center',
+    fontWeight: '400',
   },
 });
