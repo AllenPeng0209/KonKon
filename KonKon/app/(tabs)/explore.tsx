@@ -40,7 +40,10 @@ export default function ExploreScreen() {
     messages: familyMessages,
     isLoading: isFamilyLoading,
     isLoadingHistory,
+    isLoadingMore,
+    hasMoreMessages,
     sendMessage: sendFamilyMessage,
+    loadMoreMessages,
     clearChat: clearFamilyChat,
     saveChatSession,
     hasFamily: hasFamilyChat,
@@ -66,6 +69,19 @@ export default function ExploreScreen() {
 
   const handleSendMessage = async (message: string) => {
     await sendFamilyMessage(message);
+  };
+
+  // 處理滾動事件，檢測是否需要加載更多消息
+  const handleScroll = (event: any) => {
+    const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+    
+    // 檢測是否滑動到頂部附近
+    const isNearTop = contentOffset.y <= 50;
+    
+    if (isNearTop && hasMoreMessages && !isLoadingMore && !isLoadingHistory) {
+      console.log('[ExploreScreen] 用戶滑動到頂部，加載更多消息');
+      loadMoreMessages();
+    }
   };
 
   // 判断是否需要显示时间戳
@@ -149,6 +165,8 @@ export default function ExploreScreen() {
             contentContainerStyle={styles.messagesContentContainer}
             onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
             onLayout={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+            onScroll={handleScroll}
+            scrollEventThrottle={100}
           >
             {familyMessages.length === 0 ? (
               <View style={styles.emptyContainer}>
@@ -160,16 +178,32 @@ export default function ExploreScreen() {
                 )}
               </View>
             ) : (
-              familyMessages.map((message, index) => (
-                <React.Fragment key={message.id}>
-                  {shouldShowTimestamp(message, familyMessages[index - 1], index) && (
-                    <ChatTimeStamp timestamp={message.created_at} />
-                  )}
-                  <View style={styles.messageWrapper}>
-                    <FamilyChatMessage message={message} />
+              <>
+                {/* 加載更多消息的指示器 */}
+                {isLoadingMore && (
+                  <View style={styles.loadingMoreContainer}>
+                    <Text style={styles.loadingMoreText}>正在加載更多消息...</Text>
                   </View>
-                </React.Fragment>
-              ))
+                )}
+                
+                {/* 無更多消息的提示 */}
+                {!hasMoreMessages && familyMessages.length > 0 && (
+                  <View style={styles.loadingMoreContainer}>
+                    <Text style={styles.noMoreMessagesText}>沒有更多消息了</Text>
+                  </View>
+                )}
+                
+                {familyMessages.map((message, index) => (
+                  <React.Fragment key={message.id}>
+                    {shouldShowTimestamp(message, familyMessages[index - 1], index) && (
+                      <ChatTimeStamp timestamp={message.created_at} />
+                    )}
+                    <View style={styles.messageWrapper}>
+                      <FamilyChatMessage message={message} />
+                    </View>
+                  </React.Fragment>
+                ))}
+              </>
             )}
           </ScrollView>
 
@@ -305,5 +339,24 @@ const styles = StyleSheet.create({
     marginTop: 20,
     textAlign: 'center',
     fontWeight: '400',
+  },
+  
+  // 加載更多消息的樣式
+  loadingMoreContainer: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingMoreText: {
+    fontSize: 13,
+    color: '#999',
+    textAlign: 'center',
+  },
+  noMoreMessagesText: {
+    fontSize: 13,
+    color: '#999',
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
 });

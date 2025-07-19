@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
+import { clearAllFamilyChatCaches } from '../lib/familyChatCache';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -43,14 +44,21 @@ export default function SettingsScreen() {
   const handleClearCache = () => {
     Alert.alert(
       '确认清除缓存',
-      `您确定要清除${cacheSize.toFixed(1)}MB的缓存吗？`,
+      `您确定要清除${cacheSize.toFixed(1)}MB的缓存吗？這包括聊天消息緩存。`,
       [
         { text: '取消', style: "cancel" },
         { 
           text: '确认',
-          onPress: () => {
-            setCacheSize(0);
-            Alert.alert('缓存已清除');
+          onPress: async () => {
+            try {
+              // 清除聊天緩存
+              await clearAllFamilyChatCaches();
+              setCacheSize(0);
+              Alert.alert('缓存已清除', '包括聊天消息緩存在內的所有緩存已清除完成。');
+            } catch (error) {
+              console.error('清除緩存失敗:', error);
+              Alert.alert('清除失败', '部分緩存清除失敗，請稍後重試。');
+            }
           },
           style: 'destructive'
         }

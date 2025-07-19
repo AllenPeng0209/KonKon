@@ -8,6 +8,15 @@ import {
   subscribeFamilyChatMessages,
   saveFamilyChatSession
 } from '@/lib/familyChat';
+import {
+  loadFamilyChatCache,
+  saveFamilyChatCache,
+  addMessageToCache,
+  mergeHistoryToCache,
+  isCacheExpired,
+  getCacheConfig,
+  FamilyChatCache
+} from '@/lib/familyChatCache';
 import { sendBailianMessage, BailianMessage } from '@/lib/bailian';
 import { getCurrentLocation } from '@/lib/location';
 import { useEvents } from './useEvents';
@@ -22,6 +31,9 @@ export function useFamilyChat() {
   const [messages, setMessages] = useState<UIFamilyChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMoreMessages, setHasMoreMessages] = useState(true);
+  const [currentCache, setCurrentCache] = useState<FamilyChatCache | null>(null);
   const [currentUserDetails, setCurrentUserDetails] = useState<{display_name: string; avatar_url: string | null} | null>(null);
 
   // 获取当前用户详情（缓存）
@@ -58,26 +70,129 @@ export function useFamilyChat() {
     fetchCurrentUserDetails();
   }, [user, familyMembers]);
 
-  // 加载聊天历史
+  // 加载聊天历史（優先使用緩存）
   const loadChatHistory = useCallback(async () => {
     if (!activeFamily) return;
 
     try {
       setIsLoadingHistory(true);
+      const config = getCacheConfig();
+      
+      // 1. 先嘗試加載緩存
+      const cache = await loadFamilyChatCache(activeFamily.id);
+      
+      if (cache && !isCacheExpired(cache)) {
+        // 使用緩存數據，立即顯示
+        console.log('[FamilyChat] 使用緩存數據');
+        setMessages(cache.messages);
+        setCurrentCache(cache);
+        setHasMoreMessages(cache.hasMoreMessages);
+        setIsLoadingHistory(false);
+        
+        // 在背景更新最新消息
+        try {
+          const latestMessages = await getFamilyChatHistory({
+            family_id: activeFamily.id,
+            limit: config.minCacheMessages
+          });
+          
+          // 檢查是否有新消息
+          const cacheLatestId = cache.messages.length > 0 ? cache.messages[cache.messages.length - 1].id : null;
+          const serverLatestId = latestMessages.length > 0 ? latestMessages[latestMessages.length - 1].id : null;
+          
+          if (cacheLatestId !== serverLatestId) {
+            console.log('[FamilyChat] 檢測到新消息，更新緩存');
+            setMessages(latestMessages);
+            const updatedCache = { ...cache, messages: latestMessages, lastUpdated: Date.now() };
+            setCurrentCache(updatedCache);
+            await saveFamilyChatCache(activeFamily.id, latestMessages, cache.hasMoreMessages);
+          }
+        } catch (error) {
+          console.warn('[FamilyChat] 背景更新失敗:', error);
+        }
+        
+        return;
+      }
+      
+      // 2. 沒有有效緩存，從服務器加載
+      console.log('[FamilyChat] 從服務器加載聊天歷史');
       const history = await getFamilyChatHistory({
         family_id: activeFamily.id,
-        limit: 50
+        limit: config.minCacheMessages
       });
       
-      // 限制初始加载的消息数量，防止内存溢出
-      const limitedHistory = history.slice(-50);
-      setMessages(limitedHistory);
+      setMessages(history);
+      setHasMoreMessages(history.length >= config.minCacheMessages);
+      
+      // 保存到緩存
+      const newCache: FamilyChatCache = {
+        familyId: activeFamily.id,
+        messages: history,
+        lastUpdated: Date.now(),
+        hasMoreMessages: history.length >= config.minCacheMessages,
+        oldestMessageId: history.length > 0 ? history[0].id : undefined,
+      };
+      
+      setCurrentCache(newCache);
+      await saveFamilyChatCache(activeFamily.id, history, newCache.hasMoreMessages);
+      
     } catch (error) {
-      console.error('加载聊天历史失败:', error);
+      console.error('[FamilyChat] 加载聊天历史失败:', error);
+      setMessages([]);
+      setHasMoreMessages(false);
+      setCurrentCache(null);
     } finally {
       setIsLoadingHistory(false);
     }
   }, [activeFamily]);
+
+  // 加載更多歷史消息（分頁）
+  const loadMoreMessages = useCallback(async () => {
+    if (!activeFamily || !currentCache || !hasMoreMessages || isLoadingMore) {
+      return;
+    }
+
+    try {
+      setIsLoadingMore(true);
+      const config = getCacheConfig();
+      
+      console.log('[FamilyChat] 加載更多歷史消息');
+      
+      // 使用最舊消息的ID作為分頁參數
+      const olderMessages = await getFamilyChatHistory({
+        family_id: activeFamily.id,
+        limit: config.paginationSize,
+        before: currentCache.oldestMessageId
+      });
+      
+      if (olderMessages.length === 0) {
+        // 沒有更多消息了
+        setHasMoreMessages(false);
+        const updatedCache = { ...currentCache, hasMoreMessages: false };
+        setCurrentCache(updatedCache);
+        await saveFamilyChatCache(activeFamily.id, updatedCache.messages, false);
+        return;
+      }
+      
+      // 合併到現有消息中
+      const updatedCache = mergeHistoryToCache(currentCache, olderMessages, olderMessages.length >= config.paginationSize);
+      
+      setMessages(updatedCache.messages);
+      setCurrentCache(updatedCache);
+      setHasMoreMessages(updatedCache.hasMoreMessages);
+      
+      // 異步保存緩存
+      saveFamilyChatCache(activeFamily.id, updatedCache.messages, updatedCache.hasMoreMessages)
+        .catch(err => console.warn('[FamilyChat] 保存緩存失敗:', err));
+      
+      console.log(`[FamilyChat] 加載了 ${olderMessages.length} 條更多消息`);
+      
+    } catch (error) {
+      console.error('[FamilyChat] 加載更多消息失敗:', error);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [activeFamily, currentCache, hasMoreMessages, isLoadingMore]);
 
   // 格式化事件数据为可读文本
   const formatEventsForAI = useCallback(() => {
@@ -172,13 +287,17 @@ export function useFamilyChat() {
       isLoading: true,
     };
 
-    // 立即更新UI，同时管理内存
+    // 立即更新UI和緩存
     setMessages(prev => {
       const updatedMessages = [...prev, userMessage, loadingMessage];
-      // 如果消息过多，保留最新的80条
-      if (updatedMessages.length > 100) {
-        return updatedMessages.slice(-80);
+      
+      // 更新緩存
+      if (currentCache) {
+        let tempCache = addMessageToCache(currentCache, userMessage);
+        tempCache = addMessageToCache(tempCache, loadingMessage);
+        setCurrentCache(tempCache);
       }
+      
       return updatedMessages;
     });
     setIsLoading(true);
@@ -244,10 +363,26 @@ ${eventsInfo}
         created_at: new Date().toISOString(),
       };
 
-      // 立即更新UI
+      // 立即更新UI和緩存
       setMessages(prev => 
         prev.map(msg => msg.id === loadingMessage.id ? finalAssistantMessage : msg)
       );
+
+      // 更新緩存
+      if (currentCache) {
+        const updatedCache = {
+          ...currentCache,
+          messages: currentCache.messages.map(msg => 
+            msg.id === loadingMessage.id ? finalAssistantMessage : msg
+          ),
+          lastUpdated: Date.now()
+        };
+        setCurrentCache(updatedCache);
+        
+        // 異步保存緩存
+        saveFamilyChatCache(activeFamily.id, updatedCache.messages, updatedCache.hasMoreMessages)
+          .catch(err => console.warn('[FamilyChat] 保存緩存失敗:', err));
+      }
 
       // 5. 异步保存AI响应到数据库（不阻塞UI）
       sendFamilyChatMessage({
@@ -272,6 +407,18 @@ ${eventsInfo}
       setMessages(prev => 
         prev.map(msg => msg.id === loadingMessage.id ? errorMessage : msg)
       );
+
+      // 更新緩存
+      if (currentCache) {
+        const updatedCache = {
+          ...currentCache,
+          messages: currentCache.messages.map(msg => 
+            msg.id === loadingMessage.id ? errorMessage : msg
+          ),
+          lastUpdated: Date.now()
+        };
+        setCurrentCache(updatedCache);
+      }
 
       // 异步保存错误信息
       sendFamilyChatMessage({
@@ -323,10 +470,16 @@ ${eventsInfo}
             return prev;
           }
           
-          // 限制内存中的消息数量，超过100条时保留最新的80条
           const updatedMessages = [...prev, newMessage];
-          if (updatedMessages.length > 100) {
-            return updatedMessages.slice(-80);
+          
+          // 更新緩存
+          if (currentCache) {
+            const updatedCache = addMessageToCache(currentCache, newMessage);
+            setCurrentCache(updatedCache);
+            
+            // 異步保存緩存
+            saveFamilyChatCache(activeFamily.id, updatedCache.messages, updatedCache.hasMoreMessages)
+              .catch(err => console.warn('[FamilyChat] 實時更新緩存失敗:', err));
           }
           
           return updatedMessages;
@@ -334,6 +487,16 @@ ${eventsInfo}
       },
       (messageId) => {
         setMessages(prev => prev.filter(msg => msg.id !== messageId));
+        
+        // 同時從緩存中移除
+        if (currentCache) {
+          const updatedCache = {
+            ...currentCache,
+            messages: currentCache.messages.filter(msg => msg.id !== messageId),
+            lastUpdated: Date.now()
+          };
+          setCurrentCache(updatedCache);
+        }
       }
     );
 
@@ -346,7 +509,10 @@ ${eventsInfo}
     messages,
     isLoading,
     isLoadingHistory,
+    isLoadingMore,
+    hasMoreMessages,
     sendMessage,
+    loadMoreMessages,
     clearChat,
     saveChatSession,
     hasFamily: !!activeFamily,
