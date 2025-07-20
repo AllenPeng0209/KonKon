@@ -2,6 +2,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Tables } from '@/lib/database.types';
 import { supabase } from '@/lib/supabase';
 import { ResizeMode, Video } from 'expo-av';
+import * as ImagePicker from 'expo-image-picker';
 import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
@@ -10,6 +11,7 @@ import {
     FlatList,
     Image,
     Modal,
+    Platform,
     SafeAreaView,
     ScrollView,
     StyleSheet,
@@ -29,12 +31,13 @@ interface AlbumDetailViewProps {
   isVisible: boolean;
   onClose: () => void;
   onDelete?: () => void;
+  onPhotoAdded?: () => void;
 }
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 const PHOTO_SIZE = (screenWidth - 48) / 2; // 2 columns with padding
 
-const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({ album, isVisible, onClose, onDelete }) => {
+const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({ album, isVisible, onClose, onDelete, onPhotoAdded }) => {
   const { user } = useAuth();
   const [photos, setPhotos] = useState<AlbumPhoto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,6 +52,11 @@ const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({ album, isVisible, onC
   // Delete states
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  
+  // More menu states
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showAddPhotoModal, setShowAddPhotoModal] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     if (isVisible && album) {
@@ -202,6 +210,179 @@ const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({ album, isVisible, onC
     }
   };
 
+  const handleAddPhotos = async () => {
+    console.log('handleAddPhotos called');
+    try {
+      // 檢查是否在模擬器上運行
+      const isSimulator = __DEV__ && (Platform.OS === 'ios');
+      
+      if (isSimulator) {
+        // 在模擬器上提供相機選項
+        Alert.alert(
+          '選擇圖片來源',
+          '模擬器圖片庫可能有限制，建議使用相機',
+          [
+            {
+              text: '相機',
+              onPress: () => handleCameraPhoto(),
+            },
+            {
+              text: '圖片庫',
+              onPress: () => handleLibraryPhotos(),
+            },
+            {
+              text: '取消',
+              style: 'cancel',
+            },
+          ]
+        );
+        return;
+      }
+      
+      // 真機上直接使用圖片庫
+      await handleLibraryPhotos();
+    } catch (error: any) {
+      console.error('Error in handleAddPhotos:', error);
+      Alert.alert('錯誤', error.message || '新增照片時發生錯誤');
+    }
+  };
+
+  const handleCameraPhoto = async () => {
+    try {
+      // 請求相機權限
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('權限被拒絕', '需要相機權限才能拍照');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.7,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets.length > 0) {
+        await processSelectedPhotos(result.assets);
+      }
+    } catch (error: any) {
+      console.error('Error taking photo:', error);
+      Alert.alert('錯誤', error.message || '拍照時發生錯誤');
+    }
+  };
+
+  const handleLibraryPhotos = async () => {
+    try {
+      // 請求相機和相冊權限
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      console.log('Permission status:', status);
+      if (status !== 'granted') {
+        Alert.alert('權限被拒絕', '需要相冊權限才能添加照片');
+        return;
+      }
+
+      // 選擇多張圖片
+      console.log('About to launch image library...');
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsMultipleSelection: true,
+        quality: 0.7,
+        base64: true,
+      });
+      console.log('Image library launched');
+
+      console.log('Image picker result:', result);
+
+      if (!result.canceled && result.assets.length > 0) {
+        await processSelectedPhotos(result.assets);
+      }
+    } catch (error: any) {
+      console.error('Error in handleLibraryPhotos:', error);
+      Alert.alert('錯誤', error.message || '選擇照片時發生錯誤');
+    }
+  };
+
+  const processSelectedPhotos = async (assets: any[]) => {
+    setIsUploading(true);
+    try {
+      const imageUrls: string[] = [];
+      
+      for (const asset of assets) {
+        if (!asset.uri) continue;
+
+        const fileName = `${album.family_id}/${album.user_id}/${Date.now()}_${asset.fileName || 'photo.jpg'}`;
+        
+        let uploadData;
+        if (asset.base64) {
+          // 使用 base64 數據（與 AddMemoryModal 相同的方法）
+          const { decode } = require('base64-arraybuffer');
+          uploadData = decode(asset.base64);
+          console.log(`Uploading ${fileName} using base64, size: ${uploadData.byteLength} bytes`);
+        } else {
+          // 備用方案：使用 fetch + ArrayBuffer
+          const response = await fetch(asset.uri);
+          uploadData = await response.arrayBuffer();
+          console.log(`Uploading ${fileName} using fetch, size: ${uploadData.byteLength} bytes`);
+        }
+
+        // 上傳到 Supabase Storage
+        const { data, error: uploadError } = await supabase.storage
+          .from('memories')
+          .upload(fileName, uploadData, {
+            contentType: 'image/jpeg',
+            upsert: false
+          });
+        
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage.from('memories').getPublicUrl(data.path);
+        imageUrls.push(publicUrl);
+      }
+
+      // 更新相簿的 image_urls 和 photo_count
+      const updatedImageUrls = [...(album.image_urls || []), ...imageUrls];
+      await supabase
+        .from('family_albums')
+        .update({ 
+          image_urls: updatedImageUrls,
+          photo_count: updatedImageUrls.length 
+        })
+        .eq('id', album.id);
+
+      // 創建 album_photos 記錄
+      const currentPhotoCount = photos.length;
+      const albumPhotosData = imageUrls.map((url, index) => ({
+        album_id: album.id,
+        image_url: url,
+        order_index: currentPhotoCount + index,
+        caption: null,
+        metadata: {}
+      }));
+
+      await supabase
+        .from('album_photos')
+        .insert(albumPhotosData);
+
+      // 刷新照片列表
+      fetchAlbumPhotos();
+      
+      // 通知父組件
+      if (onPhotoAdded) {
+        onPhotoAdded();
+      }
+
+      Alert.alert('上傳成功', `已添加 ${imageUrls.length} 張照片`);
+      setShowAddPhotoModal(false);
+      setShowMoreMenu(false);
+      
+    } catch (error: any) {
+      console.error('上傳照片失敗:', error);
+      Alert.alert('上傳失敗', error.message || '無法上傳照片');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   // If album has image_urls array, use those as fallback
   const displayPhotos = photos.length > 0 ? photos : 
     (album.image_urls || []).map((url, index) => ({
@@ -245,11 +426,11 @@ const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({ album, isVisible, onC
             {album.name}
           </Text>
           <TouchableOpacity 
-            style={styles.deleteButton} 
-            onPress={() => setShowDeleteConfirm(true)}
-            disabled={isDeleting}
+            style={styles.moreButton} 
+            onPress={() => setShowMoreMenu(true)}
+            disabled={isDeleting || isUploading}
           >
-            <Text style={styles.deleteText}>🗑️</Text>
+            <Text style={styles.moreText}>⋯</Text>
           </TouchableOpacity>
         </View>
 
@@ -479,6 +660,55 @@ const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({ album, isVisible, onC
             </View>
           </View>
         </Modal>
+
+        {/* More Menu Modal */}
+        <Modal
+          visible={showMoreMenu}
+          animationType="fade"
+          transparent
+          onRequestClose={() => setShowMoreMenu(false)}
+        >
+          <TouchableOpacity 
+            style={styles.moreMenuOverlay}
+            activeOpacity={1}
+            onPress={() => setShowMoreMenu(false)}
+          >
+            <View style={styles.moreMenuContainer}>
+              <Text style={styles.moreMenuTitle}>相簿選項</Text>
+              
+              <TouchableOpacity
+                style={styles.moreMenuItem}
+                onPress={() => {
+                  setShowMoreMenu(false);
+                  handleAddPhotos();
+                }}
+                disabled={isUploading}
+              >
+                <Text style={styles.moreMenuItemIcon}>📷</Text>
+                <Text style={styles.moreMenuItemText}>
+                  {isUploading ? '上傳中...' : '新增照片'}
+                </Text>
+                {isUploading && (
+                  <ActivityIndicator size="small" color="#007AFF" />
+                )}
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.moreMenuItem, styles.deleteMenuItem]}
+                onPress={() => {
+                  setShowMoreMenu(false);
+                  setShowDeleteConfirm(true);
+                }}
+                disabled={isDeleting}
+              >
+                <Text style={styles.moreMenuItemIcon}>🗑️</Text>
+                <Text style={[styles.moreMenuItemText, styles.deleteMenuItemText]}>
+                  刪除相簿
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </Modal>
       </SafeAreaView>
     </Modal>
   );
@@ -514,14 +744,15 @@ const styles = StyleSheet.create({
     color: '#333',
     textAlign: 'center',
   },
-  deleteButton: {
+  moreButton: {
     flex: 1,
     alignItems: 'flex-end',
     paddingRight: 4,
   },
-  deleteText: {
-    fontSize: 20,
-    color: '#ff4444',
+  moreText: {
+    fontSize: 24,
+    color: '#333',
+    fontWeight: '600',
   },
   albumInfo: {
     backgroundColor: '#ffffff',
@@ -901,6 +1132,61 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#ffffff',
     textAlign: 'center',
+  },
+  
+  // More Menu Styles
+  moreMenuOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-end',
+    paddingTop: 60,
+    paddingRight: 16,
+  },
+  moreMenuContainer: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    minWidth: 200,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  moreMenuTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    textAlign: 'center',
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e1e8ed',
+  },
+  moreMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  deleteMenuItem: {
+    borderBottomWidth: 0,
+  },
+  moreMenuItemIcon: {
+    fontSize: 20,
+    marginRight: 12,
+    minWidth: 24,
+    textAlign: 'center',
+  },
+  moreMenuItemText: {
+    flex: 1,
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '500',
+  },
+  deleteMenuItemText: {
+    color: '#ff4444',
   },
 });
 

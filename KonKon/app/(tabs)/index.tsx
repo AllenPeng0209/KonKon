@@ -1706,7 +1706,8 @@ export default function HomeScreen() {
         onSave={() => {
           setShowSmartAlbumModal(false);
           setAlbumCreationData(null);
-          // SimpleAlbumView will refresh automatically
+          // 觸發相簿列表刷新
+          setAlbumRefreshTrigger(prev => prev + 1);
         }}
         albumName={albumCreationData?.albumName || ''}
         theme={albumCreationData?.theme || '日常生活'}
@@ -1879,8 +1880,13 @@ export default function HomeScreen() {
               setSelectedAlbum(null);
             }
           }}
+          onPhotoAdded={() => {
+            // 刷新相簿列表以更新照片數量
+            setAlbumRefreshTrigger(prev => prev + 1);
+          }}
         />
       )}
+
     </SafeAreaView>
   );
 }
