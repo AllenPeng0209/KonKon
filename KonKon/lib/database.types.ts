@@ -6,23 +6,6 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
-// Temporary types for smart albums (until migration is run)
-export interface FamilyAlbumRow {
-  id: string;
-  family_id: string;
-  user_id: string;
-  name: string;
-  theme: string;
-  story?: string;
-  image_urls: string[];
-  cover_image_url?: string;
-  photo_count: number;
-  is_smart_generated: boolean;
-  tags: string[];
-  created_at: string;
-  updated_at: string;
-}
-
 export type Database = {
   // Allows to automatically instanciate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
@@ -31,6 +14,108 @@ export type Database = {
   }
   public: {
     Tables: {
+      album_comments: {
+        Row: {
+          album_id: string
+          content: string
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          album_id: string
+          content: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          album_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "album_comments_album_id_fkey"
+            columns: ["album_id"]
+            isOneToOne: false
+            referencedRelation: "family_albums"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      album_likes: {
+        Row: {
+          album_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          album_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          album_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "album_likes_album_id_fkey"
+            columns: ["album_id"]
+            isOneToOne: false
+            referencedRelation: "family_albums"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      album_photos: {
+        Row: {
+          album_id: string
+          caption: string | null
+          created_at: string
+          id: string
+          image_url: string
+          metadata: Json | null
+          order_index: number | null
+        }
+        Insert: {
+          album_id: string
+          caption?: string | null
+          created_at?: string
+          id?: string
+          image_url: string
+          metadata?: Json | null
+          order_index?: number | null
+        }
+        Update: {
+          album_id?: string
+          caption?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string
+          metadata?: Json | null
+          order_index?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "album_photos_album_id_fkey"
+            columns: ["album_id"]
+            isOneToOne: false
+            referencedRelation: "family_albums"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversation_shares: {
         Row: {
           conversation_id: string
@@ -442,6 +527,62 @@ export type Database = {
           },
         ]
       }
+      family_albums: {
+        Row: {
+          cover_image_url: string | null
+          created_at: string
+          family_id: string
+          id: string
+          image_urls: string[] | null
+          is_smart_generated: boolean | null
+          name: string
+          photo_count: number | null
+          story: string | null
+          tags: string[] | null
+          theme: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cover_image_url?: string | null
+          created_at?: string
+          family_id: string
+          id?: string
+          image_urls?: string[] | null
+          is_smart_generated?: boolean | null
+          name: string
+          photo_count?: number | null
+          story?: string | null
+          tags?: string[] | null
+          theme?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cover_image_url?: string | null
+          created_at?: string
+          family_id?: string
+          id?: string
+          image_urls?: string[] | null
+          is_smart_generated?: boolean | null
+          name?: string
+          photo_count?: number | null
+          story?: string | null
+          tags?: string[] | null
+          theme?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "family_albums_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       family_chat_messages: {
         Row: {
           content: string
@@ -606,51 +747,51 @@ export type Database = {
       family_memories: {
         Row: {
           ai_generated_image_urls: Json | null
-          comments_count: number
+          comments_count: number | null
           created_at: string
           family_id: string
           id: string
           image_urls: Json | null
-          is_featured: boolean
-          likes_count: number
+          is_featured: boolean | null
+          likes_count: number | null
           location: string | null
           story: string | null
           tags: Json | null
           user_id: string
-          views_count: number
-          visibility: string
+          views_count: number | null
+          visibility: string | null
         }
         Insert: {
           ai_generated_image_urls?: Json | null
-          comments_count?: number
+          comments_count?: number | null
           created_at?: string
           family_id: string
           id?: string
           image_urls?: Json | null
-          is_featured?: boolean
-          likes_count?: number
+          is_featured?: boolean | null
+          likes_count?: number | null
           location?: string | null
           story?: string | null
           tags?: Json | null
           user_id: string
-          views_count?: number
-          visibility?: string
+          views_count?: number | null
+          visibility?: string | null
         }
         Update: {
           ai_generated_image_urls?: Json | null
-          comments_count?: number
+          comments_count?: number | null
           created_at?: string
           family_id?: string
           id?: string
           image_urls?: Json | null
-          is_featured?: boolean
-          likes_count?: number
+          is_featured?: boolean | null
+          likes_count?: number | null
           location?: string | null
           story?: string | null
           tags?: Json | null
           user_id?: string
-          views_count?: number
-          visibility?: string
+          views_count?: number | null
+          visibility?: string | null
         }
         Relationships: [
           {
@@ -662,32 +803,795 @@ export type Database = {
           },
         ]
       }
-      memory_comments: {
+      finance_accounts: {
         Row: {
-          content: string
+          account_number: string | null
+          balance: number | null
+          bank_name: string | null
+          created_at: string | null
+          currency: string | null
+          description: string | null
+          family_id: string
+          id: string
+          is_active: boolean | null
+          name: string
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          account_number?: string | null
+          balance?: number | null
+          bank_name?: string | null
+          created_at?: string | null
+          currency?: string | null
+          description?: string | null
+          family_id: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          account_number?: string | null
+          balance?: number | null
+          bank_name?: string | null
+          created_at?: string | null
+          currency?: string | null
+          description?: string | null
+          family_id?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_accounts_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      finance_budgets: {
+        Row: {
+          alert_threshold: number | null
+          amount: number
+          category_id: string | null
+          created_at: string | null
+          created_by: string
+          description: string | null
+          end_date: string | null
+          family_id: string
+          id: string
+          is_active: boolean | null
+          name: string
+          period_type: string
+          start_date: string
+          updated_at: string | null
+        }
+        Insert: {
+          alert_threshold?: number | null
+          amount: number
+          category_id?: string | null
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          end_date?: string | null
+          family_id: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          period_type: string
+          start_date: string
+          updated_at?: string | null
+        }
+        Update: {
+          alert_threshold?: number | null
+          amount?: number
+          category_id?: string | null
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          end_date?: string | null
+          family_id?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          period_type?: string
+          start_date?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_budgets_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "finance_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_budgets_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "family_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_budgets_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      finance_categories: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          display_order: number | null
+          family_id: string | null
+          icon: string | null
+          id: string
+          is_active: boolean | null
+          is_system: boolean | null
+          name: string
+          parent_id: string | null
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          display_order?: number | null
+          family_id?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_system?: boolean | null
+          name: string
+          parent_id?: string | null
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          display_order?: number | null
+          family_id?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_system?: boolean | null
+          name?: string
+          parent_id?: string | null
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_categories_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "finance_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      finance_savings_goals: {
+        Row: {
+          achieved_date: string | null
+          auto_transfer_amount: number | null
+          auto_transfer_frequency: string | null
+          category: string | null
+          created_at: string | null
+          created_by: string
+          current_amount: number | null
+          description: string | null
+          family_id: string
+          id: string
+          is_active: boolean | null
+          name: string
+          priority: number | null
+          source_account_id: string | null
+          target_account_id: string | null
+          target_amount: number
+          target_date: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          achieved_date?: string | null
+          auto_transfer_amount?: number | null
+          auto_transfer_frequency?: string | null
+          category?: string | null
+          created_at?: string | null
+          created_by: string
+          current_amount?: number | null
+          description?: string | null
+          family_id: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          priority?: number | null
+          source_account_id?: string | null
+          target_account_id?: string | null
+          target_amount: number
+          target_date?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          achieved_date?: string | null
+          auto_transfer_amount?: number | null
+          auto_transfer_frequency?: string | null
+          category?: string | null
+          created_at?: string | null
+          created_by?: string
+          current_amount?: number | null
+          description?: string | null
+          family_id?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          priority?: number | null
+          source_account_id?: string | null
+          target_account_id?: string | null
+          target_amount?: number
+          target_date?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_savings_goals_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "family_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_savings_goals_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_savings_goals_source_account_id_fkey"
+            columns: ["source_account_id"]
+            isOneToOne: false
+            referencedRelation: "finance_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_savings_goals_target_account_id_fkey"
+            columns: ["target_account_id"]
+            isOneToOne: false
+            referencedRelation: "finance_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      finance_transactions: {
+        Row: {
+          account_id: string
+          amount: number
+          category_id: string
+          created_at: string | null
+          description: string | null
+          family_id: string
+          id: string
+          is_recurring: boolean | null
+          location: string | null
+          member_id: string
+          notes: string | null
+          receipt_url: string | null
+          recurring_pattern: Json | null
+          reference_number: string | null
+          status: string | null
+          tags: string | null
+          transaction_date: string
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          account_id: string
+          amount: number
+          category_id: string
+          created_at?: string | null
+          description?: string | null
+          family_id: string
+          id?: string
+          is_recurring?: boolean | null
+          location?: string | null
+          member_id: string
+          notes?: string | null
+          receipt_url?: string | null
+          recurring_pattern?: Json | null
+          reference_number?: string | null
+          status?: string | null
+          tags?: string | null
+          transaction_date: string
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          account_id?: string
+          amount?: number
+          category_id?: string
+          created_at?: string | null
+          description?: string | null
+          family_id?: string
+          id?: string
+          is_recurring?: boolean | null
+          location?: string | null
+          member_id?: string
+          notes?: string | null
+          receipt_url?: string | null
+          recurring_pattern?: Json | null
+          reference_number?: string | null
+          status?: string | null
+          tags?: string | null
+          transaction_date?: string
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_transactions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "finance_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_transactions_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "finance_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_transactions_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_transactions_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "family_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      finance_transfers: {
+        Row: {
+          created_at: string | null
+          exchange_rate: number | null
+          from_account_id: string
+          from_transaction_id: string
+          id: string
+          to_account_id: string
+          to_transaction_id: string
+          transfer_fee: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          exchange_rate?: number | null
+          from_account_id: string
+          from_transaction_id: string
+          id?: string
+          to_account_id: string
+          to_transaction_id: string
+          transfer_fee?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          exchange_rate?: number | null
+          from_account_id?: string
+          from_transaction_id?: string
+          id?: string
+          to_account_id?: string
+          to_transaction_id?: string
+          transfer_fee?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_transfers_from_account_id_fkey"
+            columns: ["from_account_id"]
+            isOneToOne: false
+            referencedRelation: "finance_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_transfers_from_transaction_id_fkey"
+            columns: ["from_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "finance_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_transfers_to_account_id_fkey"
+            columns: ["to_account_id"]
+            isOneToOne: false
+            referencedRelation: "finance_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_transfers_to_transaction_id_fkey"
+            columns: ["to_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "finance_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      health_alerts: {
+        Row: {
+          acknowledged_at: string | null
+          alert_type: string
+          created_at: string
+          family_id: string | null
+          id: string
+          is_acknowledged: boolean | null
+          is_resolved: boolean | null
+          message: string
+          related_record_id: string | null
+          related_record_type: string | null
+          resolved_at: string | null
+          severity: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          alert_type: string
+          created_at?: string
+          family_id?: string | null
+          id?: string
+          is_acknowledged?: boolean | null
+          is_resolved?: boolean | null
+          message: string
+          related_record_id?: string | null
+          related_record_type?: string | null
+          resolved_at?: string | null
+          severity: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          alert_type?: string
+          created_at?: string
+          family_id?: string | null
+          id?: string
+          is_acknowledged?: boolean | null
+          is_resolved?: boolean | null
+          message?: string
+          related_record_id?: string | null
+          related_record_type?: string | null
+          resolved_at?: string | null
+          severity?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "health_alerts_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      health_checkups: {
+        Row: {
+          blood_sugar: number | null
+          bmi: number | null
+          checkup_date: string
+          checkup_type: string
+          chest_xray: string | null
+          created_at: string
+          diagnosis: string | null
+          diastolic_bp: number | null
+          doctor_name: string | null
+          ecg_result: string | null
+          family_id: string | null
+          follow_up_date: string | null
+          follow_up_required: boolean | null
+          hba1c: number | null
+          hdl_cholesterol: number | null
+          height: number | null
+          id: string
+          ldl_cholesterol: number | null
+          medical_facility: string | null
+          recommendations: string | null
+          resting_heart_rate: number | null
+          systolic_bp: number | null
+          total_cholesterol: number | null
+          triglycerides: number | null
+          updated_at: string
+          user_id: string
+          weight: number | null
+        }
+        Insert: {
+          blood_sugar?: number | null
+          bmi?: number | null
+          checkup_date: string
+          checkup_type: string
+          chest_xray?: string | null
+          created_at?: string
+          diagnosis?: string | null
+          diastolic_bp?: number | null
+          doctor_name?: string | null
+          ecg_result?: string | null
+          family_id?: string | null
+          follow_up_date?: string | null
+          follow_up_required?: boolean | null
+          hba1c?: number | null
+          hdl_cholesterol?: number | null
+          height?: number | null
+          id?: string
+          ldl_cholesterol?: number | null
+          medical_facility?: string | null
+          recommendations?: string | null
+          resting_heart_rate?: number | null
+          systolic_bp?: number | null
+          total_cholesterol?: number | null
+          triglycerides?: number | null
+          updated_at?: string
+          user_id: string
+          weight?: number | null
+        }
+        Update: {
+          blood_sugar?: number | null
+          bmi?: number | null
+          checkup_date?: string
+          checkup_type?: string
+          chest_xray?: string | null
+          created_at?: string
+          diagnosis?: string | null
+          diastolic_bp?: number | null
+          doctor_name?: string | null
+          ecg_result?: string | null
+          family_id?: string | null
+          follow_up_date?: string | null
+          follow_up_required?: boolean | null
+          hba1c?: number | null
+          hdl_cholesterol?: number | null
+          height?: number | null
+          id?: string
+          ldl_cholesterol?: number | null
+          medical_facility?: string | null
+          recommendations?: string | null
+          resting_heart_rate?: number | null
+          systolic_bp?: number | null
+          total_cholesterol?: number | null
+          triglycerides?: number | null
+          updated_at?: string
+          user_id?: string
+          weight?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "health_checkups_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      health_records: {
+        Row: {
+          created_at: string
+          device_name: string | null
+          diastolic_bp: number | null
+          family_id: string | null
+          id: string
+          measurement_location: string | null
+          measurement_time: string
+          notes: string | null
+          pulse: number | null
+          record_type: string
+          systolic_bp: number | null
+          unit: string | null
+          updated_at: string
+          user_id: string
+          value: number | null
+        }
+        Insert: {
+          created_at?: string
+          device_name?: string | null
+          diastolic_bp?: number | null
+          family_id?: string | null
+          id?: string
+          measurement_location?: string | null
+          measurement_time?: string
+          notes?: string | null
+          pulse?: number | null
+          record_type: string
+          systolic_bp?: number | null
+          unit?: string | null
+          updated_at?: string
+          user_id: string
+          value?: number | null
+        }
+        Update: {
+          created_at?: string
+          device_name?: string | null
+          diastolic_bp?: number | null
+          family_id?: string | null
+          id?: string
+          measurement_location?: string | null
+          measurement_time?: string
+          notes?: string | null
+          pulse?: number | null
+          record_type?: string
+          systolic_bp?: number | null
+          unit?: string | null
+          updated_at?: string
+          user_id?: string
+          value?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "health_records_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      medication_logs: {
+        Row: {
+          actual_time: string | null
           created_at: string
           id: string
-          memory_id: string
-          parent_comment_id: string | null
+          medication_id: string
+          notes: string | null
+          scheduled_time: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          actual_time?: string | null
+          created_at?: string
+          id?: string
+          medication_id: string
+          notes?: string | null
+          scheduled_time: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          actual_time?: string | null
+          created_at?: string
+          id?: string
+          medication_id?: string
+          notes?: string | null
+          scheduled_time?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medication_logs_medication_id_fkey"
+            columns: ["medication_id"]
+            isOneToOne: false
+            referencedRelation: "medications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      medications: {
+        Row: {
+          created_at: string
+          dosage: string
+          end_date: string | null
+          family_id: string | null
+          frequency: string
+          id: string
+          is_active: boolean | null
+          medication_name: string
+          medication_type: string | null
+          notes: string | null
+          prescribed_by: string | null
+          reminder_times: string[] | null
+          start_date: string
+          times_per_day: number | null
+          unit: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
-          content: string
           created_at?: string
+          dosage: string
+          end_date?: string | null
+          family_id?: string | null
+          frequency: string
           id?: string
-          memory_id: string
-          parent_comment_id?: string | null
+          is_active?: boolean | null
+          medication_name: string
+          medication_type?: string | null
+          notes?: string | null
+          prescribed_by?: string | null
+          reminder_times?: string[] | null
+          start_date: string
+          times_per_day?: number | null
+          unit?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
-          content?: string
           created_at?: string
+          dosage?: string
+          end_date?: string | null
+          family_id?: string | null
+          frequency?: string
+          id?: string
+          is_active?: boolean | null
+          medication_name?: string
+          medication_type?: string | null
+          notes?: string | null
+          prescribed_by?: string | null
+          reminder_times?: string[] | null
+          start_date?: string
+          times_per_day?: number | null
+          unit?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medications_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      memory_comments: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          memory_id: string
+          parent_comment_id: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: string
+          memory_id: string
+          parent_comment_id?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
           id?: string
           memory_id?: string
           parent_comment_id?: string | null
-          updated_at?: string
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: [
@@ -716,19 +1620,19 @@ export type Database = {
       }
       memory_likes: {
         Row: {
-          created_at: string
+          created_at: string | null
           id: string
           memory_id: string
           user_id: string
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           id?: string
           memory_id: string
           user_id: string
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           id?: string
           memory_id?: string
           user_id?: string
@@ -752,21 +1656,21 @@ export type Database = {
       }
       memory_tags: {
         Row: {
-          created_at: string
+          created_at: string | null
           created_by: string
           id: string
           memory_id: string
           tag_name: string
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           created_by: string
           id?: string
           memory_id: string
           tag_name: string
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           created_by?: string
           id?: string
           memory_id?: string
@@ -992,3 +1896,6 @@ export const Constants = {
     Enums: {},
   },
 } as const
+
+// Remove the temporary interface as the real types are now available
+export type FamilyAlbumRow = Tables<'family_albums'>

@@ -1,6 +1,8 @@
 import AddMemoryModal from '@/components/album/AddMemoryModal';
-import AlbumView from '@/components/album/AlbumView';
+import AlbumDetailView from '@/components/album/AlbumDetailView';
 import MemoryDetailView from '@/components/album/MemoryDetailView';
+import type { SimpleAlbum } from '@/components/album/SimpleAlbumView';
+import SimpleAlbumView from '@/components/album/SimpleAlbumView';
 import SmartAlbumModal from '@/components/album/SmartAlbumModal';
 import CalendarViewSelector from '@/components/calendar/CalendarViewSelector';
 import ChoreViewSelector from '@/components/chore/ChoreViewSelector';
@@ -102,6 +104,9 @@ export default function HomeScreen() {
   // 相簿詳情狀態
   const [selectedMemory, setSelectedMemory] = useState<any>(null);
   const [showMemoryDetail, setShowMemoryDetail] = useState(false);
+  const [selectedAlbum, setSelectedAlbum] = useState<SimpleAlbum | null>(null);
+  const [showAlbumDetail, setShowAlbumDetail] = useState(false);
+  const [albumRefreshTrigger, setAlbumRefreshTrigger] = useState(0);
 
   // 餐食管理狀態
   const [lunchSuggestions, setLunchSuggestions] = useState<MealPlan[]>([]);
@@ -1105,11 +1110,15 @@ export default function HomeScreen() {
 
       {/* 相冊功能需要直接渲染避免嵌套問題 */}
       {selectedFilter === 'familyAlbum' ? (
-        <AlbumView 
-          onMemoryPress={(memory) => {
-            setSelectedMemory(memory);
-            setShowMemoryDetail(true);
+        <SimpleAlbumView 
+          onAlbumPress={(album) => {
+            setSelectedAlbum(album);
+            setShowAlbumDetail(true);
           }}
+          onAddAlbum={() => {
+            setShowSmartAlbumModal(true);
+          }}
+          refreshTrigger={albumRefreshTrigger}
         />
       ) : (
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -1682,7 +1691,7 @@ export default function HomeScreen() {
         onSave={() => {
           setShowAddMemoryModal(false);
           setInitialMemoryImages([]);
-          // Note: AlbumView has its own refresh logic, so we don't need to call refresh here.
+          // Note: SimpleAlbumView has its own refresh logic, so we don't need to call refresh here.
         }}
         initialImages={initialMemoryImages}
       />
@@ -1697,7 +1706,7 @@ export default function HomeScreen() {
         onSave={() => {
           setShowSmartAlbumModal(false);
           setAlbumCreationData(null);
-          // AlbumView will refresh automatically
+          // SimpleAlbumView will refresh automatically
         }}
         albumName={albumCreationData?.albumName || ''}
         theme={albumCreationData?.theme || '日常生活'}
@@ -1842,8 +1851,33 @@ export default function HomeScreen() {
             setSelectedMemory(null);
           }}
           onMemoryUpdate={(updatedMemory) => {
-            // 這裡可以更新本地狀態，但由於我們在AlbumView中處理，
+            // 這裡可以更新本地狀態，但由於我們在SimpleAlbumView中處理，
             // 這個回調主要用於其他可能的狀態同步
+          }}
+        />
+      )}
+
+      {/* 相簿詳情頁 */}
+      {selectedAlbum && (
+        <AlbumDetailView
+          album={selectedAlbum}
+          isVisible={showAlbumDetail}
+          onClose={() => {
+            setShowAlbumDetail(false);
+            setSelectedAlbum(null);
+          }}
+          onDelete={() => {
+            try {
+              // 刷新相簿列表
+              setAlbumRefreshTrigger(prev => prev + 1);
+              setShowAlbumDetail(false);
+              setSelectedAlbum(null);
+            } catch (error) {
+              console.error('Error in album delete callback:', error);
+              // 確保 UI 狀態正確重置
+              setShowAlbumDetail(false);
+              setSelectedAlbum(null);
+            }
           }}
         />
       )}

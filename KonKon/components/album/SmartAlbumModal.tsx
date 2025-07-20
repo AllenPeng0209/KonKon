@@ -103,15 +103,21 @@ const SmartAlbumModal: React.FC<SmartAlbumModalProps> = ({
       for (const photo of selectedPhotos) {
         if (!photo.uri) continue;
 
-        // 讀取文件並上傳
-        const response = await fetch(photo.uri);
-        const blob = await response.blob();
-        
+        // 創建文件名
         const fileName = `${familyId}/${user.id}/${Date.now()}_${photo.fileName || 'photo.jpg'}`;
+        
+        // 讀取文件並轉換為 ArrayBuffer
+        const response = await fetch(photo.uri);
+        const arrayBuffer = await response.arrayBuffer();
+        
+        console.log(`Uploading ${fileName}, size: ${arrayBuffer.byteLength} bytes`);
+
+        // 使用 ArrayBuffer 上傳
         const { data, error: uploadError } = await supabase.storage
           .from('memories')
-          .upload(fileName, blob, {
+          .upload(fileName, arrayBuffer, {
             contentType: 'image/jpeg',
+            upsert: false
           });
         
         if (uploadError) throw uploadError;
@@ -121,7 +127,7 @@ const SmartAlbumModal: React.FC<SmartAlbumModalProps> = ({
       }
 
       // 創建家庭相簿記錄
-      const { error: insertError } = await supabase.from('family_albums').insert({
+      const { data: albumData, error: insertError } = await supabase.from('family_albums').insert({
         family_id: familyId,
         user_id: user.id,
         name: smartAlbum.name,
@@ -130,9 +136,29 @@ const SmartAlbumModal: React.FC<SmartAlbumModalProps> = ({
         image_urls: imageUrls,
         cover_image_url: imageUrls[0] || null,
         photo_count: selectedPhotos.length
-      });
+      }).select().single();
 
       if (insertError) throw insertError;
+
+      // 創建對應的 album_photos 記錄
+      if (albumData && imageUrls.length > 0) {
+        const albumPhotosData = imageUrls.map((url, index) => ({
+          album_id: albumData.id,
+          image_url: url,
+          order_index: index,
+          caption: null,
+          metadata: {}
+        }));
+
+        const { error: photosError } = await supabase
+          .from('album_photos')
+          .insert(albumPhotosData);
+
+        if (photosError) {
+          console.error('創建照片記錄失敗:', photosError);
+          // 不中斷流程，因為主要的相簿已經創建成功
+        }
+      }
 
       Alert.alert('成功', '智能相簿已創建並分享給家庭');
       resetState();
