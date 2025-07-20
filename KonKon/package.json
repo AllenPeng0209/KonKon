@@ -3,7 +3,7 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
-    "start": "node --max-old-space-size=8192 $(which expo) start",
+    "start": "node --max-old-space-size=8192 --expose-gc $(which expo) start",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "node --max-old-space-size=8192 $(which expo) start --android",
     "ios": "node --max-old-space-size=8192 $(which expo) start --ios",
@@ -18,7 +18,10 @@
     "monitor-memory": "node ./scripts/monitor-memory.js",
     "claude": "node ./scripts/claude-helper.js",
     "claude:docs": "node ./scripts/claude-helper.js --docs",
-    "claude:help": "node ./scripts/claude-helper.js --help"
+    "claude:help": "node ./scripts/claude-helper.js --help",
+    "clean": "npx expo start --clear && rm -rf .expo/cache",
+    "clean:full": "rm -rf node_modules .expo && npm install",
+    "dev": "npm run clean && npm run start"
   },
   "dependencies": {
     "@expo/config-plugins": "^10.1.2",
