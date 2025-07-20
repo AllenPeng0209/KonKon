@@ -1,5 +1,5 @@
 import { useAuth } from '@/contexts/AuthContext';
-import { Tables } from '@/lib/database.types';
+import { Tables, FamilyAlbumRow } from '@/lib/database.types';
 import { supabase } from '@/lib/supabase';
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -16,10 +16,17 @@ import {
     View,
 } from 'react-native';
 import AddMemoryModal from './AddMemoryModal';
+import SmartAlbumModal from './SmartAlbumModal';
 
 type Memory = Tables<'family_memories'> & {
   user_name?: string;
   user_avatar?: string | null;
+  isLiked?: boolean;
+};
+
+type FamilyAlbum = FamilyAlbumRow & {
+  user_name?: string;
+  like_count?: number;
   isLiked?: boolean;
 };
 
@@ -62,6 +69,34 @@ const StoryCard = ({ story, onPress }: { story: StoryCollection; onPress: () => 
       <Text style={styles.storyTitle}>{story.title}</Text>
       <Text style={styles.storyCount}>{story.memories.length}</Text>
     </View>
+  </TouchableOpacity>
+);
+
+// 智能相簿卡片
+const AlbumCard = ({ album, onPress }: { album: FamilyAlbum; onPress: () => void }) => (
+  <TouchableOpacity 
+    style={styles.albumCard}
+    onPress={onPress}
+    activeOpacity={0.8}
+  >
+    {album.cover_image_url && (
+      <Image source={{ uri: album.cover_image_url }} style={styles.albumCover} />
+    )}
+    <View style={styles.albumOverlay}>
+      <View style={styles.albumInfo}>
+        <Text style={styles.albumName}>{album.name}</Text>
+        <Text style={styles.albumTheme}>🎯 {album.theme}</Text>
+        <Text style={styles.albumStats}>
+          📷 {album.photo_count} 張 • ❤️ {album.like_count || 0}
+        </Text>
+        <Text style={styles.albumCreator}>由 {album.user_name} 創建</Text>
+      </View>
+    </View>
+    {album.is_smart_generated && (
+      <View style={styles.aibadge}>
+        <Text style={styles.aiBadgeText}>🤖 AI</Text>
+      </View>
+    )}
   </TouchableOpacity>
 );
 
@@ -132,18 +167,22 @@ const PhotoDetailModal = ({ visible, memory, onClose }: {
 const AlbumView = ({ onMemoryPress }: AlbumViewProps) => {
   const { user } = useAuth();
   const [memories, setMemories] = useState<Memory[]>([]);
+  const [familyAlbums, setFamilyAlbums] = useState<FamilyAlbum[]>([]);
   const [storyCollections, setStoryCollections] = useState<StoryCollection[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [showAddMemoryModal, setShowAddMemoryModal] = useState(false);
+  const [showSmartAlbumModal, setShowSmartAlbumModal] = useState(false);
   const [selectedMemory, setSelectedMemory] = useState<Memory | null>(null);
+  const [selectedAlbum, setSelectedAlbum] = useState<FamilyAlbum | null>(null);
   const [page, setPage] = useState(0);
   const PAGE_SIZE = 30;
 
   useEffect(() => {
     fetchMemories(true);
+    fetchFamilyAlbums();
   }, [user]);
 
   useEffect(() => {
@@ -214,6 +253,53 @@ const AlbumView = ({ onMemoryPress }: AlbumViewProps) => {
     }
   };
 
+  const fetchFamilyAlbums = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('family_albums')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching family albums:', error);
+        return;
+      }
+
+      const albumsWithInfo: FamilyAlbum[] = await Promise.all((data || []).map(async album => {
+        const { data: userData } = await supabase
+          .from('users')
+          .select('display_name')
+          .eq('id', album.user_id)
+          .single();
+
+        const { data: likeCount } = await supabase
+          .from('album_likes')
+          .select('id', { count: 'exact' })
+          .eq('album_id', album.id);
+
+        const { data: likeData } = await supabase
+          .from('album_likes')
+          .select('id')
+          .eq('album_id', album.id)
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        return {
+          ...album,
+          user_name: userData?.display_name || '家庭成員',
+          like_count: likeCount?.length || 0,
+          isLiked: !!likeData,
+        };
+      }));
+
+      setFamilyAlbums(albumsWithInfo);
+    } catch (error) {
+      console.error('Error fetching family albums:', error);
+    }
+  };
+
   const generateStoryCollections = () => {
     const collections: StoryCollection[] = [];
     const now = new Date();
@@ -252,6 +338,7 @@ const AlbumView = ({ onMemoryPress }: AlbumViewProps) => {
     setRefreshing(true);
     setPage(0);
     fetchMemories(true);
+    fetchFamilyAlbums();
   }, [user]);
 
   const handleLoadMore = useCallback(() => {
@@ -266,6 +353,10 @@ const AlbumView = ({ onMemoryPress }: AlbumViewProps) => {
     } else {
       setSelectedMemory(memory);
     }
+  };
+
+  const handleAlbumPress = (album: FamilyAlbum) => {
+    setSelectedAlbum(album);
   };
 
   const renderPhoto = ({ item, index }: { item: Memory; index: number }) => (
@@ -295,11 +386,41 @@ const AlbumView = ({ onMemoryPress }: AlbumViewProps) => {
 
   const renderHeader = () => (
     <View style={styles.header}>
+      {/* 智能相簿區域 */}
+      {familyAlbums.length > 0 && (
+        <View style={styles.albumsSection}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>🤖 AI 智能相簿</Text>
+            <TouchableOpacity onPress={() => setShowSmartAlbumModal(true)}>
+              <Text style={styles.addButton}>＋ 創建</Text>
+            </TouchableOpacity>
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={styles.albumsContent}>
+              {familyAlbums.map((album) => (
+                <AlbumCard 
+                  key={album.id}
+                  album={album}
+                  onPress={() => handleAlbumPress(album)}
+                />
+              ))}
+            </View>
+          </ScrollView>
+        </View>
+      )}
+      
+      {/* 故事集區域 */}
       {storyCollections.length > 0 && (
         <View style={styles.storiesSection}>
+          <Text style={styles.sectionTitle}>📖 自動故事集</Text>
           {renderStoryCollections()}
         </View>
       )}
+      
+      {/* 最近照片標題 */}
+      <View style={styles.photosHeader}>
+        <Text style={styles.sectionTitle}>📷 最近照片</Text>
+      </View>
     </View>
   );
 
@@ -365,6 +486,15 @@ const AlbumView = ({ onMemoryPress }: AlbumViewProps) => {
           handleRefresh();
         }}
       />
+      
+      <SmartAlbumModal 
+        isVisible={showSmartAlbumModal}
+        onClose={() => setShowSmartAlbumModal(false)}
+        onSave={() => {
+          setShowSmartAlbumModal(false);
+          handleRefresh();
+        }}
+      />
     </View>
   );
 };
@@ -383,6 +513,90 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
   },
   
+  // 相簿區域
+  albumsSection: {
+    marginBottom: 24,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+  },
+  addButton: {
+    fontSize: 16,
+    color: '#007AFF',
+    fontWeight: '500',
+  },
+  albumsContent: {
+    flexDirection: 'row',
+    gap: 16,
+    paddingHorizontal: PADDING,
+  },
+  albumCard: {
+    width: 280,
+    height: 160,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#f8f8f8',
+    position: 'relative',
+  },
+  albumCover: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  albumOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    justifyContent: 'flex-end',
+    padding: 16,
+  },
+  albumInfo: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  albumName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#ffffff',
+    marginBottom: 4,
+  },
+  albumTheme: {
+    fontSize: 14,
+    color: '#ffffff',
+    opacity: 0.9,
+    marginBottom: 4,
+  },
+  albumStats: {
+    fontSize: 12,
+    color: '#ffffff',
+    opacity: 0.8,
+    marginBottom: 4,
+  },
+  albumCreator: {
+    fontSize: 11,
+    color: '#ffffff',
+    opacity: 0.7,
+  },
+  aibadge: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    backgroundColor: 'rgba(0, 122, 255, 0.9)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  aiBadgeText: {
+    fontSize: 10,
+    color: '#ffffff',
+    fontWeight: '600',
+  },
+  
   // 故事集區域
   storiesSection: {
     marginBottom: 20,
@@ -393,6 +607,11 @@ const styles = StyleSheet.create({
   storiesContent: {
     paddingHorizontal: PADDING,
     gap: 16,
+  },
+  
+  // 照片標題
+  photosHeader: {
+    marginBottom: 16,
   },
   storyCard: {
     height: STORY_HEIGHT,

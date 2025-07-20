@@ -6,6 +6,23 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
+// Temporary types for smart albums (until migration is run)
+export interface FamilyAlbumRow {
+  id: string;
+  family_id: string;
+  user_id: string;
+  name: string;
+  theme: string;
+  story?: string;
+  image_urls: string[];
+  cover_image_url?: string;
+  photo_count: number;
+  is_smart_generated: boolean;
+  tags: string[];
+  created_at: string;
+  updated_at: string;
+}
+
 export type Database = {
   // Allows to automatically instanciate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)

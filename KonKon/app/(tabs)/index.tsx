@@ -1,6 +1,7 @@
 import AddMemoryModal from '@/components/album/AddMemoryModal';
 import AlbumView from '@/components/album/AlbumView';
 import MemoryDetailView from '@/components/album/MemoryDetailView';
+import SmartAlbumModal from '@/components/album/SmartAlbumModal';
 import CalendarViewSelector from '@/components/calendar/CalendarViewSelector';
 import ChoreViewSelector from '@/components/chore/ChoreViewSelector';
 import { ConfirmationModal, LoadingModal, SuccessModal } from '@/components/common';
@@ -36,6 +37,7 @@ import CalendarService from '@/lib/calendarService';
 import { t } from '@/lib/i18n';
 import type { MealPlan } from '@/lib/mealService';
 import mealService from '@/lib/mealService';
+import { ParsedAlbumResult } from '@/lib/voiceAlbumService';
 import * as FileSystem from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
@@ -77,7 +79,7 @@ export default function HomeScreen() {
   const [loadingText, setLoadingText] = useState('');
   const [showRecurringEventManager, setShowRecurringEventManager] = useState(false);
   const [selectedParentEventId, setSelectedParentEventId] = useState<string | null>(null);
-  const [processedEvents, setProcessedEvents] = useState<any[]>([]);
+
   // 已移除：记账相关状态
   
   // 新增：确认弹窗状态
@@ -93,7 +95,9 @@ export default function HomeScreen() {
 
   // 新增：相簿模态框状态
   const [showAddMemoryModal, setShowAddMemoryModal] = useState(false);
+  const [showSmartAlbumModal, setShowSmartAlbumModal] = useState(false);
   const [initialMemoryImages, setInitialMemoryImages] = useState<ImagePicker.ImagePickerAsset[]>([]);
+  const [albumCreationData, setAlbumCreationData] = useState<{ albumName: string; theme: string } | null>(null);
   
   // 相簿詳情狀態
   const [selectedMemory, setSelectedMemory] = useState<any>(null);
@@ -364,13 +368,20 @@ export default function HomeScreen() {
     router.push('/recipe-detail');
   };
 
-  // 处理手动添加
+  // 處理手動添加 - 根據當前filter決定打開哪個模態框
   const handleManualAdd = () => {
+    // 如果當前是相簿模式，直接打開相簿添加模態框
+    if (selectedFilter === 'familyAlbum') {
+      setInitialMemoryImages([]); // 沒有初始圖片，純手動添加
+      setShowAddMemoryModal(true);
+      return;
+    }
+    
+    // 其他模式（日曆等）打開事件添加模態框
     // 如果没有选中日期，则使用今天
     if (!selectedDate) {
       setSelectedDate(new Date());
     }
-    // 移除记账相关的条件分支
     setEditingEvent(null);
     setShowAddEventModal(true);
   };
@@ -483,21 +494,48 @@ export default function HomeScreen() {
     }
   };
 
-  const handlePhotoPress = () => {
-    Alert.alert(
-      t('home.photo'),
-      '',
-      [
-        { text: t('home.photo'), onPress: () => handleImageSelection('camera') },
-        { text: t('home.album'), onPress: () => handleImageSelection('library') },
-        { text: t('home.cancel'), style: 'cancel' },
-      ],
-      { cancelable: true }
-    );
+  // 處理拍照功能 - 直接拍照並添加到相簿
+  const handlePhotoPress = async () => {
+    const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+    if (permissionResult.granted === false) {
+      Alert.alert('權限錯誤', '需要相機權限才能拍照');
+      return;
+    }
+
+    const pickerResult = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.7,
+      base64: true, // 需要base64用於上傳
+    });
+
+    if (!pickerResult.canceled && pickerResult.assets && pickerResult.assets.length > 0) {
+      // 直接打開 AddMemoryModal 來添加到相簿
+      setInitialMemoryImages(pickerResult.assets);
+      setShowAddMemoryModal(true);
+    }
   };
 
-  const handleAlbumPress = () => {
-    handleImageSelection('library');
+  // 處理相簿選取功能 - 從相簿選取照片並添加到家庭相簿
+  const handleAlbumPress = async () => {
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (permissionResult.granted === false) {
+      Alert.alert('權限錯誤', '需要相簿權限才能選取照片');
+      return;
+    }
+
+    const pickerResult = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: true,
+      quality: 0.7,
+      base64: true, // 需要base64用於上傳
+    });
+
+    if (!pickerResult.canceled && pickerResult.assets && pickerResult.assets.length > 0) {
+      // 打開 AddMemoryModal 來添加到相簿
+      setInitialMemoryImages(pickerResult.assets);
+      setShowAddMemoryModal(true);
+    }
   };
 
   // 处理语音转日程
@@ -633,6 +671,20 @@ export default function HomeScreen() {
       setIsConfirmationModalVisible(true);
     } else {
       // handleTextError(); // No longer needed, SmartButton will handle it
+    }
+  };
+
+  const handleAlbumAIResult = (result: ParsedAlbumResult) => {
+    console.log('Got album AI result:', result);
+    if (result.success && result.albumName) {
+      // 設置相簿創建數據並打開智能相簿模態框
+      setAlbumCreationData({
+        albumName: result.albumName,
+        theme: result.theme || '日常生活'
+      });
+      setShowSmartAlbumModal(true);
+    } else {
+      Alert.alert('語音識別失敗', result.error || '無法識別相簿創建指令，請重新嘗試');
     }
   };
 
@@ -912,7 +964,8 @@ export default function HomeScreen() {
   const getProcessedEventsByDate = (date: Date) => {
     const targetDateString = date.toISOString().split('T')[0];
     
-    return processedEvents.filter(event => {
+    // 直接使用 events 而不是 processedEvents 來確保事件正確顯示
+    return events.filter(event => {
       const eventDateString = new Date(event.start_ts * 1000).toISOString().split('T')[0];
       return eventDateString === targetDateString;
     });
@@ -957,7 +1010,7 @@ export default function HomeScreen() {
     };
     
     // 标记有事件的日期
-    processedEvents.forEach(event => {
+    events.forEach(event => {
       const eventDate = new Date(event.start_ts * 1000).toISOString().split('T')[0];
       if (markedDates[eventDate]) {
         markedDates[eventDate] = {
@@ -1416,7 +1469,18 @@ export default function HomeScreen() {
           <>
             {/* 日历部分 */}
             <CalendarViewSelector
-              events={processedEvents}
+              events={events.map(event => ({
+                id: event.id,
+                title: event.title,
+                description: event.description || undefined,
+                start_ts: event.start_ts,
+                end_ts: event.end_ts || event.start_ts,
+                location: event.location || undefined,
+                color: event.color || undefined,
+                type: event.type || undefined,
+                parent_event_id: event.parent_event_id || undefined,
+                creator_id: event.creator_id
+              }))}
               selectedDate={selectedDate || new Date()}
               currentMonth={currentMonth}
               onDatePress={(date: Date) => {
@@ -1574,13 +1638,14 @@ export default function HomeScreen() {
         onPress={handleVoicePress}
         text={voiceState.isRecording ? 
           t('home.isRecording', { duration: Math.floor(voiceState.duration / 1000) }) : 
-          t('home.longPressToTalk')
+          (selectedFilter === 'familyAlbum' ? '長按說話，創建智能相簿' : t('home.longPressToTalk'))
         }
         onTextInputPress={() => {
           // console.log('Text input pressed')
         }}
         onTextResult={handleTextResult}
-        onParseResult={handleAIResult}
+        {...(selectedFilter !== 'familyAlbum' ? { onParseResult: handleAIResult } : {})}
+        onAlbumParseResult={selectedFilter === 'familyAlbum' ? handleAlbumAIResult : undefined}
         onError={handleTextError}
         onManualAddPress={handleManualAdd}
         onPhotoPress={handlePhotoPress}
@@ -1620,6 +1685,22 @@ export default function HomeScreen() {
           // Note: AlbumView has its own refresh logic, so we don't need to call refresh here.
         }}
         initialImages={initialMemoryImages}
+      />
+
+      {/* 新增：智能相簿創建模態框 */}
+      <SmartAlbumModal
+        isVisible={showSmartAlbumModal}
+        onClose={() => {
+          setShowSmartAlbumModal(false);
+          setAlbumCreationData(null);
+        }}
+        onSave={() => {
+          setShowSmartAlbumModal(false);
+          setAlbumCreationData(null);
+          // AlbumView will refresh automatically
+        }}
+        albumName={albumCreationData?.albumName || ''}
+        theme={albumCreationData?.theme || '日常生活'}
       />
 
       {/* 餐食生成器模態框 */}

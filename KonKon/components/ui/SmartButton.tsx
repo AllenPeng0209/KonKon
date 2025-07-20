@@ -14,14 +14,15 @@ import {
   View,
 } from 'react-native';
 import { t } from '@/lib/i18n';
-import { ParsedCalendarResult, processVoiceToCalendar } from '../../lib/bailian_omni_calendar';
+import { ParsedAlbumResult, voiceAlbumService } from '@/lib/voiceAlbumService';
 
 interface SmartButtonProps {
   onPress?: () => void;
   onTextInputPress?: () => void;
   onTextResult?: (text: string) => void;
-  onParseResult?: (result: ParsedCalendarResult) => void;
-  onError?: () => void;
+  onParseResult?: (result: any) => void; // Backward compatibility
+  onAlbumParseResult?: (result: ParsedAlbumResult) => void;
+  onError?: (error?: string) => void;
   onPhotoPress?: () => void;
   onAlbumPress?: () => void;
   onManualAddPress?: () => void;
@@ -35,11 +36,12 @@ export default function SmartButton({
   onTextInputPress,
   onTextResult,
   onParseResult,
+  onAlbumParseResult,
   onError,
   onPhotoPress,
   onAlbumPress,
   onManualAddPress,
-  text = '长按说话，快速记录',
+  text = '长按说话，创建智能相簿',
   icon = '+',
   disabled = false,
 }: SmartButtonProps) {
@@ -117,13 +119,34 @@ export default function SmartButton({
     }
   };
 
-  const handleSendText = () => {
+  const handleSendText = async () => {
     if (!inputText.trim()) return;
+    
+    setIsProcessing(true);
     const textToProcess = inputText.trim();
-    if (onTextResult) {
-      onTextResult(textToProcess);
+    
+    try {
+      // 嘗試解析文字相簿創建指令
+      const albumRequest = await voiceAlbumService.parseAlbumCommand?.(textToProcess);
+      
+      if (albumRequest && onAlbumParseResult) {
+        onAlbumParseResult({
+          albumName: albumRequest.albumName,
+          theme: albumRequest.theme || '日常生活',
+          success: true
+        });
+      } else if (onTextResult) {
+        onTextResult(textToProcess);
+      }
+    } catch (error: any) {
+      console.error('文字解析失敗:', error);
+      if (onTextResult) {
+        onTextResult(textToProcess);
+      }
+    } finally {
+      setInputText('');
+      setIsProcessing(false);
     }
-    setInputText('');
   };
 
   const handleBackToVoice = () => {
@@ -243,23 +266,38 @@ export default function SmartButton({
         });
         
         try {
-          console.log('录音完成，开始 Bailian Omni Calendar 解析...');
-          
-          // 不再将实时数据流更新到UI
-          const result = await processVoiceToCalendar(base64Audio);
-          
-          console.log('Bailian Omni Calendar 解析完成:', result);
-          
-          if (!result || result.events.length === 0) {
-            throw new Error('未能解析出任何日程事件');
-          }
+          // 根据是否有 onAlbumParseResult 决定使用哪种解析
+          if (onAlbumParseResult) {
+            console.log('录音完成，开始 AI 相簿创建解析...');
+            
+            // 使用新的语音相簿服务
+            const result = await voiceAlbumService.processVoiceToAlbum(base64Audio);
+            
+            console.log('AI 相簿创建解析完成:', result);
+            
+            if (!result || !result.success) {
+              throw new Error(result.error || '未能解析出相簿创建指令');
+            }
 
-          if (onParseResult) {
+            onAlbumParseResult(result);
+          } else if (onParseResult) {
+            // 使用原有的日程解析 (需要动态导入以避免循环依赖)
+            const { processVoiceToCalendar } = await import('@/lib/bailian_omni_calendar');
+            console.log('录音完成，开始 Bailian Omni Calendar 解析...');
+            
+            const result = await processVoiceToCalendar(base64Audio);
+            
+            console.log('Bailian Omni Calendar 解析完成:', result);
+            
+            if (!result || result.events.length === 0) {
+              throw new Error('未能解析出任何日程事件');
+            }
+
             onParseResult(result);
           }
         } catch (e: any) {
-          console.error('Bailian Omni Calendar 解析失败:', e);
-          onError?.();
+          console.error('AI 解析失败:', e);
+          onError?.(e.message);
         } finally {
           setIsProcessing(false);
         }
