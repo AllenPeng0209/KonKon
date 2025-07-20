@@ -99,7 +99,7 @@ export default function HomeScreen() {
   const [showAddMemoryModal, setShowAddMemoryModal] = useState(false);
   const [showSmartAlbumModal, setShowSmartAlbumModal] = useState(false);
   const [initialMemoryImages, setInitialMemoryImages] = useState<ImagePicker.ImagePickerAsset[]>([]);
-  const [albumCreationData, setAlbumCreationData] = useState<{ albumName: string; theme: string } | null>(null);
+  const [albumCreationData, setAlbumCreationData] = useState<{ albumName: string; theme: string; keywords: string[] } | null>(null);
   
   // 相簿詳情狀態
   const [selectedMemory, setSelectedMemory] = useState<any>(null);
@@ -685,9 +685,20 @@ export default function HomeScreen() {
       // 設置相簿創建數據並打開智能相簿模態框
       setAlbumCreationData({
         albumName: result.albumName,
-        theme: result.theme || '日常生活'
+        theme: result.theme || '日常生活',
+        keywords: result.keywords || []
       });
       setShowSmartAlbumModal(true);
+      
+      // 顯示解析成功的提示
+      const keywordText = result.keywords && result.keywords.length > 0 
+        ? `，將根據關鍵詞「${result.keywords.join('、')}」智能篩選照片` 
+        : '';
+      Alert.alert(
+        '語音解析成功',
+        `準備創建相簿「${result.albumName}」（${result.theme}）${keywordText}`,
+        [{ text: '開始創建', style: 'default' }]
+      );
     } else {
       Alert.alert('語音識別失敗', result.error || '無法識別相簿創建指令，請重新嘗試');
     }
@@ -1647,7 +1658,10 @@ export default function HomeScreen() {
         onPress={handleVoicePress}
         text={voiceState.isRecording ? 
           t('home.isRecording', { duration: Math.floor(voiceState.duration / 1000) }) : 
-          (selectedFilter === 'familyAlbum' ? '長按說話，創建智能相簿' : t('home.longPressToTalk'))
+          (selectedFilter === 'familyAlbum' ? 
+            '🎤 說話創建智能相簿 (如：小孩成長視頻)' : 
+            t('home.longPressToTalk')
+          )
         }
         onTextInputPress={() => {
           // console.log('Text input pressed')
@@ -1711,6 +1725,7 @@ export default function HomeScreen() {
         }}
         albumName={albumCreationData?.albumName || ''}
         theme={albumCreationData?.theme || '日常生活'}
+        keywords={albumCreationData?.keywords || []}
       />
 
       {/* 餐食生成器模態框 */}

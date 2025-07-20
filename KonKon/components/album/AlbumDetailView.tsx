@@ -1,23 +1,24 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { Tables } from '@/lib/database.types';
 import { supabase } from '@/lib/supabase';
+import { videoGenerationService } from '@/lib/videoGenerationService';
 import { ResizeMode, Video } from 'expo-av';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Dimensions,
-    FlatList,
-    Image,
-    Modal,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  FlatList,
+  Image,
+  Modal,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 type SimpleAlbum = Tables<'family_albums'> & {
@@ -120,36 +121,69 @@ const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({ album, isVisible, onC
     setIsGeneratingVideo(true);
     
     try {
-      // In a real implementation, this would call an AI video generation service
-      // For now, we'll simulate the process and use a sample video
+      console.log('開始使用AI生成視頻...');
       
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      
-      // For demo purposes, use a sample video URL
-      // In production, this would be the actual generated video URL
-      const mockVideoUrl = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
-      
-      setGeneratedVideoUrl(mockVideoUrl);
-      
-      // Update album metadata with video URL
-      const metadata = {
-        ...(album.metadata as object || {}),
-        generated_video_url: mockVideoUrl,
-        video_music_type: selectedMusic,
-        video_generated_at: new Date().toISOString(),
+      // 將 AlbumPhoto 轉換為 ImagePickerAsset 格式
+      const photoAssets = displayPhotos.map((photo, index) => ({
+        uri: photo.image_url,
+        width: 1080,
+        height: 1080,
+        fileName: `photo_${index}.jpg`,
+        type: 'image' as const,
+        mimeType: 'image/jpeg',
+      }));
+
+      // 準備視頻生成選項
+      const videoOptions = {
+        photos: photoAssets,
+        musicStyle: selectedMusic as 'upbeat' | 'emotional' | 'peaceful' | 'adventure' | 'nostalgic',
+        albumId: album.id,
+        albumName: album.name,
+        theme: album.theme || '日常生活'
       };
+
+      console.log('調用視頻生成服務...');
+      const result = await videoGenerationService.generateSlideShowVideo(videoOptions);
       
-      await supabase
-        .from('family_albums')
-        .update({ metadata })
-        .eq('id', album.id);
+      if (result.success && result.videoUrl) {
+        setGeneratedVideoUrl(result.videoUrl);
+        
+        // 更新相簿元數據（如果數據庫支持）
+        try {
+          const updateData = {
+            // 只更新已存在的字段
+            updated_at: new Date().toISOString()
+          };
+          
+          await supabase
+            .from('family_albums')
+            .update(updateData)
+            .eq('id', album.id);
+            
+          console.log('相簿更新成功');
+        } catch (updateError) {
+          console.warn('更新相簿元數據失敗（非關鍵錯誤）:', updateError);
+        }
+        
+        Alert.alert(
+          '視頻生成成功', 
+          `您的相簿視頻已準備就緒！\n時長：${Math.round(result.duration || 30)}秒`,
+          [{ text: '太棒了！', style: 'default' }]
+        );
+      } else {
+        throw new Error(result.error || '視頻生成失敗');
+      }
       
-      Alert.alert('視頻生成成功', '您的相簿視頻已準備就緒！');
-      
-    } catch (error) {
-      console.error('Error generating video:', error);
-      Alert.alert('生成失敗', '視頻生成過程中出現錯誤，請稍後重試');
+    } catch (error: any) {
+      console.error('視頻生成錯誤:', error);
+      Alert.alert(
+        '生成失敗', 
+        error.message || '視頻生成過程中出現錯誤，請稍後重試',
+        [
+          { text: '稍後重試', style: 'cancel' },
+          { text: '重新嘗試', onPress: generateVideo }
+        ]
+      );
     } finally {
       setIsGeneratingVideo(false);
     }

@@ -1,22 +1,21 @@
 import { useAuth } from '@/contexts/AuthContext';
-import { t } from '@/lib/i18n';
 import { supabase } from '@/lib/supabase';
 import { SmartAlbum, smartAlbumCreator } from '@/lib/voiceAlbumService';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Dimensions,
-    FlatList,
-    Image,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  FlatList,
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import 'react-native-get-random-values';
 
@@ -26,6 +25,7 @@ interface SmartAlbumModalProps {
   onSave: () => void;
   albumName?: string;
   theme?: string;
+  keywords?: string[]; // 新增：從語音解析的關鍵詞
 }
 
 const SmartAlbumModal: React.FC<SmartAlbumModalProps> = ({ 
@@ -33,15 +33,18 @@ const SmartAlbumModal: React.FC<SmartAlbumModalProps> = ({
   onClose, 
   onSave, 
   albumName: initialAlbumName = '',
-  theme: initialTheme = '日常生活'
+  theme: initialTheme = '日常生活',
+  keywords: initialKeywords = []
 }) => {
   const { user, userFamilyDetails } = useAuth();
   const [albumName, setAlbumName] = useState(initialAlbumName);
   const [theme, setTheme] = useState(initialTheme);
+  const [keywords, setKeywords] = useState<string[]>(initialKeywords);
   const [smartAlbum, setSmartAlbum] = useState<SmartAlbum | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [selectedPhotos, setSelectedPhotos] = useState<ImagePicker.ImagePickerAsset[]>([]);
+  const [useIntelligentSelection, setUseIntelligentSelection] = useState(true);
 
   const themeOptions = [
     { key: '日常生活', label: '日常生活', icon: '🏠' },
@@ -60,12 +63,44 @@ const SmartAlbumModal: React.FC<SmartAlbumModalProps> = ({
 
     setIsCreating(true);
     try {
-      const newSmartAlbum = await smartAlbumCreator.createSmartAlbum(albumName, theme);
+      let newSmartAlbum: SmartAlbum;
+      
+      if (useIntelligentSelection && keywords.length > 0) {
+        console.log('使用智能照片篩選功能');
+        newSmartAlbum = await smartAlbumCreator.createSmartAlbumIntelligent(albumName, theme, keywords);
+      } else {
+        console.log('使用手動選擇照片功能');
+        newSmartAlbum = await smartAlbumCreator.createSmartAlbumManual(albumName, theme);
+      }
+      
       setSmartAlbum(newSmartAlbum);
       setSelectedPhotos(newSmartAlbum.photos);
+      
+      Alert.alert(
+        '智能相簿創建成功',
+        `成功創建了包含 ${newSmartAlbum.photos.length} 張照片的智能相簿！`,
+        [{ text: '確定', style: 'default' }]
+      );
     } catch (error: any) {
       console.error('創建智能相簿失敗:', error);
-      Alert.alert('創建失敗', error.message || '無法創建智能相簿');
+      if (error.message.includes('未找到符合主題的照片')) {
+        Alert.alert(
+          '智能篩選未找到照片',
+          '沒有找到符合主題的照片，您可以：\n1. 調整主題設定\n2. 改為手動選擇照片',
+          [
+            { text: '調整設定', style: 'default' },
+            { 
+              text: '手動選擇', 
+              onPress: () => {
+                setUseIntelligentSelection(false);
+                handleCreateSmartAlbum();
+              }
+            }
+          ]
+        );
+      } else {
+        Alert.alert('創建失敗', error.message || '無法創建智能相簿');
+      }
     } finally {
       setIsCreating(false);
     }
@@ -73,9 +108,9 @@ const SmartAlbumModal: React.FC<SmartAlbumModalProps> = ({
 
   const handleTogglePhoto = (photo: ImagePicker.ImagePickerAsset) => {
     setSelectedPhotos(prev => {
-      const exists = prev.find(p => p.id === photo.id);
+      const exists = prev.find(p => p.uri === photo.uri);
       if (exists) {
-        return prev.filter(p => p.id !== photo.id);
+        return prev.filter(p => p.uri !== photo.uri);
       } else {
         return [...prev, photo];
       }
@@ -180,7 +215,7 @@ const SmartAlbumModal: React.FC<SmartAlbumModalProps> = ({
   };
 
   const renderPhotoItem = ({ item }: { item: ImagePicker.ImagePickerAsset }) => {
-    const isSelected = selectedPhotos.find(p => p.id === item.id);
+    const isSelected = selectedPhotos.find(p => p.uri === item.uri);
     
     return (
       <TouchableOpacity
@@ -255,15 +290,56 @@ const SmartAlbumModal: React.FC<SmartAlbumModalProps> = ({
               </ScrollView>
             </View>
 
+            {/* 智能篩選選項 */}
+            {keywords.length > 0 && (
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>🤖 智能篩選</Text>
+                <TouchableOpacity
+                  style={[styles.switchContainer, useIntelligentSelection && styles.switchContainerActive]}
+                  onPress={() => setUseIntelligentSelection(!useIntelligentSelection)}
+                  disabled={isCreating || isPublishing}
+                >
+                  <View style={[styles.switchTrack, useIntelligentSelection && styles.switchTrackActive]}>
+                    <View style={[styles.switchThumb, useIntelligentSelection && styles.switchThumbActive]} />
+                  </View>
+                  <Text style={styles.switchLabel}>
+                    {useIntelligentSelection ? 'AI 智能篩選照片' : '手動選擇照片'}
+                  </Text>
+                </TouchableOpacity>
+                
+                {useIntelligentSelection && (
+                  <View style={styles.keywordsContainer}>
+                    <Text style={styles.keywordsTitle}>篩選關鍵詞：</Text>
+                    <View style={styles.keywordsList}>
+                      {keywords.map((keyword, index) => (
+                        <View key={index} style={styles.keywordTag}>
+                          <Text style={styles.keywordText}>{keyword}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                )}
+              </View>
+            )}
+
             <TouchableOpacity
               style={[styles.createButton, (isCreating || !albumName.trim()) && styles.createButtonDisabled]}
               onPress={handleCreateSmartAlbum}
               disabled={isCreating || !albumName.trim()}
             >
               {isCreating ? (
-                <ActivityIndicator color="#fff" />
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator color="#fff" size="small" />
+                  <Text style={styles.createButtonText}>
+                    {useIntelligentSelection ? '🔍 AI 正在分析照片...' : '📸 正在選擇照片...'}
+                  </Text>
+                </View>
               ) : (
-                <Text style={styles.createButtonText}>🤖 AI 智能生成相簿</Text>
+                <Text style={styles.createButtonText}>
+                  {useIntelligentSelection && keywords.length > 0 
+                    ? '🤖 AI 智能生成相簿' 
+                    : '📸 手動選擇照片創建'}
+                </Text>
               )}
             </TouchableOpacity>
           </View>
@@ -286,7 +362,7 @@ const SmartAlbumModal: React.FC<SmartAlbumModalProps> = ({
               <FlatList
                 data={smartAlbum.photos}
                 renderItem={renderPhotoItem}
-                keyExtractor={(item) => item.id}
+                keyExtractor={(item, index) => item.uri || index.toString()}
                 numColumns={3}
                 scrollEnabled={false}
                 ItemSeparatorComponent={() => <View style={{ height: 4 }} />}
@@ -501,6 +577,82 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  switchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0f0f0',
+    borderRadius: 25,
+    padding: 8,
+    marginTop: 8,
+  },
+  switchContainerActive: {
+    backgroundColor: '#e3f2fd',
+  },
+  switchTrack: {
+    width: 40,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#ccc',
+    marginRight: 12,
+    position: 'relative',
+  },
+  switchTrackActive: {
+    backgroundColor: '#007AFF',
+  },
+  switchThumb: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#fff',
+    position: 'absolute',
+    left: 2,
+    top: 2,
+  },
+  switchThumbActive: {
+    left: 18,
+  },
+  switchLabel: {
+    fontSize: 14,
+    color: '#333',
+    fontWeight: '500',
+  },
+  keywordsContainer: {
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e1e8ed',
+  },
+  keywordsTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#666',
+    marginBottom: 8,
+  },
+  keywordsList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  keywordTag: {
+    backgroundColor: '#007AFF',
+    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginRight: 6,
+    marginBottom: 6,
+  },
+  keywordText: {
+    fontSize: 12,
+    color: '#fff',
+    fontWeight: '500',
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
 
