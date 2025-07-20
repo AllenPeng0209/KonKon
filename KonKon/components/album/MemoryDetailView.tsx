@@ -1,8 +1,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { Tables } from '@/lib/database.types';
-import { t } from '@/lib/i18n';
 import { supabase } from '@/lib/supabase';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -33,7 +32,7 @@ type Memory = Tables<'family_memories'> & {
 
 type Comment = Tables<'memory_comments'> & {
   user_name?: string;
-  user_avatar?: string;
+  user_avatar?: string | null;
 };
 
 interface MemoryDetailViewProps {
@@ -74,10 +73,7 @@ const MemoryDetailView: React.FC<MemoryDetailViewProps> = ({
     try {
       const { data, error } = await supabase
         .from('memory_comments')
-        .select(`
-          *,
-          users!memory_comments_user_id_fkey(display_name, avatar_url)
-        `)
+        .select('*')
         .eq('memory_id', memory.id)
         .order('created_at', { ascending: true });
 
@@ -86,10 +82,19 @@ const MemoryDetailView: React.FC<MemoryDetailViewProps> = ({
         return;
       }
 
-      const commentsWithUserInfo = (data || []).map(comment => ({
-        ...comment,
-        user_name: comment.users?.display_name || t('album.familyMember'),
-        user_avatar: comment.users?.avatar_url,
+      // 為每個評論獲取用戶信息
+      const commentsWithUserInfo = await Promise.all((data || []).map(async comment => {
+        const { data: userData } = await supabase
+          .from('users')
+          .select('display_name, avatar_url')
+          .eq('id', comment.user_id)
+          .single();
+
+        return {
+          ...comment,
+          user_name: userData?.display_name || '家庭成員',
+          user_avatar: userData?.avatar_url,
+        };
       }));
 
       setComments(commentsWithUserInfo);
@@ -130,7 +135,7 @@ const MemoryDetailView: React.FC<MemoryDetailViewProps> = ({
       }
     } catch (error) {
       console.error('Error toggling like:', error);
-      Alert.alert(t('common.error'), t('album.likeError'));
+      Alert.alert('錯誤', '點讚失敗');
     }
   };
 
@@ -156,7 +161,7 @@ const MemoryDetailView: React.FC<MemoryDetailViewProps> = ({
 
       const newCommentWithUser = {
         ...data,
-        user_name: data.users?.display_name || t('album.familyMember'),
+        user_name: data.users?.display_name || '家庭成員',
         user_avatar: data.users?.avatar_url,
       };
 
@@ -174,7 +179,7 @@ const MemoryDetailView: React.FC<MemoryDetailViewProps> = ({
       }
     } catch (error) {
       console.error('Error adding comment:', error);
-      Alert.alert(t('common.error'), t('album.commentError'));
+      Alert.alert('錯誤', '評論失敗');
     } finally {
       setLoading(false);
     }
@@ -307,7 +312,7 @@ const MemoryDetailView: React.FC<MemoryDetailViewProps> = ({
             {/* 評論區域 */}
             {showComments && (
               <View style={styles.commentsSection}>
-                <Text style={styles.commentsTitle}>{t('album.comments')}</Text>
+                <Text style={styles.commentsTitle}>評論</Text>
                 
                 {comments.map(comment => (
                   <View key={comment.id}>
@@ -319,7 +324,7 @@ const MemoryDetailView: React.FC<MemoryDetailViewProps> = ({
                 <View style={styles.addCommentSection}>
                   <TextInput
                     style={styles.commentInput}
-                    placeholder={t('album.addComment')}
+                    placeholder="添加評論..."
                     value={newComment}
                     onChangeText={setNewComment}
                     multiline

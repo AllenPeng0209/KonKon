@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Dimensions, Animated, Easing } from 'react-native';
-import { ThemedView } from '../ThemedView';
-import { ThemedText } from '../ThemedText';
+import React, { useEffect, useRef, useState } from 'react';
+import { Animated, Dimensions, Easing, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ThemedText } from '../common/ThemedText';
+import { ThemedView } from '../common/ThemedView';
 
 interface Event {
   id: string;

@@ -1,7 +1,7 @@
 import { t } from '@/lib/i18n';
 import React from 'react';
 import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { CalendarEvent } from '../lib/bailian_omni_calendar';
+import { CalendarEvent } from '../../lib/bailian_omni_calendar';
 
 interface ConfirmationModalProps {
   isVisible: boolean;

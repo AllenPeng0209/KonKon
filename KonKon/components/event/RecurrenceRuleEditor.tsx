@@ -15,7 +15,7 @@ import {
     formatRecurrenceDescription,
     parseNaturalLanguageRecurrence,
     validateRecurrenceRule
-} from '../lib/recurrenceEngine';
+} from '../../lib/recurrenceEngine';
 
 interface RecurrenceRuleEditorProps {
   initialRule?: RecurrenceRule;

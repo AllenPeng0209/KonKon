@@ -10,8 +10,8 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { RecurringEventData, useRecurringEvents } from '../hooks/useRecurringEvents';
-import { RecurrenceInstance, RecurrenceRule } from '../lib/recurrenceEngine';
+import { RecurringEventData, useRecurringEvents } from '../../hooks/useRecurringEvents';
+import { RecurrenceInstance, RecurrenceRule } from '../../lib/recurrenceEngine';
 import RecurrenceRuleEditor from './RecurrenceRuleEditor';
 
 interface RecurringEventManagerProps {

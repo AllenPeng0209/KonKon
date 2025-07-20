@@ -1,18 +1,16 @@
-import AddEventModal from '@/components/AddEventModal';
-import AddMemoryModal from '@/components/AddMemoryModal';
-import AlbumView, { Memory } from '@/components/AlbumView';
+import AddMemoryModal from '@/components/album/AddMemoryModal';
+import AlbumView from '@/components/album/AlbumView';
+import MemoryDetailView from '@/components/album/MemoryDetailView';
 import CalendarViewSelector from '@/components/calendar/CalendarViewSelector';
 import ChoreViewSelector from '@/components/chore/ChoreViewSelector';
-import { ConfirmationModal } from '@/components/ConfirmationModal';
-import EventListModal from '@/components/EventListModal';
-import LoadingModal from '@/components/LoadingModal';
+import { ConfirmationModal, LoadingModal, SuccessModal } from '@/components/common';
+import AddEventModal from '@/components/event/AddEventModal';
+import EventListModal from '@/components/event/EventListModal';
+import RecurringEventManager from '@/components/event/RecurringEventManager';
+import { VoiceToCalendar } from '@/components/event/VoiceToCalendar';
 import MealViewSelector from '@/components/meal/MealViewSelector';
 import type { MealRecord } from '@/components/meal/MealViewTypes';
-import MemoryDetailView from '@/components/MemoryDetailView';
-import RecurringEventManager from '@/components/RecurringEventManager';
-import { SuccessModal } from '@/components/SuccessModal';
 import SmartButton from '@/components/ui/SmartButton';
-import { VoiceToCalendar } from '@/components/VoiceToCalendar';
 
 import FamilyHealthDashboard from '@/components/health/FamilyHealthDashboard';
 import ShoppingViewSelector, {
@@ -98,7 +96,7 @@ export default function HomeScreen() {
   const [initialMemoryImages, setInitialMemoryImages] = useState<ImagePicker.ImagePickerAsset[]>([]);
   
   // 相簿詳情狀態
-  const [selectedMemory, setSelectedMemory] = useState<Memory | null>(null);
+  const [selectedMemory, setSelectedMemory] = useState<any>(null);
   const [showMemoryDetail, setShowMemoryDetail] = useState(false);
 
   // 餐食管理狀態
@@ -1052,32 +1050,34 @@ export default function HomeScreen() {
         </View>
       )}
 
-            <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {selectedFilter === 'familyRecipes' ? (
-          // 使用新的餐食視圖選擇器
-          <MealViewSelector
-            mealRecords={mealRecords}
-            selectedDate={selectedDate || new Date()}
-            onMealPress={handleMealPress}
-            onDatePress={(date: Date) => setSelectedDate(date)}
-            currentView={(() => {
-              const selectedStyle = featureSettings.familyRecipes?.settings?.selectedStyle;
-              switch (selectedStyle) {
-                case '每日記錄': return 'daily_records';
-                case '週間概覽': return 'weekly_overview';
-                case '營養圖表': return 'nutrition_chart';
-                default: return 'daily_records';
-              }
-            })()}
-          />
-        ) : selectedFilter === 'familyAlbum' ? (
-          <AlbumView 
-            onMemoryPress={(memory) => {
-              setSelectedMemory(memory);
-              setShowMemoryDetail(true);
-            }}
-          />
-        ) : selectedFilter === 'choreAssignment' ? (
+      {/* 相冊功能需要直接渲染避免嵌套問題 */}
+      {selectedFilter === 'familyAlbum' ? (
+        <AlbumView 
+          onMemoryPress={(memory) => {
+            setSelectedMemory(memory);
+            setShowMemoryDetail(true);
+          }}
+        />
+      ) : (
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          {selectedFilter === 'familyRecipes' ? (
+            // 使用新的餐食視圖選擇器
+            <MealViewSelector
+              mealRecords={mealRecords}
+              selectedDate={selectedDate || new Date()}
+              onMealPress={handleMealPress}
+              onDatePress={(date: Date) => setSelectedDate(date)}
+              currentView={(() => {
+                const selectedStyle = featureSettings.familyRecipes?.settings?.selectedStyle;
+                switch (selectedStyle) {
+                  case '每日記錄': return 'daily_records';
+                  case '週間概覽': return 'weekly_overview';
+                  case '營養圖表': return 'nutrition_chart';
+                  default: return 'daily_records';
+                }
+              })()}
+            />
+          ) : selectedFilter === 'choreAssignment' ? (
           // 使用家務視圖選擇器
           <ChoreViewSelector
             tasks={tasks}
@@ -1566,7 +1566,8 @@ export default function HomeScreen() {
             </View>
           </>
         )}
-      </ScrollView>
+        </ScrollView>
+      )}
 
       {/* 底部快速记录按钮 */}
       <SmartButton 

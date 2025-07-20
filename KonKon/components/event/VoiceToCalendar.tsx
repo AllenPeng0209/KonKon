@@ -10,14 +10,14 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { useEvents } from '../hooks/useEvents';
+import { useEvents } from '../../hooks/useEvents';
 import {
     CalendarEvent,
     ParsedCalendarResult,
     testOmniConnection,
     testSpeechConnection
-} from '../lib/bailian_omni_calendar';
-import SmartButton from './ui/SmartButton';
+} from '../../lib/bailian_omni_calendar';
+import SmartButton from '../ui/SmartButton';
 
 interface VoiceToCalendarProps {
   isVisible: boolean;

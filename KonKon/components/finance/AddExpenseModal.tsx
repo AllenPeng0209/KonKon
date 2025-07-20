@@ -15,9 +15,9 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { useAuth } from '../contexts/AuthContext';
-import { useFamily } from '../contexts/FamilyContext';
-import { Tables, TablesInsert } from '../lib/database.types';
+import { useAuth } from '../../contexts/AuthContext';
+import { useFamily } from '../../contexts/FamilyContext';
+import { Tables, TablesInsert } from '../../lib/database.types';
 
 type Expense = Tables<'expenses'>;
 type ExpenseInsert = TablesInsert<'expenses'>;

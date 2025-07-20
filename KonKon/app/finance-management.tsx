@@ -1,5 +1,5 @@
+import FinanceView from '@/components/finance/FinanceView';
 import TransactionForm from '@/components/finance/TransactionForm';
-import FinanceView from '@/components/FinanceView';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFamily } from '@/contexts/FamilyContext';
 import {

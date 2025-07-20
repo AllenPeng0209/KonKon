@@ -17,7 +17,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, TouchableWithoutFeedback, View } from 'react-native';
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
-import Drawer from '../components/Drawer';
+import Drawer from '../components/common/Drawer';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { FamilyProvider } from '../contexts/FamilyContext';
 import { FeatureSettingsProvider } from '../contexts/FeatureSettingsContext';
