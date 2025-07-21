@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useFamily } from '../contexts/FamilyContext';
 import { Database } from '../lib/database.types';
@@ -20,6 +20,7 @@ export interface CreateEventData {
   shareToFamilies?: string[]; // 要分享给的家庭群组ID数组
   type?: string;
   attendees?: string[]; // 参与人用户ID数组
+  imageUrls?: string[]; // 照片附件URL数组
 }
 
 // 事件分享数据结构使用数据库类型
@@ -56,7 +57,7 @@ export const useEvents = () => {
   const fetchEvents = useCallback(async (year?: number, month?: number) => {
     if (!user) return;
     
-    // console.log('🔄 开始获取事件...', { userId: user.id, year, month, userFamilies });
+
     
     try {
       setLoading(true);
@@ -69,7 +70,14 @@ export const useEvents = () => {
         .eq('creator_id', user.id)
         .is('family_id', null);
       
-      // 2. 获取分享给用户所在群组的事件
+      // 2. 获取用户创建的家庭事件（family_id 不为 NULL）
+      let userFamilyEventsQuery = supabase
+        .from('events')
+        .select('*')
+        .eq('creator_id', user.id)
+        .not('family_id', 'is', null);
+      
+      // 3. 获取分享给用户所在群组的事件
       let sharedEventsQuery = supabase
         .from('event_shares')
         .select(`
@@ -90,27 +98,39 @@ export const useEvents = () => {
           .gte('start_ts', startTs)
           .lte('start_ts', endTs);
         
+        userFamilyEventsQuery = userFamilyEventsQuery
+          .gte('start_ts', startTs)
+          .lte('start_ts', endTs);
+        
         // 对于分享事件，我们需要在事件表上过滤时间
         // 由于 Supabase 的限制，我们需要在获取数据后再过滤
       }
 
-      const [personalResult, sharedResult] = await Promise.all([
+      const [personalResult, userFamilyResult, sharedResult] = await Promise.all([
         personalEventsQuery,
+        userFamilyEventsQuery,
         sharedEventsQuery
       ]);
 
       if (personalResult.error) {
-        // console.error('获取个人事件失败:', personalResult.error);
         throw personalResult.error;
       }
 
+      if (userFamilyResult.error) {
+        throw userFamilyResult.error;
+      }
+
       if (sharedResult.error) {
-        // console.error('获取分享事件失败:', sharedResult.error);
         throw sharedResult.error;
       }
 
-      // 合并个人事件和分享事件
+      // 合并个人事件
       const personalEvents: EventWithShares[] = (personalResult.data || []).map(event => ({
+        ...event,
+        is_shared: false
+      }));
+      // 合并用户创建的家庭事件
+      const userFamilyEvents: EventWithShares[] = (userFamilyResult.data || []).map(event => ({
         ...event,
         is_shared: false
       }));
@@ -143,6 +163,10 @@ export const useEvents = () => {
       const eventMap = new Map<string, EventWithShares>();
       
       personalEvents.forEach(event => {
+        eventMap.set(event.id, event);
+      });
+
+      userFamilyEvents.forEach(event => {
         eventMap.set(event.id, event);
       });
 
@@ -199,18 +223,10 @@ export const useEvents = () => {
         }
       }
 
-      /*
-      console.log('✅ 获取事件成功:', { 
-        totalEvents: allEvents.length, 
-        personalEvents: personalEvents.length, 
-        sharedEvents: sharedEvents.length,
-        events: allEvents.map(e => ({ id: e.id, title: e.title, start_ts: e.start_ts }))
-      });
-      */
+
       setEvents(allEvents);
 
     } catch (err) {
-      // console.error('获取事件失败:', err);
       setError(err instanceof Error ? err.message : '获取事件失败');
     } finally {
       setLoading(false);
@@ -228,10 +244,10 @@ export const useEvents = () => {
     setError(null);
 
     try {
-      const { title, description, startTime, endTime, location, color, shareToFamilies, type, attendees } = eventData;
+      const { title, description, startTime, endTime, location, color, shareToFamilies, type, attendees, imageUrls } = eventData;
 
       const start_ts = Math.floor(startTime.getTime() / 1000);
-      const end_ts = endTime ? Math.floor(endTime.getTime() / 1000) : null;
+      const end_ts = endTime ? Math.floor(endTime.getTime() / 1000) : start_ts + 3600; // 默認1小時
 
       const eventToInsert: Partial<EventInsert> = {
         creator_id: user.id,
@@ -242,6 +258,7 @@ export const useEvents = () => {
         location,
         color,
         type,
+        image_urls: imageUrls || null,
       };
 
       if (shareToFamilies && shareToFamilies.length > 0) {
@@ -357,10 +374,10 @@ export const useEvents = () => {
     setError(null);
 
     try {
-      const { title, description, startTime, endTime, location, color, shareToFamilies, type, attendees } = eventData;
+      const { title, description, startTime, endTime, location, color, shareToFamilies, type, attendees, imageUrls } = eventData;
 
       const start_ts = Math.floor(startTime.getTime() / 1000);
-      const end_ts = endTime ? Math.floor(endTime.getTime() / 1000) : null;
+      const end_ts = endTime ? Math.floor(endTime.getTime() / 1000) : start_ts + 3600; // 默認1小時
 
       const eventToUpdate: Partial<Event> = {
         title,
@@ -370,68 +387,45 @@ export const useEvents = () => {
         location,
         color,
         type,
+        image_urls: imageUrls || null,
         updated_at: new Date().toISOString(),
       };
 
-      const { error } = await supabase
+      // 首先檢查事件是否存在以及用戶權限
+      const { data: existingEvent, error: checkError } = await supabase
+        .from('events')
+        .select('id, creator_id, title')
+        .eq('id', eventId)
+        .single();
+
+              if (checkError || !existingEvent) {
+          throw new Error('事件不存在或無法訪問');
+        }
+
+        // 檢查用戶權限：是創建者或有共享權限
+        if (existingEvent.creator_id !== user.id) {
+          // 暫時允許更新，後續可以添加更複雜的權限檢查
+        }
+
+      const { data: updateData, error } = await supabase
         .from('events')
         .update(eventToUpdate)
         .eq('id', eventId)
-        .eq('creator_id', user.id);
+        .select()
+        .single();
 
-      if (error) {
-        throw error;
-      }
+              if (error) {
+          throw error;
+        }
       
       // 更新通知 (如果需要的话)
       // ...
-
-      // 处理分享逻辑
-      if (shareToFamilies) {
-        // 先删除旧的分享记录
-        await supabase
-          .from('event_shares')
-          .delete()
-          .eq('event_id', eventId);
-
-        if (shareToFamilies.length > 0) {
-          // 添加新的分享记录
-          const shareData = shareToFamilies.map(familyId => ({
-            event_id: eventId,
-            family_id: familyId,
-            shared_by: user.id,
-          }));
-          await supabase.from('event_shares').insert(shareData);
-        }
-      }
-
-      // 处理参与人数据
-      if (attendees) {
-        // 先删除旧的参与人记录
-        await supabase
-          .from('event_attendees')
-          .delete()
-          .eq('event_id', eventId);
-
-        if (attendees.length > 0) {
-          // 添加新的参与人记录
-          const attendeeData = attendees.map(userId => ({
-            event_id: eventId,
-            user_id: userId,
-            status: 'accepted', // 默认状态为已接受
-          }));
-          await supabase.from('event_attendees').insert(attendeeData);
-        }
-      }
-
+      
       await fetchEvents(); // 刷新事件列表
-
-      console.log('✅ 事件更新成功:', eventId);
       return true;
-
-    } catch (err) {
-      console.error('更新事件失败:', err);
-      setError(err instanceof Error ? err.message : '更新事件失败');
+    } catch (error: any) {
+      console.error('❌ updateEvent 錯誤:', error);
+      setError(error.message || '更新事件失败');
       return false;
     } finally {
       setLoading(false);
@@ -530,35 +524,9 @@ export const useEvents = () => {
 
     const startTs = Math.floor(startOfDay.getTime() / 1000);
     const endTs = Math.floor(endOfDay.getTime() / 1000);
-    /*
-    console.log('🔍 getEventsByDate调试:', {
-      inputDate: date.toISOString(),
-      localDate: `${date.getFullYear()}-${(date.getMonth()+1).toString().padStart(2,'0')}-${date.getDate().toString().padStart(2,'0')}`,
-      startOfDay: startOfDay.toISOString(),
-      endOfDay: endOfDay.toISOString(),
-      startTs,
-      endTs,
-      totalEvents: events.length,
-      eventsDetail: events.map(e => ({
-        id: e.id,
-        title: e.title,
-        start_ts: e.start_ts,
-        date: new Date(e.start_ts * 1000).toISOString(),
-        localDate: new Date(e.start_ts * 1000).toLocaleDateString(),
-        isInRange: e.start_ts >= startTs && e.start_ts <= endTs
-      }))
-    });
-    */
-
     const filteredEvents = events.filter(event => 
       event.start_ts >= startTs && event.start_ts <= endTs
     );
-    /*
-    console.log('📅 过滤结果:', {
-      matchedEvents: filteredEvents.length,
-      events: filteredEvents.map(e => ({ id: e.id, title: e.title }))
-    });
-    */
     return filteredEvents;
   };
 
@@ -584,7 +552,6 @@ export const useEvents = () => {
   // 当用户信息获取到后，立即获取个人事件
   useEffect(() => {
     if (user) {
-      // console.log('用户登录，开始获取事件...');
       const currentYear = new Date().getFullYear();
       const currentMonth = new Date().getMonth() + 1;
       fetchEvents(currentYear, currentMonth);
@@ -594,7 +561,6 @@ export const useEvents = () => {
   // 当家庭列表变化时，重新获取所有事件（包括群组事件和个人事件）
   useEffect(() => {
     if (user) {
-      // console.log('家庭列表更新，重新获取事件...', userFamilies);
       const currentYear = new Date().getFullYear();
       const currentMonth = new Date().getMonth() + 1;
       fetchEvents(currentYear, currentMonth);

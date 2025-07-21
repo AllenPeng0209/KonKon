@@ -1,14 +1,14 @@
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { DateData } from 'react-native-calendars';
 
@@ -402,7 +402,8 @@ export default function HomeScreen() {
               color: event.color || undefined,
               type: event.type || undefined,
               parent_event_id: event.parent_event_id || undefined,
-              creator_id: event.creator_id
+              creator_id: event.creator_id,
+              image_urls: event.image_urls // ✅ 添加 image_urls 字段
             }))}
             selectedDate={eventManagement.selectedDate || new Date()}
             currentMonth={currentMonth}

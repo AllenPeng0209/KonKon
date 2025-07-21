@@ -48,6 +48,7 @@ import {
   ActivityIndicator,
   Alert,
   Dimensions,
+  Image,
   Modal,
   SafeAreaView,
   ScrollView,
@@ -896,10 +897,8 @@ export default function HomeScreen() {
             });
             
             if (systemEventId) {
-              console.log('系统日历事件创建成功:', systemEventId);
-            } else {
-              console.warn('系统日历事件创建失败，但应用内事件已创建');
-            }
+      
+                          }
           } catch (calendarError) {
             console.error('系统日历同步失败:', calendarError);
             // 显示用户友好的错误信息
@@ -1453,7 +1452,8 @@ export default function HomeScreen() {
                 color: event.color || undefined,
                 type: event.type || undefined,
                 parent_event_id: event.parent_event_id || undefined,
-                creator_id: event.creator_id
+                creator_id: event.creator_id,
+                image_urls: event.image_urls // ✅ 添加 image_urls 字段
               }))}
               selectedDate={selectedDate || new Date()}
               currentMonth={currentMonth}
@@ -1557,6 +1557,30 @@ export default function HomeScreen() {
                                 <Text style={styles.eventLocation}>📍 {event.location}</Text>
                               )}
                             </View>
+                            {/* 照片预览 */}
+                            {event.image_urls && event.image_urls.length > 0 && (
+                              <View style={styles.eventPhotos}>
+                                <ScrollView 
+                                  horizontal 
+                                  showsHorizontalScrollIndicator={false}
+                                  style={styles.eventPhotosContainer}
+                                >
+                                  {event.image_urls.slice(0, 3).map((url: string, index: number) => (
+                                    <Image
+                                      key={index}
+                                      source={{ uri: url }}
+                                      style={styles.eventPhoto}
+                                      resizeMode="cover"
+                                    />
+                                  ))}
+                                  {event.image_urls.length > 3 && (
+                                    <View style={styles.eventPhotoMore}>
+                                      <Text style={styles.eventPhotoMoreText}>+{event.image_urls.length - 3}</Text>
+                                    </View>
+                                  )}
+                                </ScrollView>
+                              </View>
+                            )}
                           </View>
                           <View style={styles.eventActions}>
                             <Text style={styles.eventActionIcon}>›</Text>
@@ -2259,6 +2283,47 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#6b7280',
     fontWeight: '500',
+  },
+  // 照片预览样式
+  eventPhotos: {
+    marginTop: 12,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0, 0, 0, 0.06)',
+  },
+  eventPhotosContainer: {
+    paddingVertical: 4,
+  },
+  eventPhoto: {
+    width: 60,
+    height: 60,
+    borderRadius: 12,
+    marginRight: 8,
+    backgroundColor: '#f5f5f5',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  eventPhotoMore: {
+    width: 60,
+    height: 60,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+    borderWidth: 2,
+    borderColor: '#007AFF',
+    borderStyle: 'dashed',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  eventPhotoMoreText: {
+    fontSize: 12,
+    color: '#007AFF',
+    fontWeight: '600',
   },
   eventActions: {
     justifyContent: 'center',

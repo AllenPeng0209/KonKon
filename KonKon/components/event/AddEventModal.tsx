@@ -1,25 +1,29 @@
+import { useAuth } from '@/contexts/AuthContext';
+import { useFamily } from '@/contexts/FamilyContext';
 import { CreateEventData } from '@/hooks/useEvents';
+import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { decode } from 'base64-arraybuffer';
 import { BlurView } from 'expo-blur';
-import React, { useState, useEffect } from 'react';
+import * as ImagePicker from 'expo-image-picker';
+import React, { useEffect, useState } from 'react';
 import {
+  ActionSheetIOS,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Image,
+  KeyboardAvoidingView,
   Modal,
-  View,
+  Platform,
+  ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  ActionSheetIOS,
-  Image,
-  FlatList,
+  View
 } from 'react-native';
-import { useAuth } from '@/contexts/AuthContext';
-import { useFamily } from '@/contexts/FamilyContext';
 
 interface User {
   id: string;
@@ -167,7 +171,7 @@ export default function AddEventModal({
   onUpdate
 }: AddEventModalProps) {
   const { user } = useAuth();
-  const { familyMembers } = useFamily();
+  const { familyMembers, activeFamily } = useFamily();
   
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -184,6 +188,16 @@ export default function AddEventModal({
   const [selectedAttendees, setSelectedAttendees] = useState<string[]>([]);
   const [showAttendeeModal, setShowAttendeeModal] = useState(false);
   const [loading, setLoading] = useState(false);
+  
+  // 照片相關狀態
+  const [selectedImages, setSelectedImages] = useState<ImagePicker.ImagePickerAsset[]>([]);
+  const [isUploadingImages, setIsUploadingImages] = useState(false);
+  const [showImagePreview, setShowImagePreview] = useState(false);
+  const [previewImageIndex, setPreviewImageIndex] = useState(0);
+  
+  // 展開區域控制狀態
+  const [showFamilySection, setShowFamilySection] = useState(false);
+  const [showPhotoSection, setShowPhotoSection] = useState(false);
 
   // 获取所有可选的用户列表（当前用户 + 家庭成员）
   const availableUsers = React.useMemo(() => {
@@ -227,11 +241,10 @@ export default function AddEventModal({
         setTitle(editingEvent.title || '');
         setDescription(editingEvent.description || '');
         setSelectedColor(editingEvent.color || '#007AFF');
-        
         if (editingEvent.start_ts) {
-          const eventDate = new Date(editingEvent.start_ts * 1000);
-          setDate(eventDate);
-          setStartTime(eventDate);
+          const startDate = new Date(editingEvent.start_ts * 1000);
+          setDate(startDate);
+          setStartTime(startDate);
         }
         if (editingEvent.end_ts) {
           setEndTime(new Date(editingEvent.end_ts * 1000));
@@ -239,6 +252,26 @@ export default function AddEventModal({
         if (editingEvent.shared_families && editingEvent.shared_families.length > 0) {
           setSelectedFamilies(editingEvent.shared_families);
         }
+        
+        // 處理照片數據
+        if (editingEvent.image_urls && editingEvent.image_urls.length > 0) {
+          // 將現有的照片URL轉換為ImagePicker格式以供預覽
+          const existingImages: ImagePicker.ImagePickerAsset[] = editingEvent.image_urls.map((url: string, index: number) => ({
+            uri: url,
+            width: 300,
+            height: 300,
+            assetId: `existing-${index}`,
+            fileName: `image-${index}.jpg`,
+            type: 'image',
+            base64: null,
+            exif: null,
+            mimeType: 'image/jpeg',
+          }));
+          setSelectedImages(existingImages);
+        } else {
+          setSelectedImages([]);
+        }
+        
         // 获取事件的参与人信息
         if (editingEvent.attendees && editingEvent.attendees.length > 0) {
           const attendeeIds = editingEvent.attendees.map((attendee: any) => attendee.user_id);
@@ -282,9 +315,131 @@ export default function AddEventModal({
     setSelectedColor('#007AFF');
     setRepeatOption('never');
     setSelectedAttendees(user ? [user.id] : []);
+    setSelectedImages([]);
     setShowDatePicker(false);
     setShowStartTimePicker(false);
     setShowEndTimePicker(false);
+    setShowImagePreview(false);
+    setPreviewImageIndex(0);
+    setShowFamilySection(false);
+    setShowPhotoSection(false);
+  };
+
+  // 選擇照片
+  const handleSelectImages = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('權限必要', '需要相冊權限來選擇照片');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsMultipleSelection: true,
+        selectionLimit: 5 - selectedImages.length,
+        quality: 0.8,
+        base64: true,
+        allowsEditing: false,
+      });
+
+      if (!result.canceled && result.assets) {
+        setSelectedImages(prev => [...prev, ...result.assets.slice(0, 5 - prev.length)]);
+      }
+    } catch (error) {
+      console.error('Error selecting images:', error);
+      Alert.alert('錯誤', '選擇照片失敗');
+    }
+  };
+
+  // 拍照
+  const handleTakePhoto = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('權限必要', '需要相機權限來拍照');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.8,
+        base64: true,
+        allowsEditing: true,
+      });
+
+      if (!result.canceled && result.assets) {
+        setSelectedImages(prev => [...prev, ...result.assets.slice(0, 5 - prev.length)]);
+      }
+    } catch (error) {
+      console.error('Error taking photo:', error);
+      Alert.alert('錯誤', '拍照失敗');
+    }
+  };
+
+  // 移除照片
+  const handleRemoveImage = (index: number) => {
+    setSelectedImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // 上傳照片到 Supabase Storage
+  const uploadImages = async (): Promise<string[]> => {
+    if (selectedImages.length === 0) return [];
+
+    if (!user?.id) {
+      throw new Error('用戶未登錄，無法上傳照片');
+    }
+
+    if (!activeFamily?.id) {
+      throw new Error('請先選擇或加入一個家庭');
+    }
+
+    setIsUploadingImages(true);
+    const imageUrls: string[] = [];
+
+    try {
+      for (const image of selectedImages) {
+        // 如果是現有照片（沒有base64），直接保留URL
+        if (!image.base64 && image.uri.startsWith('http')) {
+          imageUrls.push(image.uri);
+          continue;
+        }
+
+        // 如果沒有base64數據，跳過
+        if (!image.base64) continue;
+
+        // 使用正確的路徑格式：{family_id}/{user_id}/{filename}
+        const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
+        const filePath = `${activeFamily.id}/${user.id}/${fileName}`;
+        
+        const { data, error: uploadError } = await supabase.storage
+          .from('memories')
+          .upload(filePath, decode(image.base64), {
+            contentType: 'image/jpeg',
+            upsert: false, // 避免覆蓋現有文件
+          });
+
+        if (uploadError) {
+          throw uploadError;
+        }
+
+        if (!data?.path) {
+          throw new Error('上傳成功但未返回文件路徑');
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('memories')
+          .getPublicUrl(data.path);
+          
+        imageUrls.push(publicUrl);
+      }
+      
+      return imageUrls;
+    } catch (error) {
+      throw error;
+    } finally {
+      setIsUploadingImages(false);
+    }
   };
 
   const handleSave = async () => {
@@ -295,6 +450,12 @@ export default function AddEventModal({
 
     setLoading(true);
     try {
+      // 處理照片 - 無論是新建還是編輯都需要處理
+      let imageUrls: string[] = [];
+      if (selectedImages.length > 0) {
+        imageUrls = await uploadImages();
+      }
+
       const eventData: CreateEventData = {
         title: title.trim(),
         description: description.trim() || undefined,
@@ -304,6 +465,7 @@ export default function AddEventModal({
         type: 'calendar',
         shareToFamilies: selectedFamilies.length > 0 ? selectedFamilies : undefined,
         attendees: selectedAttendees,
+        imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
       };
 
       if (editingEvent && onUpdate) {
@@ -443,10 +605,6 @@ export default function AddEventModal({
               />
 
          
-              {/* 日期和时间选择区域 */}
-              <View style={styles.dateTimeSection}>
-
-                
               {/* 参与人选择 - 移到顶部 */}
               <TouchableOpacity 
                 style={styles.attendeeSelectorButton}
@@ -477,6 +635,10 @@ export default function AddEventModal({
                 </View>
               </TouchableOpacity>
 
+              {/* 日期和时间选择区域 */}
+              <View style={styles.dateTimeSection}>
+
+                
                 {/* 日期选择 */}
                 <TouchableOpacity
                   style={[styles.dateTimeButton, showDatePicker && styles.dateTimeButtonActive]}
@@ -583,22 +745,159 @@ export default function AddEventModal({
                     )}
                   </>
                 )}
-              </View>
 
-              {/* 重复选项 */}
-              <TouchableOpacity
-                style={styles.optionButton}
-                onPress={showRepeatOptions}
-              >
-                <View style={styles.optionLeft}>
-                  <Ionicons name="repeat" size={20} color="#007AFF" />
-                  <Text style={styles.optionLabel}>重复</Text>
-                </View>
-                <View style={styles.optionRight}>
-                  <Text style={styles.optionValue}>{getRepeatLabel(repeatOption)}</Text>
-                  <Ionicons name="chevron-forward" size={16} color="#C7C7CD" />
-                </View>
-              </TouchableOpacity>
+                {/* 重复选项 */}
+                <TouchableOpacity
+                  style={styles.dateTimeButton}
+                  onPress={showRepeatOptions}
+                >
+                  <View style={styles.dateTimeLeft}>
+                    <Ionicons name="repeat" size={20} color="#007AFF" />
+                    <Text style={styles.dateTimeLabel}>重复</Text>
+                  </View>
+                  <View style={styles.optionRight}>
+                    <Text style={styles.dateTimeValue}>{getRepeatLabel(repeatOption)}</Text>
+                    <Ionicons name="chevron-forward" size={16} color="#C7C7CD" />
+                  </View>
+                </TouchableOpacity>
+
+                {/* 家庭分享选择 */}
+                {userFamilies.length > 0 && (
+                  <>
+                    <TouchableOpacity
+                      style={[styles.dateTimeButton, showFamilySection && styles.dateTimeButtonActive]}
+                      onPress={() => {
+                        setShowFamilySection(!showFamilySection);
+                        setShowPhotoSection(false);
+                        setShowDatePicker(false);
+                        setShowStartTimePicker(false);
+                        setShowEndTimePicker(false);
+                      }}
+                    >
+                      <View style={styles.dateTimeLeft}>
+                        <Ionicons name="people" size={20} color="#007AFF" />
+                        <Text style={styles.dateTimeLabel}>分享到</Text>
+                      </View>
+                      <Text style={styles.dateTimeValue}>
+                        {selectedFamilies.length === 0 ? '個人事件' : `${selectedFamilies.length} 個家庭`}
+                      </Text>
+                    </TouchableOpacity>
+
+                    {/* 展開的家庭選擇區域 */}
+                    {showFamilySection && (
+                      <View style={styles.inlinePicker}>
+                        <Text style={styles.sectionDescription}>
+                          選擇家庭後，該家庭的所有成員都能看到這個事件
+                        </Text>
+                        <View style={styles.familyContainer}>
+                          {userFamilies.map((family, index) => (
+                            <TouchableOpacity
+                              key={`family-${index}`}
+                              style={[
+                                styles.familyButton,
+                                selectedFamilies.includes(family.id) && styles.familyButtonSelected,
+                              ]}
+                              onPress={() => {
+                                if (selectedFamilies.includes(family.id)) {
+                                  // 取消选择
+                                  setSelectedFamilies(prev => prev.filter(id => id !== family.id));
+                                } else {
+                                  // 添加选择
+                                  setSelectedFamilies(prev => [...prev, family.id]);
+                                }
+                              }}
+                            >
+                              <Text style={[
+                                styles.familyButtonText,
+                                selectedFamilies.includes(family.id) && styles.familyButtonTextSelected
+                              ]}>
+                                {family.name}
+                              </Text>
+                              {selectedFamilies.includes(family.id) && (
+                                <Ionicons name="checkmark" size={16} color="white" style={{ marginLeft: 5 }} />
+                              )}
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      </View>
+                    )}
+                  </>
+                )}
+
+                {/* 照片選擇區域 */}
+                <TouchableOpacity
+                  style={[styles.dateTimeButton, showPhotoSection && styles.dateTimeButtonActive]}
+                  onPress={() => {
+                    setShowPhotoSection(!showPhotoSection);
+                    setShowFamilySection(false);
+                    setShowDatePicker(false);
+                    setShowStartTimePicker(false);
+                    setShowEndTimePicker(false);
+                  }}
+                >
+                  <View style={styles.dateTimeLeft}>
+                    <Ionicons name="camera" size={20} color="#007AFF" />
+                    <Text style={styles.dateTimeLabel}>附件</Text>
+                  </View>
+                  <Text style={styles.dateTimeValue}>
+                    {selectedImages.length === 0 ? '無附件' : `${selectedImages.length} 張照片`}
+                  </Text>
+                </TouchableOpacity>
+
+                {/* 展開的照片選擇區域 */}
+                {showPhotoSection && (
+                  <View style={styles.inlinePicker}>
+                    {/* 照片預覽網格 */}
+                    {selectedImages.length > 0 && (
+                      <View style={styles.imageGrid}>
+                        {selectedImages.map((image, index) => (
+                          <View key={index} style={styles.imageContainer}>
+                            <Image source={{ uri: image.uri }} style={styles.imagePreview} />
+                            <TouchableOpacity
+                              style={styles.removeImageButton}
+                              onPress={() => handleRemoveImage(index)}
+                            >
+                              <Ionicons name="close-circle" size={20} color="#FF3B30" />
+                            </TouchableOpacity>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+
+                    {/* 添加照片按鈕 */}
+                    {selectedImages.length < 5 && (
+                      <View style={styles.addPhotoButtons}>
+                        <TouchableOpacity 
+                          style={styles.addPhotoButton} 
+                          onPress={handleTakePhoto}
+                        >
+                          <Ionicons name="camera" size={20} color="#007AFF" />
+                          <Text style={styles.addPhotoButtonText}>拍照</Text>
+                        </TouchableOpacity>
+                        
+                        <TouchableOpacity 
+                          style={styles.addPhotoButton} 
+                          onPress={handleSelectImages}
+                        >
+                          <Ionicons name="image" size={20} color="#007AFF" />
+                          <Text style={styles.addPhotoButtonText}>選擇照片</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+
+                    {isUploadingImages && (
+                      <View style={styles.uploadingIndicator}>
+                        <ActivityIndicator size="small" color="#007AFF" />
+                        <Text style={styles.uploadingText}>正在上傳照片...</Text>
+                      </View>
+                    )}
+
+                    <Text style={styles.sectionDescription}>
+                      最多可以添加 5 張照片
+                    </Text>
+                  </View>
+                )}
+              </View>
 
               {/* 颜色选择 */}
               <View style={styles.colorSection}>
@@ -631,48 +930,6 @@ export default function AddEventModal({
                 multiline
                 textAlignVertical="top"
               />
-
-              {/* 家庭分享选择 */}
-              {userFamilies.length > 0 && (
-                <View style={styles.familySection}>
-                  <Text style={styles.sectionTitle}>分享到</Text>
-                  <Text style={styles.sectionDescription}>
-                    {selectedFamilies.length === 0 
-                      ? '选择家庭后，该家庭的所有成员都能看到这个事件（不选择则为个人事件）' 
-                      : `已选择 ${selectedFamilies.length} 个家庭`}
-                  </Text>
-                  <View style={styles.familyContainer}>
-                    {userFamilies.map((family, index) => (
-                      <TouchableOpacity
-                        key={`family-${index}`}
-                        style={[
-                          styles.familyButton,
-                          selectedFamilies.includes(family.id) && styles.familyButtonSelected,
-                        ]}
-                        onPress={() => {
-                          if (selectedFamilies.includes(family.id)) {
-                            // 取消选择
-                            setSelectedFamilies(prev => prev.filter(id => id !== family.id));
-                          } else {
-                            // 添加选择
-                            setSelectedFamilies(prev => [...prev, family.id]);
-                          }
-                        }}
-                      >
-                        <Text style={[
-                          styles.familyButtonText,
-                          selectedFamilies.includes(family.id) && styles.familyButtonTextSelected
-                        ]}>
-                          {family.name}
-                        </Text>
-                        {selectedFamilies.includes(family.id) && (
-                          <Ionicons name="checkmark" size={16} color="white" style={{ marginLeft: 5 }} />
-                        )}
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-              )}
 
 
             </ScrollView>
@@ -1112,5 +1369,74 @@ const styles = StyleSheet.create({
   attendeeSelectorMoreText: {
     fontSize: 12,
     color: '#333',
+  },
+  // New styles for PhotoSection
+  photoSection: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    padding: 15,
+    marginBottom: 15,
+  },
+  photoSectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  imageGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-around',
+  },
+  imageContainer: {
+    position: 'relative',
+    width: '30%', // 3 images per row
+    aspectRatio: 1,
+    marginBottom: 10,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  imagePreview: {
+    width: '100%',
+    height: '100%',
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: 5,
+    right: 5,
+    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+    borderRadius: 10,
+    padding: 5,
+  },
+  addPhotoButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginTop: 10,
+  },
+  addPhotoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    backgroundColor: '#E3F2FD',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#007AFF',
+  },
+  addPhotoButtonText: {
+    color: '#007AFF',
+    fontSize: 14,
+    marginLeft: 8,
+  },
+  uploadingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+  },
+  uploadingText: {
+    color: '#007AFF',
+    fontSize: 14,
+    marginLeft: 5,
   },
 });

@@ -360,6 +360,7 @@ export type Database = {
           end_ts: number
           family_id: string | null
           id: string
+          image_urls: string[] | null
           location: string | null
           parent_event_id: string | null
           recurrence_count: number | null
@@ -379,6 +380,7 @@ export type Database = {
           end_ts: number
           family_id?: string | null
           id?: string
+          image_urls?: string[] | null
           location?: string | null
           parent_event_id?: string | null
           recurrence_count?: number | null
@@ -398,6 +400,7 @@ export type Database = {
           end_ts?: number
           family_id?: string | null
           id?: string
+          image_urls?: string[] | null
           location?: string | null
           parent_event_id?: string | null
           recurrence_count?: number | null
@@ -1896,6 +1899,3 @@ export const Constants = {
     Enums: {},
   },
 } as const
-
-// Remove the temporary interface as the real types are now available
-export type FamilyAlbumRow = Tables<'family_albums'>
