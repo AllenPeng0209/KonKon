@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { RecurringEventData, useRecurringEvents } from '../../hooks/useRecurringEvents';
 import { RecurrenceInstance, RecurrenceRule } from '../../lib/recurrenceEngine';
+import AddEventModal from './AddEventModal';
 import RecurrenceRuleEditor from './RecurrenceRuleEditor';
 
 interface RecurringEventManagerProps {
@@ -38,6 +39,10 @@ export default function RecurringEventManager({
   const [actionType, setActionType] = useState<'modify' | 'cancel' | 'series' | null>(null);
   const [showRuleEditor, setShowRuleEditor] = useState(false);
   const [seriesRule, setSeriesRule] = useState<RecurrenceRule | null>(null);
+  
+  // 新增：单个事件编辑状态
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingInstanceData, setEditingInstanceData] = useState<any>(null);
 
   useEffect(() => {
     loadInstances();
@@ -106,9 +111,50 @@ export default function RecurringEventManager({
   };
 
   const modifyOnlyThisEvent = async (instance: RecurrenceInstance) => {
-    // 这里应该打开事件编辑界面
-    // 暂时显示提示
-    Alert.alert(t('recurringEventManager.featureInProgress'), t('recurringEventManager.singleEventModificationInDev'));
+    // 准备编辑数据
+    const editData = {
+      id: `${parentEventId}_${instance.start.getTime()}`,
+      title: instance.title || '重复事件',
+      description: instance.description,
+      start_ts: Math.floor(instance.start.getTime() / 1000),
+      end_ts: Math.floor(instance.end.getTime() / 1000),
+      location: instance.location,
+      color: instance.color || '#007AFF',
+      recurrence_rule: null,
+      parent_event_id: parentEventId,
+      originalDate: instance.start,
+    };
+    
+    setEditingInstanceData(editData);
+    setShowEditModal(true);
+  };
+
+  const handleSaveInstanceEdit = async (eventData: any) => {
+    if (!selectedInstance || !editingInstanceData) return;
+
+    try {
+      const success = await modifyRecurringEventInstance(
+        parentEventId,
+        editingInstanceData.originalDate,
+        {
+          title: eventData.title,
+          description: eventData.description,
+          startDate: eventData.startTime,
+          endDate: eventData.endTime,
+          location: eventData.location,
+          color: eventData.color,
+        }
+      );
+
+      if (success) {
+        Alert.alert('修改成功', '重复事件实例已修改');
+        setShowEditModal(false);
+        setEditingInstanceData(null);
+        loadInstances(); // 重新加载实例列表
+      }
+    } catch (error) {
+      Alert.alert('修改失败', '无法修改事件实例');
+    }
   };
 
   const modifyThisAndFutureEvents = (instance: RecurrenceInstance) => {
@@ -274,6 +320,20 @@ export default function RecurringEventManager({
           }}
         />
       </Modal>
+
+      {/* 单个实例编辑模态框 */}
+      <AddEventModal
+        visible={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setEditingInstanceData(null);
+        }}
+        onSave={handleSaveInstanceEdit}
+        onUpdate={handleSaveInstanceEdit}
+        initialDate={editingInstanceData?.originalDate || new Date()}
+        userFamilies={[]} // 单个实例不允许修改分享设置
+        editingEvent={editingInstanceData}
+      />
     </View>
   );
 }

@@ -44,14 +44,14 @@ export const useRecurringEvents = () => {
     setError(null);
 
     try {
-      console.log('Creating recurring event with data:', eventData);
-      
       // 验证重复规则
       const validation = validateRecurrenceRule(eventData.recurrenceRule);
-      console.log('Validation result:', validation);
       if (!validation.valid) {
         throw new Error(`重复规则验证失败: ${validation.errors.join(', ')}`);
       }
+
+      // 生成 RRULE 字符串
+      const rruleString = generateRecurrenceRule(eventData.recurrenceRule);
 
       // 准备事件数据
       const eventToInsert: EventInsert = {
@@ -63,14 +63,12 @@ export const useRecurringEvents = () => {
         location: eventData.location,
         color: eventData.color || '#007AFF',
         family_id: eventData.familyId || null,
-        recurrence_rule: generateRecurrenceRule(eventData.recurrenceRule),
+        recurrence_rule: rruleString,
         recurrence_end_date: eventData.recurrenceRule.until?.toISOString().split('T')[0] || null,
         recurrence_count: eventData.recurrenceRule.count || null,
         parent_event_id: null, // 这是父事件
       };
 
-      console.log('Inserting event data:', eventToInsert);
-      
       // 创建主重复事件
       const { data: parentEvent, error: createError } = await supabase
         .from('events')
@@ -78,17 +76,15 @@ export const useRecurringEvents = () => {
         .select('id')
         .single();
 
-      if (createError) {
-        console.error('Database insert error:', createError);
-        throw createError;
+      if (createError || !parentEvent) {
+        throw new Error(`创建重复事件失败: ${createError?.message || '未返回事件数据'}`);
       }
 
-      console.log('重复事件创建成功:', parentEvent.id);
       return parentEvent.id;
 
     } catch (err) {
-      console.error('创建重复事件失败:', err);
-      setError(err instanceof Error ? err.message : '创建重复事件失败');
+      const errorMessage = err instanceof Error ? err.message : '创建重复事件失败';
+      setError(errorMessage);
       return null;
     } finally {
       setLoading(false);
@@ -217,7 +213,6 @@ export const useRecurringEvents = () => {
         throw exceptionError;
       }
 
-      console.log('重复事件实例修改成功');
       return true;
 
     } catch (err) {
@@ -258,7 +253,6 @@ export const useRecurringEvents = () => {
         throw exceptionError;
       }
 
-      console.log('重复事件实例取消成功');
       return true;
 
     } catch (err) {
@@ -304,7 +298,6 @@ export const useRecurringEvents = () => {
         throw deleteError;
       }
 
-      console.log('重复事件系列删除成功');
       return true;
 
     } catch (err) {
@@ -369,7 +362,6 @@ export const useRecurringEvents = () => {
         await createRecurringEvent(newSeriesData);
       }
 
-      console.log('重复事件系列批量修改成功');
       return true;
 
     } catch (err) {

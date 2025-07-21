@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useFamily } from '../contexts/FamilyContext';
 import { Database } from '../lib/database.types';
 import { cancelNotificationForEvent, scheduleNotificationForEvent } from '../lib/notifications';
+import { generateRecurrenceInstances, parseRecurrenceRule, RecurrenceInstance, RecurrenceRule } from '../lib/recurrenceEngine';
 import { supabase } from '../lib/supabase';
 
 type Event = Database['public']['Tables']['events']['Row'];
@@ -21,6 +22,7 @@ export interface CreateEventData {
   type?: string;
   attendees?: string[]; // 参与人用户ID数组
   imageUrls?: string[]; // 照片附件URL数组
+  recurrenceRule?: RecurrenceRule; // 使用统一的 RecurrenceRule 类型
 }
 
 // 事件分享数据结构使用数据库类型
@@ -44,150 +46,105 @@ export const useEvents = () => {
   const { user } = useAuth();
   const { familyMembers } = useFamily();
   const [events, setEvents] = useState<EventWithShares[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastExpandKey, setLastExpandKey] = useState<string>(''); // 防重复扩展
 
-  const userFamilies = familyMembers.map(m => m.family_id);
-  const userFamilyDetails = familyMembers.map(m => ({
-    id: m.family_id,
-    name: m.user?.display_name || '未知家庭' 
-  }));
+  // 使用 useMemo 稳定 userFamilies 引用，避免重复调用
+  const userFamilies = useMemo(() => 
+    familyMembers.map(m => m.family_id), 
+    [familyMembers]
+  );
+  
+  const userFamilyDetails = useMemo(() => 
+    familyMembers.map(m => ({
+      id: m.family_id,
+      name: m.user?.display_name || '未知家庭' 
+    })), 
+    [familyMembers]
+  );
 
   // 获取事件列表（个人事件 + 分享给用户的事件）
   const fetchEvents = useCallback(async (year?: number, month?: number) => {
     if (!user) return;
     
-
-    
     try {
       setLoading(true);
       setError(null);
 
-      // 1. 获取个人事件（family_id 为 NULL）
-      let personalEventsQuery = supabase
+      // 策略：总是获取所有重复事件主记录，无论时间范围
+      // 1. 获取所有重复事件主记录
+      const { data: recurringEvents, error: recurringError } = await supabase
         .from('events')
         .select('*')
         .eq('creator_id', user.id)
-        .is('family_id', null);
-      
-      // 2. 获取用户创建的家庭事件（family_id 不为 NULL）
-      let userFamilyEventsQuery = supabase
+        .is('parent_event_id', null) // 只要主记录
+        .not('recurrence_rule', 'is', null); // 有重复规则
+
+      if (recurringError) throw recurringError;
+
+      // 2. 获取普通事件（根据时间过滤）
+      let normalEventsQuery = supabase
         .from('events')
         .select('*')
         .eq('creator_id', user.id)
-        .not('family_id', 'is', null);
+        .is('recurrence_rule', null); // 无重复规则
+
+      if (year && month) {
+        const startOfMonth = new Date(year, month - 1, 1);
+        const endOfMonth = new Date(year, month, 0, 23, 59, 59);
+        const startTimestamp = Math.floor(startOfMonth.getTime() / 1000);
+        const endTimestamp = Math.floor(endOfMonth.getTime() / 1000);
+        
+        normalEventsQuery = normalEventsQuery
+          .gte('start_ts', startTimestamp)
+          .lte('start_ts', endTimestamp);
+      }
+
+      const { data: normalEvents, error: normalError } = await normalEventsQuery;
       
-      // 3. 获取分享给用户所在群组的事件
+      if (normalError) throw normalError;
+
+      // 3. 获取分享事件（简化处理）
       let sharedEventsQuery = supabase
         .from('event_shares')
         .select(`
           event_id,
-          family_id,
-          events!inner (*)
+          events (
+            *
+          )
         `)
         .in('family_id', userFamilies);
 
-      // 添加时间过滤
-      if (year && month) {
-        const startOfMonth = new Date(year, month - 1, 1);
-        const endOfMonth = new Date(year, month, 0);
-        const startTs = Math.floor(startOfMonth.getTime() / 1000);
-        const endTs = Math.floor(endOfMonth.getTime() / 1000);
-        
-        personalEventsQuery = personalEventsQuery
-          .gte('start_ts', startTs)
-          .lte('start_ts', endTs);
-        
-        userFamilyEventsQuery = userFamilyEventsQuery
-          .gte('start_ts', startTs)
-          .lte('start_ts', endTs);
-        
-        // 对于分享事件，我们需要在事件表上过滤时间
-        // 由于 Supabase 的限制，我们需要在获取数据后再过滤
-      }
-
-      const [personalResult, userFamilyResult, sharedResult] = await Promise.all([
-        personalEventsQuery,
-        userFamilyEventsQuery,
-        sharedEventsQuery
-      ]);
-
-      if (personalResult.error) {
-        throw personalResult.error;
-      }
-
-      if (userFamilyResult.error) {
-        throw userFamilyResult.error;
-      }
-
-      if (sharedResult.error) {
-        throw sharedResult.error;
-      }
-
-      // 合并个人事件
-      const personalEvents: EventWithShares[] = (personalResult.data || []).map(event => ({
-        ...event,
-        is_shared: false
-      }));
-      // 合并用户创建的家庭事件
-      const userFamilyEvents: EventWithShares[] = (userFamilyResult.data || []).map(event => ({
-        ...event,
-        is_shared: false
-      }));
-
-      // 处理分享事件数据
-      let sharedEvents: EventWithShares[] = [];
-      if (sharedResult.data) {
-        sharedEvents = (sharedResult.data as any[])
-          .filter(share => share.events) // 确保事件存在
-          .map(share => ({
-            ...(share.events as Event),
-            is_shared: true,
-            shared_families: [share.family_id]
-          }));
-        
-        // 如果有时间过滤，在这里过滤分享事件
-        if (year && month) {
-          const startOfMonth = new Date(year, month - 1, 1);
-          const endOfMonth = new Date(year, month, 0);
-          const startTs = Math.floor(startOfMonth.getTime() / 1000);
-          const endTs = Math.floor(endOfMonth.getTime() / 1000);
-          
-          sharedEvents = sharedEvents.filter(event => 
-            event.start_ts >= startTs && event.start_ts <= endTs
-          );
-        }
-      }
-
-      // 去重并合并（如果同一个事件被分享到多个群组）
-      const eventMap = new Map<string, EventWithShares>();
+      const { data: sharedResult, error: sharedError } = await sharedEventsQuery;
       
-      personalEvents.forEach(event => {
-        eventMap.set(event.id, event);
-      });
+      if (sharedError) throw sharedError;
 
-      userFamilyEvents.forEach(event => {
-        eventMap.set(event.id, event);
-      });
+      // 合并所有事件
+      const allEvents: EventWithShares[] = [
+        ...(recurringEvents || []).map(event => ({ ...event, is_shared: false })),
+        ...(normalEvents || []).map(event => ({ ...event, is_shared: false })),
+        ...(sharedResult || [])
+          .filter(share => share.events)
+          .map(share => ({ ...share.events, is_shared: true }))
+      ];
 
-      sharedEvents.forEach(event => {
-        if (eventMap.has(event.id)) {
-          // 如果已存在，添加到分享列表
-          const existing = eventMap.get(event.id)!;
-          existing.shared_families = existing.shared_families || [];
-          existing.shared_families.push(...(event.shared_families || []));
+      // 去重
+      const eventMap = new Map<string, EventWithShares>();
+      allEvents.forEach(event => {
+        const existing = eventMap.get(event.id);
+        if (existing) {
           existing.is_shared = true;
         } else {
-          // 新事件
           eventMap.set(event.id, event);
         }
       });
 
-      const allEvents = Array.from(eventMap.values()).sort((a, b) => a.start_ts - b.start_ts);
-      
+      const finalEvents = Array.from(eventMap.values()).sort((a, b) => a.start_ts - b.start_ts);
+
       // 获取所有事件的参与人信息
-      if (allEvents.length > 0) {
-        const eventIds = allEvents.map(e => e.id);
+      if (finalEvents.length > 0) {
+        const eventIds = finalEvents.map(e => e.id);
         const { data: attendeesData, error: attendeesError } = await supabase
           .from('event_attendees')
           .select(`
@@ -217,14 +174,16 @@ export const useEvents = () => {
           });
 
           // 将参与人数据附加到事件
-          allEvents.forEach(event => {
+          finalEvents.forEach(event => {
             event.attendees = attendeesMap.get(event.id) || [];
           });
         }
       }
 
+      // 生成重复事件实例
+      const expandedEvents = await expandRecurringEvents(finalEvents, year, month);
 
-      setEvents(allEvents);
+      setEvents(expandedEvents);
 
     } catch (err) {
       setError(err instanceof Error ? err.message : '获取事件失败');
@@ -232,6 +191,122 @@ export const useEvents = () => {
       setLoading(false);
     }
   }, [user, userFamilies]);
+
+  // 扩展重复事件实例的辅助函数
+  const expandRecurringEvents = async (events: EventWithShares[], year?: number, month?: number) => {
+    // 生成唯一键来避免重复扩展相同的数据 - 包含年月信息确保切换月份时重新计算
+    const expandKey = `${events.length}_${year || 'all'}_${month || 'all'}`;
+    if (expandKey === lastExpandKey) {
+      // 相同的数据集，直接返回已扩展的结果
+      return events;
+    }
+    
+    const expandedEvents: EventWithShares[] = [];
+    
+    // 确定时间范围
+    let startDate: Date;
+    let endDate: Date;
+    let viewStartDate: Date;
+    let viewEndDate: Date;
+    
+    if (year && month) {
+      // 查看特定月份时
+      viewStartDate = new Date(year, month - 1, 1); // 当前月第一天
+      viewEndDate = new Date(year, month, 0); // 当前月最后一天
+      
+      // 为了生成重复事件，需要更宽的时间范围 - 从原始事件开始日期到未来
+      startDate = new Date(2025, 0, 1); // 从2025年1月1日开始，确保包含所有重复事件
+      endDate = new Date(year, month + 2, 0); // 扩展到未来3个月用于计算重复
+    } else {
+      // 没有指定月份时，从当前日期开始，扩展1年
+      startDate = new Date();
+      endDate = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+      viewStartDate = startDate;
+      viewEndDate = endDate;
+    }
+    
+    const recurringEventsCount = events.filter(e => e.recurrence_rule && !e.parent_event_id).length;
+    if (recurringEventsCount > 0) {
+    }
+    
+    for (const event of events) {
+      if (event.recurrence_rule && !event.parent_event_id) {
+        // 这是一个重复事件的主事件
+        try {
+          // 获取该重复事件的异常记录
+          const { data: exceptions } = await supabase
+            .from('event_exceptions')
+            .select('*')
+            .eq('parent_event_id', event.id);
+
+          // 解析重复规则
+          const recurrenceRule = parseRecurrenceRule(event.recurrence_rule);
+          
+          if (recurrenceRule) {
+            // 转换异常记录
+            const recurrenceExceptions = (exceptions || []).map(ex => ({
+              date: new Date(ex.exception_date),
+              type: ex.exception_type as 'cancelled' | 'modified' | 'moved',
+              modifiedEventId: ex.modified_event_id || undefined,
+            }));
+
+            // 生成重复事件实例 - 使用更大的范围
+            const originalStart = new Date(event.start_ts * 1000);
+            const originalEnd = new Date(event.end_ts * 1000);
+            
+            const instances = generateRecurrenceInstances(
+              originalStart,
+              originalEnd,
+              recurrenceRule,
+              recurrenceExceptions,
+              endDate, // 使用扩展后的结束时间
+              200 // 增加最大实例数
+            );
+
+            // 过滤当前查看月份的实例
+            const filteredInstances = instances
+              .filter((instance: RecurrenceInstance) => {
+                const inRange = instance.start >= viewStartDate && instance.start <= viewEndDate;
+                return inRange;
+              })
+              .map((instance: RecurrenceInstance) => ({
+                ...event,
+                id: `${event.id}_${instance.start.getTime()}`, // 生成唯一ID
+                start_ts: Math.floor(instance.start.getTime() / 1000),
+                end_ts: Math.floor(instance.end.getTime() / 1000),
+                parent_event_id: event.id,
+                recurrence_rule: null, // 实例本身不是重复事件
+              }));
+
+            expandedEvents.push(...filteredInstances);
+          }
+        } catch (error) {
+          console.error('生成重复事件实例失败:', error);
+          // 如果生成失败，至少添加原始事件
+          if (event.start_ts >= Math.floor(viewStartDate.getTime() / 1000) && 
+              event.start_ts <= Math.floor(viewEndDate.getTime() / 1000)) {
+            expandedEvents.push(event);
+          }
+        }
+      } else {
+        // 普通事件或重复事件的修改实例
+        // 如果是查看特定月份，只包含该月份的事件
+        if (year && month) {
+          if (event.start_ts >= Math.floor(viewStartDate.getTime() / 1000) && 
+              event.start_ts <= Math.floor(viewEndDate.getTime() / 1000)) {
+            expandedEvents.push(event);
+          }
+        } else {
+          expandedEvents.push(event);
+        }
+      }
+    }
+    
+    // 更新防重复键
+    setLastExpandKey(expandKey);
+    
+    return expandedEvents.sort((a, b) => a.start_ts - b.start_ts);
+  };
 
   // 创建事件
   const createEvent = async (eventData: CreateEventData): Promise<string | null> => {
@@ -391,6 +466,24 @@ export const useEvents = () => {
         updated_at: new Date().toISOString(),
       };
 
+      // 检查是否有重复规则需要更新
+      const recurrenceRule = (eventData as any).recurrenceRule;
+      if (recurrenceRule) {
+        // 导入重复事件相关函数
+        const { generateRecurrenceRule } = await import('../lib/recurrenceEngine');
+        
+        eventToUpdate.recurrence_rule = generateRecurrenceRule(recurrenceRule);
+        eventToUpdate.recurrence_end_date = recurrenceRule.until?.toISOString().split('T')[0] || null;
+        eventToUpdate.recurrence_count = recurrenceRule.count || null;
+        eventToUpdate.parent_event_id = null; // 确保这是父事件
+      } else {
+        // 如果没有重复规则，清除相关字段
+        eventToUpdate.recurrence_rule = null;
+        eventToUpdate.recurrence_end_date = null;
+        eventToUpdate.recurrence_count = null;
+        eventToUpdate.parent_event_id = null;
+      }
+
       // 首先檢查事件是否存在以及用戶權限
       const { data: existingEvent, error: checkError } = await supabase
         .from('events')
@@ -398,14 +491,14 @@ export const useEvents = () => {
         .eq('id', eventId)
         .single();
 
-              if (checkError || !existingEvent) {
-          throw new Error('事件不存在或無法訪問');
-        }
+      if (checkError || !existingEvent) {
+        throw new Error('事件不存在或無法訪問');
+      }
 
-        // 檢查用戶權限：是創建者或有共享權限
-        if (existingEvent.creator_id !== user.id) {
-          // 暫時允許更新，後續可以添加更複雜的權限檢查
-        }
+      // 檢查用戶權限：是創建者或有共享權限
+      if (existingEvent.creator_id !== user.id) {
+        // 暫時允許更新，後續可以添加更複雜的權限檢查
+      }
 
       const { data: updateData, error } = await supabase
         .from('events')
@@ -414,18 +507,38 @@ export const useEvents = () => {
         .select()
         .single();
 
-              if (error) {
-          throw error;
-        }
-      
-      // 更新通知 (如果需要的话)
-      // ...
-      
-      await fetchEvents(); // 刷新事件列表
+      if (error) {
+        throw error;
+      }
+
+      if (!updateData) {
+        throw new Error('更新失敗，未返回數據');
+      }
+
+      // 更新參與人
+      if (attendees && attendees.length > 0) {
+        // 先刪除現有參與人
+        await supabase
+          .from('event_attendees')
+          .delete()
+          .eq('event_id', eventId);
+
+        // 再添加新的參與人
+        const attendeeInserts = attendees.map(attendeeId => ({
+          event_id: eventId,
+          user_id: attendeeId,
+          status: 'pending'
+        }));
+
+        await supabase
+          .from('event_attendees')
+          .insert(attendeeInserts);
+      }
+
       return true;
-    } catch (error: any) {
-      console.error('❌ updateEvent 錯誤:', error);
-      setError(error.message || '更新事件失败');
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '更新失敗');
       return false;
     } finally {
       setLoading(false);
@@ -542,6 +655,12 @@ export const useEvents = () => {
     );
   };
 
+  // 清除事件缓存（用于强制重新获取）
+  const clearEvents = () => {
+    setEvents([]);
+    setLastExpandKey(''); // 清除防重复键
+  };
+
   // 初始化时获取用户家庭列表
   useEffect(() => {
     if (user) {
@@ -580,5 +699,6 @@ export const useEvents = () => {
     getEventsByDate,
     getMonthEvents,
     fetchEvents,
+    clearEvents,
   };
 }; 

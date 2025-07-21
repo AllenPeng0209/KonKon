@@ -1,4 +1,3 @@
-import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Calendar, DateData } from 'react-native-calendars';
 import { CalendarViewProps } from './CalendarViewTypes';
@@ -11,6 +10,7 @@ export default function GridMonthView({
   onEventPress,
   onMonthChange,
 }: CalendarViewProps) {
+
   // 生成日历标记数据
   const getCalendarMarkedDates = () => {
     const markedDates: { [key: string]: any } = {};
@@ -24,8 +24,9 @@ export default function GridMonthView({
     };
     
     // 标记有事件的日期
-    events.forEach(event => {
+    events.forEach((event) => {
       const eventDate = new Date(event.start_ts * 1000).toISOString().split('T')[0];
+      
       if (markedDates[eventDate]) {
         markedDates[eventDate] = {
           ...markedDates[eventDate],
@@ -98,6 +99,7 @@ export default function GridMonthView({
         disabledByDefault={false}
         markingType={'dot'}
       />
+      {/* 可以在这里添加其他月视图组件 */}
     </View>
   );
 }

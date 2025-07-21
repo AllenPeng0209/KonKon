@@ -1,7 +1,3 @@
-import { useAuth } from '@/contexts/AuthContext';
-import { useFamily } from '@/contexts/FamilyContext';
-import { CreateEventData } from '@/hooks/useEvents';
-import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { decode } from 'base64-arraybuffer';
@@ -24,6 +20,11 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import { useAuth } from '../../contexts/AuthContext';
+import { useFamily } from '../../contexts/FamilyContext';
+import { CreateEventData } from '../../hooks/useEvents';
+import { useRecurringEvents } from '../../hooks/useRecurringEvents';
+import { supabase } from '../../lib/supabase';
 
 interface User {
   id: string;
@@ -172,6 +173,7 @@ export default function AddEventModal({
 }: AddEventModalProps) {
   const { user } = useAuth();
   const { familyMembers, activeFamily } = useFamily();
+  const { createRecurringEvent } = useRecurringEvents();
   
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -280,6 +282,52 @@ export default function AddEventModal({
           // 如果没有参与人信息，默认选择创建者
           setSelectedAttendees([editingEvent.creator_id]);
         }
+
+        // 处理重复规则
+        if (editingEvent.recurrence_rule) {
+          // 直接的重复事件主记录
+          const repeatType = parseRecurrenceRuleToOption(editingEvent.recurrence_rule);
+          setRepeatOption(repeatType);
+        } else if (editingEvent.parent_event_id || editingEvent.id.includes('_')) {
+          // 这是重复事件的实例，需要获取父事件的重复规则
+          const fetchParentEventRule = async () => {
+            try {
+              let parentEventId = editingEvent.parent_event_id;
+              
+              // 如果没有 parent_event_id，尝试从 ID 中提取
+              if (!parentEventId && editingEvent.id.includes('_')) {
+                const idParts = editingEvent.id.split('_');
+                if (idParts.length > 1 && !isNaN(Number(idParts[1]))) {
+                  parentEventId = idParts[0];
+                }
+              }
+              
+              if (parentEventId) {
+                const { data: parentEvent, error } = await supabase
+                  .from('events')
+                  .select('recurrence_rule')
+                  .eq('id', parentEventId)
+                  .single();
+                
+                if (!error && parentEvent && parentEvent.recurrence_rule) {
+                  const repeatType = parseRecurrenceRuleToOption(parentEvent.recurrence_rule);
+                  setRepeatOption(repeatType);
+                } else {
+                  setRepeatOption('never');
+                }
+              } else {
+                setRepeatOption('never');
+              }
+            } catch (error) {
+              console.error('获取父事件重复规则失败:', error);
+              setRepeatOption('never');
+            }
+          };
+          
+          fetchParentEventRule();
+        } else {
+          setRepeatOption('never');
+        }
       } else {
         resetForm();
         if (initialDate) {
@@ -298,6 +346,27 @@ export default function AddEventModal({
       }
     }
   }, [visible, editingEvent, initialDate, user]);
+
+  // 辅助函数：将重复规则转换为选项字符串
+  const parseRecurrenceRuleToOption = (rruleString: string): string => {
+    if (!rruleString) return 'never';
+    
+    try {
+      if (rruleString.includes('FREQ=DAILY')) {
+        return 'daily';
+      } else if (rruleString.includes('FREQ=WEEKLY')) {
+        return 'weekly';
+      } else if (rruleString.includes('FREQ=MONTHLY')) {
+        return 'monthly';
+      } else if (rruleString.includes('FREQ=YEARLY')) {
+        return 'yearly';
+      }
+    } catch (error) {
+      console.error('解析重复规则失败:', error);
+    }
+    
+    return 'never';
+  };
 
   const resetForm = () => {
     setTitle('');
@@ -456,6 +525,7 @@ export default function AddEventModal({
         imageUrls = await uploadImages();
       }
 
+      // 统一创建事件数据，包含重复规则信息
       const eventData: CreateEventData = {
         title: title.trim(),
         description: description.trim() || undefined,
@@ -468,8 +538,32 @@ export default function AddEventModal({
         imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
       };
 
+      // 如果选择了重复，添加重复规则信息
+      if (repeatOption !== 'never') {
+        (eventData as any).recurrenceRule = {
+          frequency: getRecurrenceFrequency(repeatOption),
+          interval: 1,
+          byWeekDay: repeatOption === 'weekly' ? [startTime.getDay()] : undefined,
+        };
+      }
+
       if (editingEvent && onUpdate) {
-        await onUpdate(editingEvent.id, eventData);
+        // 检查是否是重复事件的实例
+        let eventIdToUpdate = editingEvent.id;
+        
+        // 如果是重复事件实例（ID包含下划线和时间戳）
+        if (editingEvent.parent_event_id) {
+          // 这是一个重复事件的实例，应该更新父事件
+          eventIdToUpdate = editingEvent.parent_event_id;
+        } else if (editingEvent.id.includes('_')) {
+          // 检查ID格式，如果包含时间戳，提取父事件ID
+          const idParts = editingEvent.id.split('_');
+          if (idParts.length > 1 && !isNaN(Number(idParts[1]))) {
+            eventIdToUpdate = idParts[0];
+          }
+        }
+        
+        await onUpdate(eventIdToUpdate, eventData);
       } else {
         await onSave(eventData);
       }
@@ -483,7 +577,16 @@ export default function AddEventModal({
     }
   };
 
-
+  // 辅助函数：将重复选项转换为重复频率
+  const getRecurrenceFrequency = (option: string): 'daily' | 'weekly' | 'monthly' | 'yearly' => {
+    switch (option) {
+      case 'daily': return 'daily';
+      case 'weekly': return 'weekly';
+      case 'monthly': return 'monthly';
+      case 'yearly': return 'yearly';
+      default: return 'daily';
+    }
+  };
 
   const onDateChange = (event: any, selectedDate?: Date) => {
     if (selectedDate) {

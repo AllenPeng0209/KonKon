@@ -9,7 +9,6 @@ import ChoreViewSelector from '@/components/chore/ChoreViewSelector';
 import { ConfirmationModal, LoadingModal, SuccessModal } from '@/components/common';
 import AddEventModal from '@/components/event/AddEventModal';
 import EventListModal from '@/components/event/EventListModal';
-import RecurringEventManager from '@/components/event/RecurringEventManager';
 import { VoiceToCalendar } from '@/components/event/VoiceToCalendar';
 import MealViewSelector from '@/components/meal/MealViewSelector';
 import type { MealRecord } from '@/components/meal/MealViewTypes';
@@ -80,11 +79,7 @@ export default function HomeScreen() {
   const [isProcessingImage, setIsProcessingImage] = useState(false);
   const [isProcessingText, setIsProcessingText] = useState(false); // 新增：文本处理状态
   const [loadingText, setLoadingText] = useState('');
-  const [showRecurringEventManager, setShowRecurringEventManager] = useState(false);
-  const [selectedParentEventId, setSelectedParentEventId] = useState<string | null>(null);
 
-  // 已移除：记账相关状态
-  
   // 新增：确认弹窗状态
   const [isConfirmationModalVisible, setIsConfirmationModalVisible] = useState(false);
   const [pendingEvent, setPendingEvent] = useState<CalendarEvent[]>([]);
@@ -170,18 +165,16 @@ export default function HomeScreen() {
     setShoppingItems(items => items.map(item => item.id === itemId ? { ...item, assignedTo: memberId } : item));
   };
 
-  // 事件管理
+  // 使用事件管理钩子
   const { 
     events, 
     loading: eventsLoading, 
-    error: eventsError,
-    userFamilyDetails,
-    createEvent,
-    updateEvent,
-    deleteEvent,
-    getEventsByDate,
-    getMonthEvents,
-    fetchEvents
+    error: eventsError, 
+    createEvent, 
+    updateEvent, 
+    deleteEvent, 
+    fetchEvents,
+    clearEvents,
   } = useEvents();
 
   // 重複事件管理
@@ -884,7 +877,29 @@ export default function HomeScreen() {
   // 处理事件创建
   const handleCreateEvent = async (eventData: any) => {
     try {
-      const result = await createEvent(eventData);
+      let result;
+
+      // 检查是否是重复事件
+      if (eventData.recurrenceRule) {
+        // 创建重复事件
+        const recurringEventData = {
+          title: eventData.title,
+          description: eventData.description,
+          startDate: eventData.startTime,
+          endDate: eventData.endTime || eventData.startTime,
+          location: eventData.location,
+          color: eventData.color,
+          recurrenceRule: eventData.recurrenceRule,
+          familyId: eventData.shareToFamilies && eventData.shareToFamilies.length > 0 
+            ? eventData.shareToFamilies[0] 
+            : undefined,
+        };
+        
+        result = await createRecurringEvent(recurringEventData);
+      } else {
+        // 创建普通事件
+        result = await createEvent(eventData);
+      }
       
       if (result) {
         // 如果有日历权限，同步到系统日历
@@ -908,9 +923,10 @@ export default function HomeScreen() {
               allDay: eventData.type === 'todo' ? false : false, // 待办事项不设置全天
             });
             
+            // 系统日历同步成功
             if (systemEventId) {
-      
-                          }
+              console.log('已同步到系统日历:', systemEventId);
+            }
           } catch (calendarError) {
             console.error('系统日历同步失败:', calendarError);
             // 显示用户友好的错误信息
@@ -961,15 +977,10 @@ export default function HomeScreen() {
 
   // 处理打开编辑事件
   const handleEditEvent = (event: any) => {
-    const parentId = event.parent_event_id || (event.recurrence_rule ? event.id : null);
-
-    if (parentId) {
-      setSelectedParentEventId(parentId);
-      setShowRecurringEventManager(true);
-    } else {
-      setEditingEvent(event);
-      setShowAddEventModal(true);
-    }
+    // 统一使用 AddEventModal 编辑所有类型的事件
+    // 无论是普通事件还是重复事件，都使用相同的 UI
+    setEditingEvent(event);
+    setShowAddEventModal(true);
   };
 
   // 处理关闭编辑事件
@@ -1060,9 +1071,18 @@ export default function HomeScreen() {
 
   // 处理月份变化
   const handleMonthChange = (month: DateData) => {
-    setCurrentMonth(month.dateString.slice(0, 7));
-    const [year, monthNum] = month.dateString.slice(0, 7).split('-').map(Number);
-    fetchEvents(year, monthNum);
+    const newMonth = month.dateString.slice(0, 7);
+    
+    // 强制清除事件缓存，确保重新计算重复事件
+    clearEvents();
+    setCurrentMonth(newMonth);
+    
+    const [year, monthNum] = newMonth.split('-').map(Number);
+    
+    // 延迟获取事件，确保状态已更新
+    setTimeout(() => {
+      fetchEvents(year, monthNum);
+    }, 100);
   };
 
   const navigateToProfile = () => {
@@ -1807,24 +1827,6 @@ export default function HomeScreen() {
           }
         }}
       />
-      
-      <Modal
-        visible={showRecurringEventManager}
-        animationType="slide"
-        onRequestClose={() => setShowRecurringEventManager(false)}
-      >
-        {selectedParentEventId && (
-          <RecurringEventManager
-            parentEventId={selectedParentEventId}
-            onClose={() => {
-              setShowRecurringEventManager(false);
-              setSelectedParentEventId(null);
-              const currentDate = new Date();
-              fetchEvents(currentDate.getFullYear(), currentDate.getMonth() + 1);
-            }}
-          />
-        )}
-      </Modal>
       
       {/* 语音转日程模态框 */}
       <VoiceToCalendar
