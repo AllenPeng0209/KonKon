@@ -24,6 +24,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useFamily } from '../../contexts/FamilyContext';
 import { CreateEventData } from '../../hooks/useEvents';
 import { useRecurringEvents } from '../../hooks/useRecurringEvents';
+import { notifyEventCreated, notifyEventUpdated } from '../../lib/notificationService';
 import { supabase } from '../../lib/supabase';
 
 interface User {
@@ -547,6 +548,9 @@ export default function AddEventModal({
         };
       }
 
+      // 获取当前用户名称
+      const currentUserName = user?.user_metadata?.display_name || user?.email || '用户';
+      
       if (editingEvent && onUpdate) {
         // 检查是否是重复事件的实例
         let eventIdToUpdate = editingEvent.id;
@@ -567,18 +571,46 @@ export default function AddEventModal({
         onClose();
         resetForm();
         
-        // 后台异步调用更新
-        onUpdate(eventIdToUpdate, eventData).catch((error) => {
+        // 后台异步调用更新和发送通知
+        Promise.all([
+          onUpdate(eventIdToUpdate, eventData),
+          // 发送事件更新通知给参与者
+          activeFamily?.id && selectedAttendees.length > 0 ? 
+            notifyEventUpdated(
+              activeFamily.id, 
+              title.trim(), 
+              eventIdToUpdate, 
+              selectedAttendees, 
+              currentUserName
+            ) : Promise.resolve()
+        ]).catch((error) => {
           // 如果更新失败，可以显示 Toast 或其他非阻塞的错误提示
-          console.error('Event update failed:', error);
+          console.error('Event update or notification failed:', error);
         });
       } else {
         // 🚀 对于新建事件也是立即关闭
         onClose();
         resetForm();
         
-        // 后台异步调用保存
-        onSave(eventData).catch((error) => {
+        // 后台异步调用保存和发送通知
+        onSave(eventData).then(async (savedEvent) => {
+          // 如果有activeFamily且有参与者，发送通知
+          if (activeFamily?.id && selectedAttendees.length > 0) {
+            try {
+              // 如果onSave返回的是事件对象，使用其ID；否则生成一个临时ID用于通知
+              const eventIdForNotification = (savedEvent as any)?.id || 'new-event';
+              await notifyEventCreated(
+                activeFamily.id, 
+                title.trim(), 
+                eventIdForNotification, 
+                selectedAttendees, 
+                currentUserName
+              );
+            } catch (notificationError) {
+              console.error('Failed to send event creation notification:', notificationError);
+            }
+          }
+        }).catch((error) => {
           console.error('Event save failed:', error);
         });
       }

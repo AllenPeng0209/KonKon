@@ -1758,6 +1758,137 @@ export type Database = {
         }
         Relationships: []
       }
+      family_notifications: {
+        Row: {
+          created_at: string | null
+          family_id: string
+          id: string
+          is_read: boolean | null
+          is_sent: boolean | null
+          message: string
+          metadata: Json | null
+          push_notification_id: string | null
+          push_notification_sent: boolean | null
+          read_at: string | null
+          recipient_id: string
+          related_id: string | null
+          related_type: string | null
+          sender_id: string
+          sent_at: string | null
+          title: string
+          type: string
+        }
+        Insert: {
+          created_at?: string | null
+          family_id: string
+          id?: string
+          is_read?: boolean | null
+          is_sent?: boolean | null
+          message: string
+          metadata?: Json | null
+          push_notification_id?: string | null
+          push_notification_sent?: boolean | null
+          read_at?: string | null
+          recipient_id: string
+          related_id?: string | null
+          related_type?: string | null
+          sender_id: string
+          sent_at?: string | null
+          title: string
+          type: string
+        }
+        Update: {
+          created_at?: string | null
+          family_id?: string
+          id?: string
+          is_read?: boolean | null
+          is_sent?: boolean | null
+          message?: string
+          metadata?: Json | null
+          push_notification_id?: string | null
+          push_notification_sent?: boolean | null
+          read_at?: string | null
+          recipient_id?: string
+          related_id?: string | null
+          related_type?: string | null
+          sender_id?: string
+          sent_at?: string | null
+          title?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "family_notifications_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification_preferences: {
+        Row: {
+          created_at: string | null
+          event_created_enabled: boolean | null
+          event_deleted_enabled: boolean | null
+          event_reminder_enabled: boolean | null
+          event_updated_enabled: boolean | null
+          family_id: string | null
+          family_invite_enabled: boolean | null
+          id: string
+          push_enabled: boolean | null
+          push_token: string | null
+          quiet_hours_enabled: boolean | null
+          quiet_hours_end: string | null
+          quiet_hours_start: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          event_created_enabled?: boolean | null
+          event_deleted_enabled?: boolean | null
+          event_reminder_enabled?: boolean | null
+          event_updated_enabled?: boolean | null
+          family_id?: string | null
+          family_invite_enabled?: boolean | null
+          id?: string
+          push_enabled?: boolean | null
+          push_token?: string | null
+          quiet_hours_enabled?: boolean | null
+          quiet_hours_end?: string | null
+          quiet_hours_start?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          event_created_enabled?: boolean | null
+          event_deleted_enabled?: boolean | null
+          event_reminder_enabled?: boolean | null
+          event_updated_enabled?: boolean | null
+          family_id?: string | null
+          family_invite_enabled?: boolean | null
+          id?: string
+          push_enabled?: boolean | null
+          push_token?: string | null
+          quiet_hours_enabled?: boolean | null
+          quiet_hours_end?: string | null
+          quiet_hours_start?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_preferences_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      [key: string]: any  // 临时解决其他表的类型
     }
     Views: {
       [_ in never]: never

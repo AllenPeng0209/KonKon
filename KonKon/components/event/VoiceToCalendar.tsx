@@ -10,6 +10,8 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { useAuth } from '../../contexts/AuthContext';
+import { useFamily } from '../../contexts/FamilyContext';
 import { useEvents } from '../../hooks/useEvents';
 import {
     CalendarEvent,
@@ -37,6 +39,8 @@ export const VoiceToCalendar: React.FC<VoiceToCalendarProps> = ({
   const [isCreatingEvents, setIsCreatingEvents] = useState(false);
   
   const { createEvent } = useEvents();
+  const { activeFamily } = useFamily();
+  const { user } = useAuth();
 
   // 测试连接
   const handleTestConnection = useCallback(async () => {
@@ -108,15 +112,36 @@ export const VoiceToCalendar: React.FC<VoiceToCalendarProps> = ({
         selectedEvents.has(event.id)
       );
       
-             // 创建事件
+             // 创建事件 - 默认共享给当前激活的家庭群组
        for (const event of eventsToCreate) {
-         await createEvent({
+         const createdId = await createEvent({
            title: event.title,
            description: event.description || '',
            startTime: event.startTime,
            endTime: event.endTime,
            location: event.location || '',
+           // 🚀 新增：默认共享给当前激活的家庭群组
+           shareToFamilies: activeFamily?.id ? [activeFamily.id] : undefined,
+           // 🚀 新增：默认添加当前用户作为参与者
+           attendees: user?.id ? [user.id] : undefined,
          });
+         
+         // 🚀 发送事件创建通知给家庭成员
+         if (createdId && activeFamily?.id && user?.id) {
+           try {
+             const currentUserName = user?.user_metadata?.display_name || user?.email || '用户';
+             const { notifyEventCreated } = await import('../../lib/notificationService');
+             await notifyEventCreated(
+               activeFamily.id, 
+               event.title, 
+               createdId, 
+               [user.id], // 参与者列表 
+               currentUserName
+             );
+           } catch (notificationError) {
+             console.error('Failed to send voice event creation notification:', notificationError);
+           }
+         }
        }
       
       onEventsCreated?.(eventsToCreate);

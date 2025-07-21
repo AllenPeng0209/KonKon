@@ -63,7 +63,7 @@ const { width: screenWidth } = Dimensions.get('window');
 
 export default function HomeScreen() {
   const { user, loading } = useAuth();
-  const { userFamilies } = useFamily();
+  const { userFamilies, activeFamily } = useFamily();
   const { featureSettings, resetAllSettings } = useFeatureSettings();
   const router = useRouter();
   const [showFilterMenu, setShowFilterMenu] = useState(false);
@@ -731,11 +731,32 @@ export default function HomeScreen() {
         startTime: new Date(event.startTime),
         endTime: event.endTime ? new Date(event.endTime) : undefined,
         location: event.location,
+        // 🚀 新增：默认共享给当前激活的家庭群组
+        shareToFamilies: activeFamily?.id ? [activeFamily.id] : undefined,
+        // 🚀 新增：默认添加当前用户作为参与者
+        attendees: user?.id ? [user.id] : undefined,
       };
       
       const createdId = await createEvent(eventData);
 
       if (createdId) {
+        // 🚀 发送事件创建通知给家庭成员
+        if (activeFamily?.id && user?.id) {
+          try {
+            const currentUserName = user?.user_metadata?.display_name || user?.email || '用户';
+            const { notifyEventCreated } = await import('../../lib/notificationService');
+            await notifyEventCreated(
+              activeFamily.id, 
+              event.title, 
+              createdId, 
+              [user.id], // 参与者列表 
+              currentUserName
+            );
+          } catch (notificationError) {
+            console.error('Failed to send AI event creation notification:', notificationError);
+          }
+        }
+        
         setSuccessTitle(t('home.eventCreationSuccess'));
         setSuccessMessage(t('home.eventCreationSuccessMessage', { title: event.title }));
         setShowSuccessModal(true);
@@ -753,6 +774,8 @@ export default function HomeScreen() {
 
   const handleCreateMultipleAIEvents = async (events: any[]) => {
     let successCount = 0;
+    const currentUserName = user?.user_metadata?.display_name || user?.email || '用户';
+    
     for (const event of events) {
       try {
         const eventData = {
@@ -761,10 +784,30 @@ export default function HomeScreen() {
           startTime: new Date(event.startTime),
           endTime: event.endTime ? new Date(event.endTime) : undefined,
           location: event.location,
+          // 🚀 新增：默认共享给当前激活的家庭群组
+          shareToFamilies: activeFamily?.id ? [activeFamily.id] : undefined,
+          // 🚀 新增：默认添加当前用户作为参与者
+          attendees: user?.id ? [user.id] : undefined,
         };
         const createdId = await createEvent(eventData);
         if (createdId) {
           successCount++;
+          
+          // 🚀 发送事件创建通知给家庭成员
+          if (activeFamily?.id && user?.id) {
+            try {
+              const { notifyEventCreated } = await import('../../lib/notificationService');
+              await notifyEventCreated(
+                activeFamily.id, 
+                event.title, 
+                createdId, 
+                [user.id], // 参与者列表 
+                currentUserName
+              );
+            } catch (notificationError) {
+              console.error('Failed to send AI event creation notification:', notificationError);
+            }
+          }
         }
       } catch (e) {
         console.error("Failed to create one of multiple events:", e);

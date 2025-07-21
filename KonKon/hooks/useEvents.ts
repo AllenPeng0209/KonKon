@@ -334,13 +334,8 @@ export const useEvents = () => {
         color,
         type,
         image_urls: imageUrls || null,
+        // 移除重复的family_id设置，统一使用event_shares表
       };
-
-      if (shareToFamilies && shareToFamilies.length > 0) {
-        // For now, let's assume we share to the first family. 
-        // This logic can be expanded later.
-        eventToInsert.family_id = shareToFamilies[0];
-      }
 
       const { data: newEvent, error: eventError } = await supabase
         .from('events')
@@ -370,16 +365,21 @@ export const useEvents = () => {
         }
       }
       
-      // 4. 如果是分享事件，更新 family_id 或 event_shares 表
+      // 🚀 支持真正的多家庭共享机制
       if (shareToFamilies && shareToFamilies.length > 0) {
-        // 假设一次只分享给一个家庭
-        const familyId = shareToFamilies[0];
+        // 为每个选择的家庭创建共享记录
+        const shareData = shareToFamilies.map(familyId => ({
+          event_id: newEvent.id,
+          family_id: familyId,
+          shared_by: user.id
+        }));
+
         const { error: shareError } = await supabase
           .from('event_shares')
-          .insert({ event_id: newEvent.id, family_id: familyId, shared_by: user.id });
+          .insert(shareData);
         
         if (shareError) {
-          // console.error('分享事件失败:', shareError);
+          console.error('分享事件失败:', shareError);
           // 即使分享失败，事件本身已创建，可以考虑回滚或提示
         }
       }

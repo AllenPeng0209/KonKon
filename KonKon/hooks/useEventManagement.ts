@@ -1,3 +1,5 @@
+import { useAuth } from '@/contexts/AuthContext';
+import { useFamily } from '@/contexts/FamilyContext';
 import { useEvents } from '@/hooks/useEvents';
 import { useRecurringEvents } from '@/hooks/useRecurringEvents';
 import { CalendarEvent, ParsedCalendarResult, processTextToCalendar } from '@/lib/bailian_omni_calendar';
@@ -9,6 +11,10 @@ import { Alert } from 'react-native';
 export const useEventManagement = () => {
   const [isProcessingText, setIsProcessingText] = useState(false);
   const [loadingText, setLoadingText] = useState('');
+  
+  // 新增：获取用户和家庭信息
+  const { user } = useAuth();
+  const { activeFamily } = useFamily();
   
   // 確認彈窗狀態
   const [isConfirmationModalVisible, setIsConfirmationModalVisible] = useState(false);
@@ -103,11 +109,32 @@ export const useEventManagement = () => {
         startTime: new Date(event.startTime),
         endTime: event.endTime ? new Date(event.endTime) : undefined,
         location: event.location,
+        // 🚀 新增：默认共享给当前激活的家庭群组
+        shareToFamilies: activeFamily?.id ? [activeFamily.id] : undefined,
+        // 🚀 新增：默认添加当前用户作为参与者
+        attendees: user?.id ? [user.id] : undefined,
       };
       
       const createdId = await createEvent(eventData);
 
       if (createdId) {
+        // 🚀 发送事件创建通知给家庭成员
+        if (activeFamily?.id && user?.id) {
+          try {
+            const currentUserName = user?.user_metadata?.display_name || user?.email || '用户';
+            const { notifyEventCreated } = await import('../lib/notificationService');
+            await notifyEventCreated(
+              activeFamily.id, 
+              event.title, 
+              createdId, 
+              [user.id], // 参与者列表 
+              currentUserName
+            );
+          } catch (notificationError) {
+            console.error('Failed to send AI event creation notification:', notificationError);
+          }
+        }
+        
         setSuccessTitle(t('home.eventCreationSuccess'));
         setSuccessMessage(t('home.eventCreationSuccessMessage', { title: event.title }));
         setShowSuccessModal(true);
@@ -123,6 +150,8 @@ export const useEventManagement = () => {
   // 創建多個 AI 事件
   const handleCreateMultipleAIEvents = async (events: CalendarEvent[]) => {
     let successCount = 0;
+    const currentUserName = user?.user_metadata?.display_name || user?.email || '用户';
+    
     for (const event of events) {
       try {
         const eventData = {
@@ -131,10 +160,30 @@ export const useEventManagement = () => {
           startTime: new Date(event.startTime),
           endTime: event.endTime ? new Date(event.endTime) : undefined,
           location: event.location,
+          // 🚀 新增：默认共享给当前激活的家庭群组
+          shareToFamilies: activeFamily?.id ? [activeFamily.id] : undefined,
+          // 🚀 新增：默认添加当前用户作为参与者
+          attendees: user?.id ? [user.id] : undefined,
         };
         const createdId = await createEvent(eventData);
         if (createdId) {
           successCount++;
+          
+          // 🚀 发送事件创建通知给家庭成员
+          if (activeFamily?.id && user?.id) {
+            try {
+              const { notifyEventCreated } = await import('../lib/notificationService');
+              await notifyEventCreated(
+                activeFamily.id, 
+                event.title, 
+                createdId, 
+                [user.id], // 参与者列表 
+                currentUserName
+              );
+            } catch (notificationError) {
+              console.error('Failed to send AI event creation notification:', notificationError);
+            }
+          }
         }
       } catch (e) {
         console.error("Failed to create one of multiple events:", e);

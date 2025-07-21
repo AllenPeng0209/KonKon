@@ -97,8 +97,13 @@ export default function SettingsScreen() {
 
         <Text style={styles.sectionHeader}>通用</Text>
         <View style={styles.settingsGroup}>
-          <TouchableOpacity style={styles.settingItem} onPress={() => router.push('/notification-settings')}>
+          <TouchableOpacity style={styles.settingItem} onPress={() => router.push('/notifications')}>
             <Ionicons name="notifications-outline" size={24} color="#333" style={styles.icon} />
+            <Text style={styles.settingText}>通知中心</Text>
+            <Ionicons name="chevron-forward" size={20} color="#c7c7cc" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.settingItem} onPress={() => router.push('/notification-settings')}>
+            <Ionicons name="settings-outline" size={24} color="#333" style={styles.icon} />
             <Text style={styles.settingText}>通知设置</Text>
             <Ionicons name="chevron-forward" size={20} color="#c7c7cc" />
           </TouchableOpacity>
