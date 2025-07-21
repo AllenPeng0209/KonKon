@@ -1,4 +1,3 @@
-import React from 'react';
 import { Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { CalendarViewProps } from './CalendarViewTypes';
 
@@ -86,9 +85,6 @@ export default function CardMonthView({
       {/* 月份头部 */}
       <View style={styles.header}>
         <Text style={styles.monthTitle}>{monthTitle}</Text>
-        <Text style={styles.eventSummary}>
-          {events.length} 个本月日程
-        </Text>
       </View>
 
       {/* 星期标题 */}
@@ -149,15 +145,17 @@ export default function CardMonthView({
                           onPress={() => onEventPress(event)}
                         >
                           <Text style={styles.eventChipText} numberOfLines={1}>
-                            {formatEventTime(event.start_ts)} {event.title}
+                            {event.title}
                           </Text>
                         </TouchableOpacity>
                       ))}
                       
                       {events.filter(event => {
-                        const eventDateString = new Date(event.start_ts * 1000).toISOString().split('T')[0];
-                        const targetDateString = date.toISOString().split('T')[0];
-                        return eventDateString === targetDateString;
+                        const eventDate = new Date(event.start_ts * 1000);
+                        eventDate.setHours(0, 0, 0, 0);
+                        const targetDate = new Date(date);
+                        targetDate.setHours(0, 0, 0, 0);
+                        return eventDate.getTime() === targetDate.getTime();
                       }).length > 2 && (
                         <View style={styles.moreEventsChip}>
                           <Text style={styles.moreEventsText}>
@@ -241,19 +239,19 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   weeksContainer: {
-    padding: 12,
+    padding: 8,
   },
   weekRow: {
     flexDirection: 'row',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   dayCard: {
     flex: 1,
     backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 8,
-    marginHorizontal: 2,
-    minHeight: 80,
+    borderRadius: 8,
+    padding: 6,
+    marginHorizontal: 0.5,
+    minHeight: 100,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -262,8 +260,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 1,
-    borderWidth: 1,
-    borderColor: '#f1f5f9',
+    borderWidth: 0.5,
+    borderColor: '#e5e7eb',
   },
   todayCard: {
     backgroundColor: '#eef2ff',
@@ -278,10 +276,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   dayNumber: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: '#334155',
   },
@@ -294,41 +292,42 @@ const styles = StyleSheet.create({
   },
   eventCountBadge: {
     backgroundColor: '#6366f1',
-    borderRadius: 8,
-    minWidth: 16,
-    height: 16,
+    borderRadius: 6,
+    minWidth: 14,
+    height: 14,
     justifyContent: 'center',
     alignItems: 'center',
   },
   eventCountText: {
     color: '#ffffff',
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '600',
   },
   dayEvents: {
     flex: 1,
   },
   eventChip: {
-    borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    marginBottom: 2,
+    borderRadius: 4,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    marginBottom: 1,
   },
   eventChipText: {
     color: '#ffffff',
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '500',
+    lineHeight: 12,
   },
   moreEventsChip: {
     backgroundColor: '#e2e8f0',
-    borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    borderRadius: 3,
+    paddingHorizontal: 3,
+    paddingVertical: 1,
     alignItems: 'center',
   },
   moreEventsText: {
     color: '#64748b',
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: '500',
   },
 }); 

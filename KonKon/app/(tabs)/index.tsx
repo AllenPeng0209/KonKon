@@ -969,7 +969,7 @@ export default function HomeScreen() {
 
   // 处理日期点击
   const handleDatePress = (dateData: DateData) => {
-    const clickedDate = new Date(dateData.dateString);
+    const clickedDate = new Date(dateData.year, dateData.month - 1, dateData.day);
     setSelectedDate(clickedDate);
     
     // 不再弹出模态框，而是直接更新选中的日期
@@ -978,12 +978,14 @@ export default function HomeScreen() {
   };
 
   const getProcessedEventsByDate = (date: Date) => {
-    const targetDateString = date.toISOString().split('T')[0];
+    const targetDayStart = new Date(date);
+    targetDayStart.setHours(0, 0, 0, 0);
     
     // 直接使用 events 而不是 processedEvents 來確保事件正確顯示
     return events.filter(event => {
-      const eventDateString = new Date(event.start_ts * 1000).toISOString().split('T')[0];
-      return eventDateString === targetDateString;
+      const eventStartDate = new Date(event.start_ts * 1000);
+      eventStartDate.setHours(0, 0, 0, 0);
+      return eventStartDate.getTime() === targetDayStart.getTime();
     });
   };
 
@@ -1461,7 +1463,7 @@ export default function HomeScreen() {
                   month: date.getMonth() + 1,
                   day: date.getDate(),
                   timestamp: date.getTime(),
-                  dateString: date.toISOString().split('T')[0],
+                  dateString: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`,
                 };
                 handleDatePress(dateData);
               }}
@@ -1497,7 +1499,7 @@ export default function HomeScreen() {
                   {(() => {
                     const displayDate = selectedDate || new Date();
                     const today = new Date();
-                    const isToday = displayDate.toISOString().split('T')[0] === today.toISOString().split('T')[0];
+                    const isToday = displayDate.toDateString() === today.toDateString();
                     
                     if (isToday) {
                       return `${t('home.today')} ${displayDate.toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}`;
