@@ -1,23 +1,22 @@
-import React, { useState, useCallback } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useFamily } from '@/contexts/FamilyContext';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Alert,
-  TextInput,
-  Share,
-  Clipboard,
-  ActivityIndicator,
-  RefreshControl,
+    ActivityIndicator,
+    Alert,
+    Clipboard,
+    RefreshControl,
+    ScrollView,
+    Share,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { useFamily } from '@/contexts/FamilyContext';
-import { useAuth } from '@/contexts/AuthContext';
-import { t } from '@/lib/i18n';
 
 export default function FamilyManagement() {
   const router = useRouter();
@@ -29,6 +28,7 @@ export default function FamilyManagement() {
     loading,
     error,
     createFamily,
+    updateFamilyName,
     joinFamilyByCode,
     refreshFamilies,
     switchFamily,
@@ -41,10 +41,12 @@ export default function FamilyManagement() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showJoinForm, setShowJoinForm] = useState(false);
   const [showInviteForm, setShowInviteForm] = useState(false);
+  const [showEditNameForm, setShowEditNameForm] = useState(false);
   const [familyName, setFamilyName] = useState('');
   const [familyDescription, setFamilyDescription] = useState('');
   const [inviteCode, setInviteCode] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
+  const [newFamilyName, setNewFamilyName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleCreateFamily = useCallback(async () => {
@@ -205,6 +207,33 @@ export default function FamilyManagement() {
     );
   }, [activeFamily, deleteFamily]);
 
+  const handleEditFamilyName = useCallback(() => {
+    if (!activeFamily) return;
+    setNewFamilyName(activeFamily.name);
+    setShowEditNameForm(true);
+  }, [activeFamily]);
+
+  const handleUpdateFamilyName = useCallback(async () => {
+    if (!activeFamily || !newFamilyName.trim()) {
+      Alert.alert('提示', '请输入有效的家庭名称');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const success = await updateFamilyName(activeFamily.id, newFamilyName.trim());
+      if (success) {
+        Alert.alert('修改成功', '家庭名称已更新');
+        setShowEditNameForm(false);
+        setNewFamilyName('');
+      }
+    } catch (error) {
+      console.error('修改家庭名称失败:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [activeFamily, newFamilyName, updateFamilyName]);
+
   const isOwner = activeFamily?.owner_id === user?.id;
 
   return (
@@ -231,7 +260,17 @@ export default function FamilyManagement() {
             <Text style={styles.sectionTitle}>当前家庭</Text>
             <View style={styles.familyCard}>
               <View style={styles.familyInfo}>
-                <Text style={styles.familyName}>{activeFamily.name}</Text>
+                <View style={styles.familyNameRow}>
+                  <Text style={styles.familyName}>{activeFamily.name}</Text>
+                  {isOwner && (
+                    <TouchableOpacity
+                      style={styles.editNameButton}
+                      onPress={handleEditFamilyName}
+                    >
+                      <Ionicons name="pencil" size={16} color="#007AFF" />
+                    </TouchableOpacity>
+                  )}
+                </View>
                 {activeFamily.description && (
                   <Text style={styles.familyDescription}>
                     {activeFamily.description}
@@ -486,6 +525,48 @@ export default function FamilyManagement() {
           </View>
         </View>
       )}
+
+      {/* 修改家庭名称表单 */}
+      {showEditNameForm && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>修改家庭名称</Text>
+            
+            <TextInput
+              style={styles.input}
+              placeholder="输入新的家庭名称"
+              value={newFamilyName}
+              onChangeText={setNewFamilyName}
+              maxLength={50}
+              autoFocus
+            />
+            
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => {
+                  setShowEditNameForm(false);
+                  setNewFamilyName('');
+                }}
+              >
+                <Text style={styles.cancelButtonText}>取消</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.confirmButton}
+                onPress={handleUpdateFamilyName}
+                disabled={isSubmitting || !newFamilyName.trim()}
+              >
+                {isSubmitting ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.confirmButtonText}>保存</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -549,11 +630,21 @@ const styles = StyleSheet.create({
   familyInfo: {
     marginBottom: 12,
   },
+  familyNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
   familyName: {
     fontSize: 18,
     fontWeight: '700',
     color: '#1C1C1E',
-    marginBottom: 4,
+  },
+  editNameButton: {
+    padding: 4,
+    borderRadius: 4,
+    backgroundColor: '#F2F2F7',
   },
   familyDescription: {
     fontSize: 14,

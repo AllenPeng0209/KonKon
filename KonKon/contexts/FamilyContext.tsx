@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { useAuth } from './AuthContext';
 import { supabase } from '../lib/supabase';
+import { useAuth } from './AuthContext';
 
 interface Family {
   id: string;
@@ -35,6 +35,7 @@ interface FamilyContextType {
   error: string | null;
   
   createFamily: (data: { name: string; description?: string }) => Promise<Family | null>;
+  updateFamilyName: (familyId: string, newName: string) => Promise<boolean>;
   joinFamilyByCode: (inviteCode: string) => Promise<boolean>;
   refreshFamilies: () => Promise<void>;
   switchFamily: (familyId: string) => Promise<void>;
@@ -372,6 +373,37 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const updateFamilyName = async (familyId: string, newName: string) => {
+    if (!user) return false;
+    
+    try {
+      setLoading(true);
+      setError(null);
+
+      const { error: updateError } = await supabase
+        .from('families')
+        .update({ name: newName.trim(), updated_at: new Date().toISOString() })
+        .eq('id', familyId)
+        .eq('owner_id', user.id); // 只有家庭擁有者才能修改
+
+      if (updateError) {
+        // console.error('修改家庭名稱失败:', updateError);
+        setError('修改家庭名稱失败');
+        return false;
+      }
+
+      // 更新本地狀態
+      await fetchUserFamilies();
+      return true;
+    } catch (err) {
+      // console.error('修改家庭名稱异常:', err);
+      setError('修改家庭名稱失败');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const inviteByEmail = async (email: string) => {
     if (!user || !activeFamily) return false;
     
@@ -402,6 +434,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
         loading,
         error,
         createFamily,
+        updateFamilyName,
         joinFamilyByCode,
         refreshFamilies,
         switchFamily,

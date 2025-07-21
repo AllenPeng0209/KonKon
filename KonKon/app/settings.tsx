@@ -93,16 +93,6 @@ export default function SettingsScreen() {
             <Text style={styles.settingText}>家庭管理</Text>
             <Ionicons name="chevron-forward" size={20} color="#c7c7cc" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.settingItem} onPress={() => router.push('/chore-management')}>
-            <Ionicons name="checkmark-done-outline" size={24} color="#333" style={styles.icon} />
-            <View style={styles.settingTextContainer}>
-              <Text style={styles.settingText}>家务管理</Text>
-              <View style={styles.newBadge}>
-                <Text style={styles.newBadgeText}>NEW</Text>
-              </View>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#c7c7cc" />
-          </TouchableOpacity>
         </View>
 
         <Text style={styles.sectionHeader}>通用</Text>
@@ -215,22 +205,5 @@ const styles = StyleSheet.create({
     logoutButtonText: {
         color: '#ff3b30',
         fontSize: 17,
-    },
-    settingTextContainer: {
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    newBadge: {
-        backgroundColor: '#FF3B30',
-        paddingHorizontal: 6,
-        paddingVertical: 2,
-        borderRadius: 4,
-        marginLeft: 8,
-    },
-    newBadgeText: {
-        color: '#FFFFFF',
-        fontSize: 10,
-        fontWeight: '600',
     },
 }); 
