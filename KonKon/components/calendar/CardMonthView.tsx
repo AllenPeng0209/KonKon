@@ -46,7 +46,7 @@ export default function CardMonthView({
       const eventStartDate = new Date(event.start_ts * 1000);
       eventStartDate.setHours(0, 0, 0, 0);
       return eventStartDate.getTime() === targetDayStart.getTime();
-    }).slice(0, 2); // 最多显示2个事件
+    }).slice(0, 4); // 最多显示2个事件
   };
 
   const isToday = (date: Date) => {
@@ -156,14 +156,14 @@ export default function CardMonthView({
                         const targetDate = new Date(date);
                         targetDate.setHours(0, 0, 0, 0);
                         return eventDate.getTime() === targetDate.getTime();
-                      }).length > 2 && (
+                      }).length > 4 && (
                         <View style={styles.moreEventsChip}>
                           <Text style={styles.moreEventsText}>
                             +{events.filter(event => {
                               const eventDateString = new Date(event.start_ts * 1000).toISOString().split('T')[0];
                               const targetDateString = date.toISOString().split('T')[0];
                               return eventDateString === targetDateString;
-                            }).length - 2}
+                            }).length - 4}
                           </Text>
                         </View>
                       )}
