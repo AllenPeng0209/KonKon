@@ -1,4 +1,4 @@
-import React from 'react';
+import { useEffect, useRef } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { CalendarViewProps } from './CalendarViewTypes';
 
@@ -7,9 +7,13 @@ export default function AgendaListView({
   selectedDate,
   onEventPress,
 }: CalendarViewProps) {
-  // 根据日期分组事件
-  const groupEventsByDate = () => {
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  // 根据日期分组事件并按今天为中心重新排序
+  const groupAndSortEventsByDate = () => {
     const grouped: { [key: string]: any[] } = {};
+    const today = new Date();
+    const todayKey = today.toISOString().split('T')[0];
     
     events.forEach(event => {
       const eventDate = new Date(event.start_ts * 1000);
@@ -26,7 +30,21 @@ export default function AgendaListView({
       grouped[dateKey].sort((a, b) => a.start_ts - b.start_ts);
     });
     
-    return grouped;
+    // 只保留今天和未來的日期
+    const todayAndFutureDates: string[] = [];
+    
+    Object.keys(grouped).forEach(dateKey => {
+      if (dateKey >= todayKey) {
+        todayAndFutureDates.push(dateKey);
+      }
+    });
+    
+    // 按日期正序排序：今天在最前，然後是未來
+    todayAndFutureDates.sort();
+    
+    const orderedDates = todayAndFutureDates;
+    
+    return { grouped, orderedDates, todayKey };
   };
 
   const formatDate = (dateString: string) => {
@@ -34,21 +52,28 @@ export default function AgendaListView({
     const today = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(today.getDate() + 1);
-    const yesterday = new Date(today);
-    yesterday.setDate(today.getDate() - 1);
 
     if (date.toDateString() === today.toDateString()) {
       return '今天';
     } else if (date.toDateString() === tomorrow.toDateString()) {
       return '明天';
-    } else if (date.toDateString() === yesterday.toDateString()) {
-      return '昨天';
     } else {
-      return date.toLocaleDateString('zh-CN', { 
+      // 只顯示未來日期，不需要 "天前/天后" 標識
+      const dateStr = date.toLocaleDateString('zh-CN', { 
         month: 'long', 
         day: 'numeric',
         weekday: 'long'
       });
+      
+      // 計算距離今天的天數（只有未來）
+      const diffTime = date.getTime() - today.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays > 1) {
+        return `${dateStr} (${diffDays}天後)`;
+      } else {
+        return dateStr;
+      }
     }
   };
 
@@ -71,21 +96,32 @@ export default function AgendaListView({
     }
   };
 
-  const groupedEvents = groupEventsByDate();
-  const sortedDates = Object.keys(groupedEvents).sort();
+  const { grouped: groupedEvents, orderedDates, todayKey } = groupAndSortEventsByDate();
+
+  // 自动滚动到顶部（今天在最前面）
+  useEffect(() => {
+    if (orderedDates.length > 0 && scrollViewRef.current) {
+      setTimeout(() => {
+        scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+      }, 300);
+    }
+  }, [orderedDates]);
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {sortedDates.length === 0 ? (
+      <ScrollView ref={scrollViewRef} style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        {orderedDates.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyIcon}>📅</Text>
             <Text style={styles.emptyTitle}>暂无日程安排</Text>
             <Text style={styles.emptyDescription}>您可以添加新的日程安排</Text>
           </View>
         ) : (
-          sortedDates.map((dateKey) => (
-            <View key={dateKey} style={styles.dateSection}>
+          orderedDates.map((dateKey: string) => (
+            <View 
+              key={dateKey} 
+              style={styles.dateSection}
+            >
               <View style={styles.dateHeader}>
                 <Text style={styles.dateTitle}>
                   {formatDate(dateKey)}

@@ -97,6 +97,7 @@ function ProtectedLayout() {
                 <Stack.Screen name="language-selection" options={{ headerShown: false }} />
                 <Stack.Screen name="calendar-settings" options={{ headerShown: false }} />
                 <Stack.Screen name="feature-settings" options={{ headerShown: false }} />
+                <Stack.Screen name="calendar-style-selection" options={{ headerShown: false }} />
                 <Stack.Screen name="finance-management" options={{ headerShown: false }} />
                 <Stack.Screen name="avatar" options={{ headerShown: false, animation: 'slide_from_right' }} />
                 <Stack.Screen name="+not-found" />
