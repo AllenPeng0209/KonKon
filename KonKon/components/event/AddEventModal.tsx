@@ -563,13 +563,25 @@ export default function AddEventModal({
           }
         }
         
-        await onUpdate(eventIdToUpdate, eventData);
+        // 🚀 立即关闭模态框，提升用户体验（onUpdate 内部已经有乐观更新）
+        onClose();
+        resetForm();
+        
+        // 后台异步调用更新
+        onUpdate(eventIdToUpdate, eventData).catch((error) => {
+          // 如果更新失败，可以显示 Toast 或其他非阻塞的错误提示
+          console.error('Event update failed:', error);
+        });
       } else {
-        await onSave(eventData);
+        // 🚀 对于新建事件也是立即关闭
+        onClose();
+        resetForm();
+        
+        // 后台异步调用保存
+        onSave(eventData).catch((error) => {
+          console.error('Event save failed:', error);
+        });
       }
-
-      onClose();
-      resetForm();
     } catch (error) {
       Alert.alert('错误', '保存失败');
     } finally {

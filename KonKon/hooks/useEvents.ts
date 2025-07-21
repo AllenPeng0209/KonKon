@@ -487,7 +487,7 @@ export const useEvents = () => {
       // 首先檢查事件是否存在以及用戶權限
       const { data: existingEvent, error: checkError } = await supabase
         .from('events')
-        .select('id, creator_id, title')
+        .select('id, creator_id, title, recurrence_rule')
         .eq('id', eventId)
         .single();
 
@@ -500,6 +500,55 @@ export const useEvents = () => {
         // 暫時允許更新，後續可以添加更複雜的權限檢查
       }
 
+      // 🚀 乐观更新：先更新本地状态，提升用户体验
+      const wasRecurring = existingEvent.recurrence_rule !== null;
+      const willBeRecurring = eventToUpdate.recurrence_rule !== null;
+      
+      // 如果重复状态发生变化，清除缓存强制重新展开
+      if (wasRecurring !== willBeRecurring) {
+        setLastExpandKey(''); // 清除缓存
+      }
+
+      // 立即更新 UI（乐观更新）
+      setEvents(prev => {
+        let updated = prev.map(event => {
+          if (event.id === eventId || 
+              (event.parent_event_id === eventId) || 
+              (event.id.startsWith(eventId + '_'))) {
+            return {
+              ...event,
+              title: eventToUpdate.title || event.title,
+              description: eventToUpdate.description || event.description,
+              start_ts: eventToUpdate.start_ts || event.start_ts,
+              end_ts: eventToUpdate.end_ts || event.end_ts,
+              color: eventToUpdate.color || event.color,
+              image_urls: eventToUpdate.image_urls !== undefined ? eventToUpdate.image_urls : event.image_urls,
+              recurrence_rule: eventToUpdate.recurrence_rule !== undefined ? eventToUpdate.recurrence_rule : event.recurrence_rule,
+              updated_at: eventToUpdate.updated_at || event.updated_at,
+            };
+          }
+          return event;
+        });
+
+        // 🔥 特殊处理：如果从重复事件改为单次事件，移除所有实例，只保留主事件
+        if (wasRecurring && !willBeRecurring) {
+          updated = updated.filter(event => {
+            // 保留主事件（ID 完全匹配）
+            if (event.id === eventId) {
+              return true;
+            }
+            // 移除所有这个重复系列的实例
+            if (event.parent_event_id === eventId || event.id.startsWith(eventId + '_')) {
+              return false;
+            }
+            return true;
+          });
+        }
+
+        return updated;
+      });
+
+      // 后台异步更新数据库
       const { data: updateData, error } = await supabase
         .from('events')
         .update(eventToUpdate)
@@ -508,6 +557,13 @@ export const useEvents = () => {
         .single();
 
       if (error) {
+        // 如果数据库更新失败，恢复原始状态
+        setEvents(prev => prev.map(event => {
+          if (event.id === eventId) {
+            return { ...event, ...existingEvent };
+          }
+          return event;
+        }));
         throw error;
       }
 
@@ -533,6 +589,23 @@ export const useEvents = () => {
         await supabase
           .from('event_attendees')
           .insert(attendeeInserts);
+      }
+
+      // 🔄 如果重复状态发生变化，异步重新获取并展开事件
+      if (wasRecurring !== willBeRecurring) {
+        // 使用 setTimeout 避免阻塞 UI
+        setTimeout(async () => {
+          try {
+            const currentDate = new Date();
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth() + 1;
+            
+            // 重新获取数据（这次是准确的）
+            await fetchEvents(year, month);
+          } catch (error) {
+            console.error('Background refresh failed:', error);
+          }
+        }, 100);
       }
 
       return true;

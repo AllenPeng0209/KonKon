@@ -960,9 +960,8 @@ export default function HomeScreen() {
       
       if (result) {
         Alert.alert(t('home.success'), t('home.eventUpdateSuccess'));
-        // 重新获取当月事件
-        const currentDate = new Date();
-        fetchEvents(currentDate.getFullYear(), currentDate.getMonth() + 1);
+        // ✅ 移除不必要的 fetchEvents 调用 - updateEvent 内部已经处理了乐观更新
+        // 只有在重复状态变化时，updateEvent 内部会异步刷新
       } else {
         // 显示 eventsError 中的具体错误信息
         const errorMessage = eventsError || t('home.eventUpdateFailed');
