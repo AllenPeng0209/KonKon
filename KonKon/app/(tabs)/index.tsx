@@ -96,6 +96,11 @@ export default function HomeScreen() {
   const [successTitle, setSuccessTitle] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
+  // 照片查看器状态
+  const [showPhotoViewer, setShowPhotoViewer] = useState(false);
+  const [photoViewerImages, setPhotoViewerImages] = useState<string[]>([]);
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+
   // 新增：相簿模态框状态
   const [showAddMemoryModal, setShowAddMemoryModal] = useState(false);
   const [showSmartAlbumModal, setShowSmartAlbumModal] = useState(false);
@@ -820,6 +825,13 @@ export default function HomeScreen() {
 
   const handleTextError = () => {
     Alert.alert(t('home.error'), t('smartButton.parseError'));
+  };
+
+  // 处理照片点击查看
+  const handlePhotoViewerPress = (imageUrls: string[], selectedIndex: number) => {
+    setPhotoViewerImages(imageUrls);
+    setCurrentPhotoIndex(selectedIndex);
+    setShowPhotoViewer(true);
   };
 
   // 处理记账保存
@@ -1566,17 +1578,26 @@ export default function HomeScreen() {
                                   style={styles.eventPhotosContainer}
                                 >
                                   {event.image_urls.slice(0, 3).map((url: string, index: number) => (
-                                    <Image
+                                    <TouchableOpacity
                                       key={index}
-                                      source={{ uri: url }}
-                                      style={styles.eventPhoto}
-                                      resizeMode="cover"
-                                    />
+                                      onPress={() => handlePhotoViewerPress(event.image_urls!, index)}
+                                      activeOpacity={0.8}
+                                    >
+                                      <Image
+                                        source={{ uri: url }}
+                                        style={styles.eventPhoto}
+                                        resizeMode="cover"
+                                      />
+                                    </TouchableOpacity>
                                   ))}
                                   {event.image_urls.length > 3 && (
-                                    <View style={styles.eventPhotoMore}>
+                                    <TouchableOpacity 
+                                      style={styles.eventPhotoMore}
+                                      onPress={() => handlePhotoViewerPress(event.image_urls!, 3)}
+                                      activeOpacity={0.8}
+                                    >
                                       <Text style={styles.eventPhotoMoreText}>+{event.image_urls.length - 3}</Text>
-                                    </View>
+                                    </TouchableOpacity>
                                   )}
                                 </ScrollView>
                               </View>
@@ -1879,6 +1900,64 @@ export default function HomeScreen() {
           }}
         />
       )}
+
+      {/* 照片查看器 */}
+      <Modal
+        visible={showPhotoViewer}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowPhotoViewer(false)}
+      >
+        <View style={styles.photoViewerContainer}>
+          <View style={styles.photoViewerHeader}>
+            <TouchableOpacity 
+              style={styles.photoViewerCloseButton}
+              onPress={() => setShowPhotoViewer(false)}
+            >
+              <Text style={styles.photoViewerCloseText}>✕</Text>
+            </TouchableOpacity>
+            <Text style={styles.photoViewerCounter}>
+              {currentPhotoIndex + 1} / {photoViewerImages.length}
+            </Text>
+            <View style={styles.photoViewerPlaceholder} />
+          </View>
+          
+          <ScrollView 
+            horizontal 
+            pagingEnabled 
+            showsHorizontalScrollIndicator={false}
+            onMomentumScrollEnd={(event) => {
+              const newIndex = Math.round(event.nativeEvent.contentOffset.x / event.nativeEvent.layoutMeasurement.width);
+              setCurrentPhotoIndex(newIndex);
+            }}
+            contentOffset={{ x: currentPhotoIndex * screenWidth, y: 0 }}
+          >
+            {photoViewerImages.map((imageUrl, index) => (
+              <View key={index} style={styles.photoViewerImageContainer}>
+                <Image
+                  source={{ uri: imageUrl }}
+                  style={styles.photoViewerImage}
+                  resizeMode="contain"
+                />
+              </View>
+            ))}
+          </ScrollView>
+          
+          {photoViewerImages.length > 1 && (
+            <View style={styles.photoViewerDots}>
+              {photoViewerImages.map((_, index) => (
+                <View 
+                  key={index}
+                  style={[
+                    styles.photoViewerDot,
+                    index === currentPhotoIndex && styles.photoViewerActiveDot
+                  ]} 
+                />
+              ))}
+            </View>
+          )}
+        </View>
+      </Modal>
 
     </SafeAreaView>
   );
@@ -2734,5 +2813,69 @@ const styles = StyleSheet.create({
     elevation: 3,
     borderWidth: 1,
     borderColor: 'rgba(0, 0, 0, 0.04)',
+  },
+  // 照片查看器样式
+  photoViewerContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+  },
+  photoViewerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 20,
+  },
+  photoViewerCloseButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  photoViewerCloseText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  photoViewerCounter: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  photoViewerPlaceholder: {
+    width: 40,
+    height: 40,
+  },
+  photoViewerImageContainer: {
+    width: screenWidth,
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  photoViewerImage: {
+    width: screenWidth - 40,
+    height: '80%',
+  },
+  photoViewerDots: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingBottom: 40,
+    gap: 8,
+  },
+  photoViewerDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+  },
+  photoViewerActiveDot: {
+    backgroundColor: '#FFFFFF',
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
 });
