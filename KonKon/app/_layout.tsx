@@ -14,9 +14,10 @@ import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from 'expo-status-bar';
 import { requestTrackingPermissionsAsync } from 'expo-tracking-transparency';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, TouchableWithoutFeedback, View } from 'react-native';
+import { ActivityIndicator, Dimensions, StyleSheet, TouchableWithoutFeedback, View } from 'react-native';
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
+import { useSharedValue, withTiming } from 'react-native-reanimated';
 import Drawer from '../components/common/Drawer';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { FamilyProvider } from '../contexts/FamilyContext';
@@ -26,12 +27,23 @@ import { registerForPushNotificationsAsync } from '../lib/notifications';
 
 SplashScreen.preventAutoHideAsync();
 
+const { width } = Dimensions.get('window');
+
 function ProtectedLayout() {
   const { user, loading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
   const colorScheme = useColorScheme();
   const [isDrawerVisible, setDrawerVisible] = useState(false);
+  const translateX = useSharedValue(-width);
+
+  useEffect(() => {
+    if (isDrawerVisible) {
+      translateX.value = withTiming(0, { duration: 300 });
+    } else {
+      translateX.value = withTiming(-width, { duration: 300 });
+    }
+  }, [isDrawerVisible]);
 
   const onHandlerStateChange = (event: any) => {
     const currentRoute = segments.join('/');
@@ -42,9 +54,10 @@ function ProtectedLayout() {
       const { translationX, translationY } = event.nativeEvent;
       if (translationX > 100 && Math.abs(translationY) < 50) {
         setDrawerVisible(true);
-      } else if (translationX < -100 && Math.abs(translationY) < 50) {
-        router.push('/avatar');
-      }
+      } 
+      // else if (translationX < -100 && Math.abs(translationY) < 50) {
+      //   router.push('/avatar');
+      // }
     }
   };
 
@@ -111,7 +124,7 @@ function ProtectedLayout() {
                 <View style={StyleSheet.absoluteFill} />
               </TouchableWithoutFeedback>
             )}
-            <Drawer isVisible={isDrawerVisible} onClose={closeDrawer} />
+            <Drawer onClose={closeDrawer} translateX={translateX} />
             </>
           </FamilyProvider>
         </FeatureSettingsProvider>

@@ -12,6 +12,7 @@ interface Family {
   timezone: string | null;
   created_at: string | null;
   updated_at: string | null;
+  member_count?: number; // 添加成员数量字段
 }
 
 interface FamilyMember {
@@ -99,23 +100,44 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
           throw familiesError;
         }
 
-        setUserFamilies(familiesData || []);
-        
-        // 3. Set the first family as active and fetch its members
-        const currentActiveFamily = activeFamily 
-          ? familiesData.find(f => f.id === activeFamily.id) 
-          : null;
+        // 3. 为每个家庭获取成员数量
+        if (familiesData) {
+          const familiesWithMemberCount = await Promise.all(
+            familiesData.map(async (family) => {
+              const { count, error: countError } = await supabase
+                .from('family_members')
+                .select('*', { count: 'exact', head: true })
+                .eq('family_id', family.id);
+              
+              if (countError) {
+                console.error(`获取家庭 ${family.id} 成员数量失败:`, countError);
+                return { ...family, member_count: 0 };
+              }
+              return { ...family, member_count: count || 0 };
+            })
+          );
+          setUserFamilies(familiesWithMemberCount);
 
-        if (currentActiveFamily) {
-          setActiveFamily(currentActiveFamily);
-          await fetchFamilyMembers(currentActiveFamily.id);
-        } else if (familiesData && familiesData.length > 0) {
-          const newActiveFamily = familiesData[0];
-          setActiveFamily(newActiveFamily);
-          await fetchFamilyMembers(newActiveFamily.id);
+          // 4. Set the first family as active and fetch its members
+          const currentActiveFamily = activeFamily 
+            ? familiesWithMemberCount.find(f => f.id === activeFamily.id) 
+            : null;
+
+          if (currentActiveFamily) {
+            setActiveFamily(currentActiveFamily);
+            await fetchFamilyMembers(currentActiveFamily.id);
+          } else if (familiesWithMemberCount.length > 0) {
+            const newActiveFamily = familiesWithMemberCount[0];
+            setActiveFamily(newActiveFamily);
+            await fetchFamilyMembers(newActiveFamily.id);
+          } else {
+            setActiveFamily(null);
+            setFamilyMembers([]);
+          }
         } else {
-          setActiveFamily(null);
-          setFamilyMembers([]);
+           setUserFamilies([]);
+           setActiveFamily(null);
+           setFamilyMembers([]);
         }
       } else {
         // No families found for the user
