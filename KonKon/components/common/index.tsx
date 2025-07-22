@@ -1,4 +1,5 @@
 // 通用組件統一導出入口
+export { default as Avatar } from './Avatar';
 export { Collapsible } from './Collapsible';
 export { ConfirmationModal } from './ConfirmationModal';
 export { default as Drawer } from './Drawer';

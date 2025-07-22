@@ -84,6 +84,11 @@ export default function SettingsScreen() {
             <Text style={styles.settingText}>编辑个人资料</Text>
             <Ionicons name="chevron-forward" size={20} color="#c7c7cc" />
           </TouchableOpacity>
+          <TouchableOpacity style={styles.settingItem} onPress={() => router.push('/change-password')}>
+            <Ionicons name="lock-closed-outline" size={24} color="#333" style={styles.icon} />
+            <Text style={styles.settingText}>更改密码</Text>
+            <Ionicons name="chevron-forward" size={20} color="#c7c7cc" />
+          </TouchableOpacity>
         </View>
 
         <Text style={styles.sectionHeader}>家庭</Text>

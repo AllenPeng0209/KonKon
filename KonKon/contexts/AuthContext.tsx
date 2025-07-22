@@ -1,11 +1,10 @@
 import { Tables } from '@/lib/database.types';
 import { Session, User } from '@supabase/supabase-js';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import * as Crypto from 'expo-crypto';
 import * as React from 'react';
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import * as AppleAuthentication from 'expo-apple-authentication';
-import * as Crypto from 'expo-crypto';
-import { Platform } from 'react-native';
 
 type FamilyDetails = Tables<'family_members'> & {
   families: Tables<'families'> | null;
@@ -20,6 +19,7 @@ interface AuthContextType {
   signUp: (email: string, password: string) => Promise<any>;
   signInWithApple: () => Promise<any>;
   signOut: () => Promise<void>;
+  updatePassword: (newPassword: string) => Promise<any>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -170,6 +170,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }
 
+  const updatePassword = async (newPassword: string) => {
+    console.log('[Auth] 开始更新密码...');
+    try {
+      const { data, error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) {
+        console.error('[Auth] 更新密码失败:', error);
+        throw error;
+      }
+
+      console.log('[Auth] 密码更新成功');
+      return { data, error: null };
+    } catch (error) {
+      console.error('[Auth] 密码更新异常:', error);
+      return { data: null, error };
+    }
+  };
+
   const value = {
     user,
     session,
@@ -179,6 +199,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     signUp,
     signInWithApple,
     signOut,
+    updatePassword,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

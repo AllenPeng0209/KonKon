@@ -1,19 +1,22 @@
 import { t } from '@/lib/i18n';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import {
-    Alert,
-    Dimensions,
-    Image,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  Dimensions,
+  Image,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { useFamily } from '../contexts/FamilyContext';
+import AvatarService from '../lib/avatarService';
+import { supabase } from '../lib/supabase';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -21,6 +24,54 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const { activeFamily, loading } = useFamily();
+  const [userProfile, setUserProfile] = useState<{
+    display_name: string;
+    avatar_url: string | null;
+  } | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
+
+  useEffect(() => {
+    loadUserProfile();
+  }, [user]);
+
+  const loadUserProfile = async () => {
+    if (!user) {
+      setProfileLoading(false);
+      return;
+    }
+
+    try {
+      const { data: userData } = await supabase
+        .from('users')
+        .select('display_name, avatar_url')
+        .eq('id', user.id)
+        .single();
+
+      if (userData) {
+        setUserProfile(userData);
+      }
+    } catch (error) {
+      console.error('載入用戶資料失敗:', error);
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  const getDisplayName = () => {
+    if (userProfile?.display_name) {
+      return userProfile.display_name;
+    }
+    return user?.user_metadata?.display_name || user?.user_metadata?.name || user?.email || 'Allen';
+  };
+
+  const getAvatarUrl = () => {
+    if (userProfile?.avatar_url) {
+      return userProfile.avatar_url;
+    }
+    
+    // 使用 AvatarService 生成默認頭像
+    return AvatarService.getPlaceholderUrl(getDisplayName());
+  };
 
   const handleBack = () => {
     router.push('/(tabs)');
@@ -92,14 +143,17 @@ export default function ProfileScreen() {
             <View style={styles.avatarContainer}>
               <View style={styles.avatar}>
                 <Image
-                  source={{ uri: user?.user_metadata?.avatar_url || 'https://via.placeholder.com/80x80/87CEEB/FFFFFF?text=👤' }}
+                  source={{ uri: getAvatarUrl() }}
                   style={styles.avatarImage}
+                  onError={(error) => {
+                    console.warn('頭像載入失敗:', error);
+                  }}
                 />
               </View>
             </View>
             <View style={styles.userDetails}>
               <View style={styles.nameRow}>
-                <Text style={styles.userName}>{user?.user_metadata?.display_name || 'Allen'}</Text>
+                <Text style={styles.userName}>{getDisplayName()}</Text>
                 <View style={styles.vipBadge}>
                   <Text style={styles.vipText}>🏆VIP</Text>
                 </View>
