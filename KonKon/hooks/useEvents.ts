@@ -44,7 +44,7 @@ export interface EventWithShares extends Event {
 
 export const useEvents = () => {
   const { user } = useAuth();
-  const { familyMembers } = useFamily();
+  const { familyMembers, activeFamily } = useFamily();
   const [events, setEvents] = useState<EventWithShares[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -64,7 +64,7 @@ export const useEvents = () => {
     [familyMembers]
   );
 
-  // 获取事件列表（个人事件 + 分享给用户的事件）
+  // 获取事件列表（只获取当前激活家庭群组的共享事件）
   const fetchEvents = useCallback(async (year?: number, month?: number) => {
     if (!user) return;
     
@@ -72,40 +72,13 @@ export const useEvents = () => {
       setLoading(true);
       setError(null);
 
-      // 策略：总是获取所有重复事件主记录，无论时间范围
-      // 1. 获取所有重复事件主记录
-      const { data: recurringEvents, error: recurringError } = await supabase
-        .from('events')
-        .select('*')
-        .eq('creator_id', user.id)
-        .is('parent_event_id', null) // 只要主记录
-        .not('recurrence_rule', 'is', null); // 有重复规则
-
-      if (recurringError) throw recurringError;
-
-      // 2. 获取普通事件（根据时间过滤）
-      let normalEventsQuery = supabase
-        .from('events')
-        .select('*')
-        .eq('creator_id', user.id)
-        .is('recurrence_rule', null); // 无重复规则
-
-      if (year && month) {
-        const startOfMonth = new Date(year, month - 1, 1);
-        const endOfMonth = new Date(year, month, 0, 23, 59, 59);
-        const startTimestamp = Math.floor(startOfMonth.getTime() / 1000);
-        const endTimestamp = Math.floor(endOfMonth.getTime() / 1000);
-        
-        normalEventsQuery = normalEventsQuery
-          .gte('start_ts', startTimestamp)
-          .lte('start_ts', endTimestamp);
+      // 只获取分享给当前激活家庭群组的事件
+      if (!activeFamily) {
+        setEvents([]);
+        return;
       }
 
-      const { data: normalEvents, error: normalError } = await normalEventsQuery;
-      
-      if (normalError) throw normalError;
-
-      // 3. 获取分享事件（简化处理）
+      // 获取分享给当前激活家庭的所有事件
       let sharedEventsQuery = supabase
         .from('event_shares')
         .select(`
@@ -114,16 +87,14 @@ export const useEvents = () => {
             *
           )
         `)
-        .in('family_id', userFamilies);
+        .eq('family_id', activeFamily.id);
 
       const { data: sharedResult, error: sharedError } = await sharedEventsQuery;
       
       if (sharedError) throw sharedError;
 
-      // 合并所有事件
+      // 只保留群組共享事件
       const allEvents: EventWithShares[] = [
-        ...(recurringEvents || []).map(event => ({ ...event, is_shared: false })),
-        ...(normalEvents || []).map(event => ({ ...event, is_shared: false })),
         ...(sharedResult || [])
           .filter(share => share.events)
           .map(share => ({ ...share.events, is_shared: true }))
@@ -190,7 +161,7 @@ export const useEvents = () => {
     } finally {
       setLoading(false);
     }
-  }, [user, userFamilies]);
+  }, [user, activeFamily]);
 
   // 扩展重复事件实例的辅助函数
   const expandRecurringEvents = async (events: EventWithShares[], year?: number, month?: number) => {
@@ -750,14 +721,14 @@ export const useEvents = () => {
     }
   }, [user, fetchEvents]);
 
-  // 当家庭列表变化时，重新获取所有事件（包括群组事件和个人事件）
+  // 当激活家庭变化时，重新获取群组事件
   useEffect(() => {
-    if (user) {
+    if (user && activeFamily) {
       const currentYear = new Date().getFullYear();
       const currentMonth = new Date().getMonth() + 1;
       fetchEvents(currentYear, currentMonth);
     }
-  }, [userFamilies, fetchEvents]);
+  }, [user, activeFamily, fetchEvents]);
 
   return {
     events,

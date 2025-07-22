@@ -252,9 +252,40 @@ export default function AddEventModal({
         if (editingEvent.end_ts) {
           setEndTime(new Date(editingEvent.end_ts * 1000));
         }
-        if (editingEvent.shared_families && editingEvent.shared_families.length > 0) {
-          setSelectedFamilies(editingEvent.shared_families);
+        
+        // 獲取事件已分享的家庭群組
+        const fetchEventSharedFamilies = async () => {
+          try {
+            // 获取事件ID，处理重复事件实例的情况
+            let eventIdToQuery = editingEvent.id;
+            if (editingEvent.parent_event_id) {
+              eventIdToQuery = editingEvent.parent_event_id;
+            } else if (editingEvent.id.includes('_')) {
+              const idParts = editingEvent.id.split('_');
+              if (idParts.length > 1 && !isNaN(Number(idParts[1]))) {
+                eventIdToQuery = idParts[0];
+              }
+            }
+
+            const { data: shares, error } = await supabase
+              .from('event_shares')
+              .select('family_id')
+              .eq('event_id', eventIdToQuery);
+
+            if (!error && shares) {
+              const familyIds = shares.map(share => share.family_id);
+              setSelectedFamilies(familyIds);
+                    } else {
+          // 重置為空，表示個人事件
+          setSelectedFamilies([]);
         }
+          } catch (error) {
+            console.error('獲取事件分享信息失敗:', error);
+            setSelectedFamilies([]);
+          }
+        };
+
+        fetchEventSharedFamilies();
         
         // 處理照片數據
         if (editingEvent.image_urls && editingEvent.image_urls.length > 0) {
@@ -344,6 +375,12 @@ export default function AddEventModal({
         if (user) {
           setSelectedAttendees([user.id]);
         }
+        // 🚀 默认分享给当前激活家庭
+        if (activeFamily) {
+          setSelectedFamilies([activeFamily.id]);
+        } else {
+          setSelectedFamilies([]);
+        }
       }
     }
   }, [visible, editingEvent, initialDate, user]);
@@ -381,7 +418,8 @@ export default function AddEventModal({
     end.setHours(10, 0, 0, 0);
     setEndTime(end);
     setAllDay(false);
-    setSelectedFamilies([]);
+    // 🚀 默认分享给当前激活家庭
+    setSelectedFamilies(activeFamily ? [activeFamily.id] : []);
     setSelectedColor('#007AFF');
     setRepeatOption('never');
     setSelectedAttendees(user ? [user.id] : []);
@@ -925,14 +963,27 @@ export default function AddEventModal({
                         <Ionicons name="people" size={20} color="#007AFF" />
                         <Text style={styles.dateTimeLabel}>分享到</Text>
                       </View>
-                      <Text style={styles.dateTimeValue}>
-                        {selectedFamilies.length === 0 ? '個人事件' : `${selectedFamilies.length} 個家庭`}
-                      </Text>
+                      <View style={styles.optionRight}>
+                        <Text style={styles.dateTimeValue}>
+                          {selectedFamilies.length === 0 
+                            ? '個人事件' 
+                            : selectedFamilies.length === 1
+                              ? userFamilies.find(f => f.id === selectedFamilies[0])?.name || '1 個家庭'
+                              : `${selectedFamilies.length} 個家庭`
+                          }
+                        </Text>
+                        <Ionicons name="chevron-down" size={16} color="#C7C7CD" style={{ marginLeft: 4 }} />
+                      </View>
                     </TouchableOpacity>
 
                     {/* 展開的家庭選擇區域 */}
                     {showFamilySection && (
                       <View style={styles.inlinePicker}>
+                        {editingEvent && selectedFamilies.length > 0 && (
+                          <Text style={[styles.sectionDescription, { color: '#007AFF', marginBottom: 8 }]}>
+                            📝 當前事件已分享給 {selectedFamilies.length} 個家庭
+                          </Text>
+                        )}
                         <Text style={styles.sectionDescription}>
                           選擇家庭後，該家庭的所有成員都能看到這個事件
                         </Text>
