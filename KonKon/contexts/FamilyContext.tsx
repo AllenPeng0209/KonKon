@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
@@ -44,6 +45,7 @@ interface FamilyContextType {
   leaveFamily: () => Promise<boolean>;
   deleteFamily: () => Promise<boolean>;
   inviteByEmail: (email: string) => Promise<boolean>;
+  reorderFamilies: (familyIds: string[]) => Promise<void>;
 }
 
 const FamilyContext = createContext<FamilyContextType | undefined>(undefined);
@@ -66,6 +68,51 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       setFamilyMembers([]);
     }
   }, [user]);
+
+  // 新增：保存家庭順序到本地存儲
+  const saveFamilyOrder = async (familyIds: string[]) => {
+    if (!user) return;
+    
+    try {
+      await AsyncStorage.setItem(`family_order_${user.id}`, JSON.stringify(familyIds));
+    } catch (error) {
+      console.error('保存家庭順序失败:', error);
+    }
+  };
+
+  // 新增：從本地存儲獲取家庭順序
+  const getFamilyOrder = async (): Promise<string[]> => {
+    if (!user) return [];
+    
+    try {
+      const orderData = await AsyncStorage.getItem(`family_order_${user.id}`);
+      return orderData ? JSON.parse(orderData) : [];
+    } catch (error) {
+      console.error('獲取家庭順序失敗:', error);
+      return [];
+    }
+  };
+
+  // 新增：重新排序家庭列表
+  const reorderFamilies = async (familyIds: string[]) => {
+    setUserFamilies(prevFamilies => {
+      const reorderedFamilies = familyIds
+        .map(id => prevFamilies.find(family => family.id === id))
+        .filter(Boolean) as Family[];
+      
+      // 添加任何不在重新排序列表中的家庭
+      const remainingFamilies = prevFamilies.filter(
+        family => !familyIds.includes(family.id)
+      );
+      
+      const newOrder = [...reorderedFamilies, ...remainingFamilies];
+      
+      // 保存到本地存儲
+      saveFamilyOrder(newOrder.map(f => f.id));
+      
+      return newOrder;
+    });
+  };
 
   const fetchUserFamilies = async () => {
     if (!user) {
@@ -116,18 +163,30 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
               return { ...family, member_count: count || 0 };
             })
           );
-          setUserFamilies(familiesWithMemberCount);
 
-          // 4. Set the first family as active and fetch its members
+          // 4. 按照保存的順序排列家庭列表
+          const savedOrder = await getFamilyOrder();
+          const orderedFamilies = savedOrder.length > 0 
+            ? savedOrder
+                .map(id => familiesWithMemberCount.find(f => f.id === id))
+                .filter(Boolean)
+                .concat(
+                  familiesWithMemberCount.filter(f => !savedOrder.includes(f.id))
+                ) as Family[]
+            : familiesWithMemberCount;
+
+          setUserFamilies(orderedFamilies);
+
+          // 5. Set the first family as active and fetch its members
           const currentActiveFamily = activeFamily 
-            ? familiesWithMemberCount.find(f => f.id === activeFamily.id) 
+            ? orderedFamilies.find(f => f.id === activeFamily.id) 
             : null;
 
           if (currentActiveFamily) {
             setActiveFamily(currentActiveFamily);
             await fetchFamilyMembers(currentActiveFamily.id);
-          } else if (familiesWithMemberCount.length > 0) {
-            const newActiveFamily = familiesWithMemberCount[0];
+          } else if (orderedFamilies.length > 0) {
+            const newActiveFamily = orderedFamilies[0];
             setActiveFamily(newActiveFamily);
             await fetchFamilyMembers(newActiveFamily.id);
           } else {
@@ -471,6 +530,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
         leaveFamily,
         deleteFamily,
         inviteByEmail,
+        reorderFamilies,
       }}
     >
       {children}
