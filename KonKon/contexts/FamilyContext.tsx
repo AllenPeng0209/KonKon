@@ -286,7 +286,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
 
   const switchFamily = async (familyId: string | null) => {
     if (familyId === null) {
-      // 切換到個人模式，清除活躍家庭
+      // 清除活躍家庭
       setActiveFamily(null);
       setFamilyMembers([]); // 清空家庭成員
     } else {

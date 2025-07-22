@@ -493,7 +493,7 @@
     "locationPlaceholder": "新增地點",
     "color": "顏色",
     "share": "分享",
-    "personal": "個人",
+
     "error": "錯誤",
     "titleRequired": "請輸入事件標題",
     "invalidStartTime": "請輸入正確的開始時間格式 (HH:MM)",

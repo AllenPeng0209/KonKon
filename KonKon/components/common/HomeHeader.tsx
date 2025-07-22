@@ -144,7 +144,7 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
             activeOpacity={0.8}
           >
             <Text style={styles.familyName} numberOfLines={1}>
-              {activeFamily ? activeFamily.name : '個人'}
+              {activeFamily ? activeFamily.name : '選擇家庭'}
             </Text>
             <Text style={styles.familyDropdownIcon}>▼</Text>
           </TouchableOpacity>
@@ -196,28 +196,6 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
         <View style={styles.familyMenuOverlay}>
           <TouchableOpacity style={styles.familyMenuBackground} onPress={() => setShowFamilyMenu(false)} />
           <View style={styles.familyMenu}>
-            {/* 個人選項 */}
-            <TouchableOpacity
-              style={[
-                styles.familyMenuItem,
-                !activeFamily && styles.familyMenuItemActive
-              ]}
-              onPress={() => handleFamilySelect(null)}
-            >
-              <View style={[styles.familyMenuIcon, { backgroundColor: '#F0F8FF' }]}>
-                <Text style={styles.familyMenuIconText}>👤</Text>
-              </View>
-              <Text style={[
-                styles.familyMenuText,
-                !activeFamily && styles.familyMenuTextActive
-              ]}>
-                個人
-              </Text>
-              {!activeFamily && (
-                <Text style={styles.familyMenuCheck}>✓</Text>
-              )}
-            </TouchableOpacity>
-            
             {/* 家庭列表 */}
             {userFamilies.map((family) => (
               <TouchableOpacity

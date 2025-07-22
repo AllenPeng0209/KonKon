@@ -422,7 +422,7 @@
     "locationPlaceholder": "添加地点",
     "color": "颜色",
     "share": "共享",
-    "personal": "个人",
+
     "error": "错误",
     "titleRequired": "请输入事件标题",
     "invalidStartTime": "请输入正确的开始时间格式 (HH:MM)",

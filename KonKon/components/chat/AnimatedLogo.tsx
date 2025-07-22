@@ -1,6 +1,6 @@
 import { t } from '@/lib/i18n';
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import Animated, {
     useAnimatedStyle,
     useSharedValue,
@@ -44,7 +44,11 @@ export function AnimatedLogo() {
   return (
     <View style={styles.container}>
       <Animated.View style={[styles.logoContainer, animatedStyle]}>
-        <Text style={styles.logoText}>🤖</Text>
+        <Image 
+          source={require('@/assets/avatar/cat.png')} 
+          style={styles.logoImage}
+          resizeMode="contain"
+        />
       </Animated.View>
       <Text style={styles.welcomeText}>{t('animatedLogo.welcome')}</Text>
       <Text style={styles.subtitleText}>{t('animatedLogo.subtitle')}</Text>
@@ -60,16 +64,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
   },
   logoContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#007AFF',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24,
   },
   logoText: {
     fontSize: 32,
+  },
+  logoImage: {
+    width: 80,
+    height: 80,
   },
   welcomeText: {
     fontSize: 18,

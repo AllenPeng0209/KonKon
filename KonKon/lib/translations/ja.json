@@ -446,7 +446,7 @@
     "locationPlaceholder": "場所を追加",
     "color": "色",
     "share": "共有",
-    "personal": "個人",
+
     "error": "エラー",
     "titleRequired": "イベントのタイトルを入力してください",
     "invalidStartTime": "有効な開始時刻（HH:MM）を入力してください",

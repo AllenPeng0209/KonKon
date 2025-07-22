@@ -1409,14 +1409,7 @@ export default function HomeScreen() {
   // 處理家庭選擇
   const handleFamilySelect = async (family: any) => {
     setShowFamilyMenu(false);
-    if (family === null) {
-      // 選擇個人模式，清除活躍家庭
-      console.log('切換到個人模式');
-      await switchFamily(null); // 切換到個人模式
-      // 重新獲取個人模式下的所有事件
-      const currentDate = new Date();
-      await fetchEvents(currentDate.getFullYear(), currentDate.getMonth() + 1);
-    } else if (family.id !== activeFamily?.id) {
+    if (family && family.id !== activeFamily?.id) {
       await switchFamily(family.id);
     }
   };
@@ -1443,7 +1436,7 @@ export default function HomeScreen() {
             activeOpacity={0.8}
           >
             <Text style={styles.familyName} numberOfLines={1}>
-              {activeFamily ? activeFamily.name : '個人'}
+              {activeFamily ? activeFamily.name : '選擇家庭'}
             </Text>
             <Text style={styles.familyDropdownIcon}>▼</Text>
           </TouchableOpacity>
@@ -1494,28 +1487,6 @@ export default function HomeScreen() {
         <View style={styles.familyMenuOverlay}>
           <TouchableOpacity style={styles.familyMenuBackground} onPress={() => setShowFamilyMenu(false)} />
           <View style={styles.familyMenu}>
-            {/* 個人選項 */}
-            <TouchableOpacity
-              style={[
-                styles.familyMenuItem,
-                !activeFamily && styles.familyMenuItemActive
-              ]}
-              onPress={() => handleFamilySelect(null)}
-            >
-              <View style={[styles.familyMenuIcon, { backgroundColor: '#F0F8FF' }]}>
-                <Text style={styles.familyMenuIconText}>👤</Text>
-              </View>
-              <Text style={[
-                styles.familyMenuText,
-                !activeFamily && styles.familyMenuTextActive
-              ]}>
-                個人
-              </Text>
-              {!activeFamily && (
-                <Text style={styles.familyMenuCheck}>✓</Text>
-              )}
-            </TouchableOpacity>
-            
             {/* 家庭列表 */}
             {userFamilies.map((family) => (
               <TouchableOpacity

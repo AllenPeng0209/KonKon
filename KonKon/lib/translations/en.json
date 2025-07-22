@@ -430,7 +430,7 @@
     "locationPlaceholder": "Add a location",
     "color": "Color",
     "share": "Share",
-    "personal": "Personal",
+
     "error": "Error",
     "titleRequired": "Please enter an event title",
     "invalidStartTime": "Please enter a valid start time (HH:MM)",

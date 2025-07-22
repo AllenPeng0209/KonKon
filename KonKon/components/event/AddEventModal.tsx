@@ -290,8 +290,8 @@ export default function AddEventModal({
               });
               setSelectedFamilies(familyIds);
             } else {
-              console.log('❌ 沒有找到分享信息，設置為個人事件');
-              // 重置為空，表示個人事件
+              console.log('❌ 沒有找到分享信息，設置為私人事件');
+              // 重置為空，表示私人事件
               setSelectedFamilies([]);
             }
           } catch (error) {
@@ -1031,7 +1031,7 @@ export default function AddEventModal({
                       <View style={styles.optionRight}>
                         <Text style={styles.dateTimeValue}>
                           {selectedFamilies.length === 0 
-                            ? '個人事件' 
+                            ? '私人事件' 
                             : selectedFamilies.length === 1
                               ? userFamilies.find(f => f.id === selectedFamilies[0])?.name || '1 個家庭'
                               : `${selectedFamilies.length} 個家庭`
