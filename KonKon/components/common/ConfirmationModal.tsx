@@ -1,4 +1,3 @@
-import { t } from '@/lib/i18n';
 import React from 'react';
 import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { CalendarEvent } from '../../lib/bailian_omni_calendar';
@@ -10,6 +9,7 @@ interface ConfirmationModalProps {
   summary: string | null;
   onConfirm: () => void;
   onCancel: () => void;
+  onEdit?: () => void; // 新增：編輯回調
 }
 
 const formatTime = (date: Date) => {
@@ -29,6 +29,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   summary,
   onConfirm,
   onCancel,
+  onEdit, // 新增參數
 }) => {
   if (!events || events.length === 0) return null;
 
@@ -42,14 +43,14 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
       <View style={styles.overlay}>
         <View style={styles.container}>
           <View style={styles.header}>
-            <Text style={styles.title}>{t(events.length > 1 ? 'home.confirmationTitleMultiple' : 'home.confirmationTitleSingle')}</Text>
+            <Text style={styles.title}>幫你安排好啦！</Text>
           </View>
           <ScrollView style={styles.contentContainer} contentContainerStyle={styles.content}>
             {userInput && (
               <View style={styles.dialogueBox}>
                 <Text style={styles.userMessage}>“{userInput}”</Text>
                 <Text style={styles.aiMessage}>
-                  🦝 {summary || t('home.confirmationConfirmMessage')}
+                  🦝 {summary || '確認創建這個日程嗎？'}
                 </Text>
               </View>
             )}
@@ -60,20 +61,20 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                 <View key={index} style={[styles.infoCard, index > 0 && { marginTop: 15 }]}>
                   <View style={styles.infoRow}>
                     <Text style={styles.infoIcon}>📅</Text>
-                    <Text style={styles.infoLabel}>{t('home.confirmationEventLabel')}:</Text>
+                    <Text style={styles.infoLabel}>日程:</Text>
                     <Text style={styles.infoValue}>{event.title}</Text>
                   </View>
 
                   <View style={styles.infoRow}>
                     <Text style={styles.infoIcon}>⏰</Text>
-                    <Text style={styles.infoLabel}>{t('home.confirmationTimeLabel')}:</Text>
+                    <Text style={styles.infoLabel}>時間:</Text>
                     <Text style={styles.infoValue}>{timeRange}</Text>
                   </View>
 
                   {event.location && (
                     <View style={styles.infoRow}>
                       <Text style={styles.infoIcon}>📍</Text>
-                      <Text style={styles.infoLabel}>{t('home.confirmationLocationLabel')}:</Text>
+                      <Text style={styles.infoLabel}>地點:</Text>
                       <Text style={styles.infoValue}>{event.location}</Text>
                     </View>
                   )}
@@ -81,14 +82,19 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
               );
             })}
             
-            <Text style={styles.confirmQuestion}>{t('home.confirmationConfirmQuestion')}</Text>
+            <Text style={styles.confirmQuestion}>確認創建這個日程嗎？</Text>
           </ScrollView>
           <View style={styles.footer}>
             <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={onCancel}>
-              <Text style={styles.buttonText}>{t('home.confirmationCancelButton')}</Text>
+              <Text style={styles.buttonText}>取消</Text>
             </TouchableOpacity>
+            {onEdit && (
+              <TouchableOpacity style={[styles.button, styles.editButton]} onPress={onEdit}>
+                <Text style={[styles.buttonText, styles.editButtonText]}>修改</Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity style={[styles.button, styles.confirmButton]} onPress={onConfirm}>
-              <Text style={[styles.buttonText, styles.confirmButtonText]}>✓ {t('home.confirmationCreateButton')}</Text>
+              <Text style={[styles.buttonText, styles.confirmButtonText]}>創建</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -198,12 +204,19 @@ const styles = StyleSheet.create({
   cancelButton: {
     backgroundColor: '#FFFFFF',
   },
+  editButton: {
+    backgroundColor: '#FFF5E6',
+  },
   confirmButton: {
     backgroundColor: '#D6EFFF',
   },
   buttonText: {
     fontSize: 17,
     color: '#007AFF',
+  },
+  editButtonText: {
+    color: '#FF9500',
+    fontWeight: 'bold',
   },
   confirmButtonText: {
     color: '#005A9C',

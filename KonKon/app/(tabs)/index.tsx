@@ -944,6 +944,39 @@ export default function HomeScreen() {
     setPendingSummary(null);
   };
 
+  // 新增：處理編輯AI解析的事件
+  const handleEditAIEvent = () => {
+    setIsConfirmationModalVisible(false);
+    
+    if (pendingEvent.length > 0) {
+      // 將AI解析的事件轉換為可編輯格式
+      const aiEvent = pendingEvent[0]; // 如果有多個事件，編輯第一個
+      
+      const editableEvent = {
+        id: 'temp-ai-event', // 臨時ID，表示這是新創建的事件
+        title: aiEvent.title,
+        description: aiEvent.description || '',
+        start_ts: Math.floor(aiEvent.startTime.getTime() / 1000),
+        end_ts: aiEvent.endTime ? Math.floor(aiEvent.endTime.getTime() / 1000) : Math.floor(aiEvent.startTime.getTime() / 1000) + 3600,
+        location: aiEvent.location || '',
+        color: '#007AFF', // 預設顏色
+        type: 'calendar',
+        creator_id: user?.id || '',
+        // 添加一個標記，表示這是從AI解析而來的
+        _isFromAI: true,
+        _originalAIData: pendingEvent, // 保留原始AI解析數據
+      };
+      
+      setEditingEvent(editableEvent);
+      setShowAddEventModal(true);
+    }
+    
+    // 清理pending數據
+    setPendingEvent([]);
+    setPendingUserInput(null);
+    setPendingSummary(null);
+  };
+
 
   // 创建从AI解析出的事件（支持语音和文字）
   const handleCreateAIEvent = async (event: any) => {
@@ -2146,6 +2179,7 @@ export default function HomeScreen() {
         summary={pendingSummary}
         onConfirm={handleConfirmCreateEvent}
         onCancel={handleCancelCreateEvent}
+        onEdit={handleEditAIEvent}
       />
       <SuccessModal
         isVisible={showSuccessModal}
