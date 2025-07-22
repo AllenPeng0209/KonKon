@@ -25,16 +25,23 @@ interface HomeHeaderProps {
   selectedFilter: string;
   onFilterChange: (filterValue: string) => void;
   onResetSettings: () => Promise<void>;
+  activeFamily?: { id: string; name: string; member_count?: number } | null;
+  userFamilies?: Array<{ id: string; name: string; member_count?: number }>;
+  onFamilyChange?: (familyId: string | null) => void;
 }
 
 export const HomeHeader: React.FC<HomeHeaderProps> = ({
   selectedFilter,
   onFilterChange,
   onResetSettings,
+  activeFamily,
+  userFamilies = [],
+  onFamilyChange,
 }) => {
   const router = useRouter();
   const { featureSettings } = useFeatureSettings();
   const [showFilterMenu, setShowFilterMenu] = useState(false);
+  const [showFamilyMenu, setShowFamilyMenu] = useState(false);
 
   // 動態生成過濾選項，基於啟用的功能
   const filterOptions: FilterOption[] = (() => {
@@ -112,46 +119,130 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
     );
   };
 
+  // 處理家庭選擇
+  const handleFamilySelect = (family: any) => {
+    setShowFamilyMenu(false);
+    if (onFamilyChange) {
+      onFamilyChange(family?.id || null);
+    }
+  };
+
   return (
     <>
       {/* 頂部標題欄 */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Text style={[styles.headerTitle, styles.activeTab]}>{t('tabs.record')}</Text>
-          <TouchableOpacity onPress={navigateToExplore}>
-            <Text style={styles.headerTitle}>{t('tabs.explore')}</Text>
+          <TouchableOpacity style={styles.recordFilterButton} onPress={toggleFilterMenu}>
+            <Text style={styles.recordFilterText}>{filterOptions.find(opt => opt.value === selectedFilter)?.label}</Text>
+            <Text style={styles.recordFilterIcon}>▼</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.headerCenter}>
+          <TouchableOpacity 
+            style={styles.familyButton}
+            onPress={() => setShowFamilyMenu(!showFamilyMenu)}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.familyName} numberOfLines={1}>
+              {activeFamily ? activeFamily.name : '個人'}
+            </Text>
+            <Text style={styles.familyDropdownIcon}>▼</Text>
           </TouchableOpacity>
         </View>
         <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.filterButton} onPress={toggleFilterMenu}>
-            {/* 顯示當前選中的過濾項的標籤 */}
-            <Text style={styles.filterButtonText}>{filterOptions.find(opt => opt.value === selectedFilter)?.label}</Text>
-            <Text style={styles.filterIcon}>▼</Text>
-          </TouchableOpacity>
           <TouchableOpacity 
-            style={styles.avatarButton} 
-            onPress={navigateToProfile}
-            onLongPress={handleResetSettings}
+            style={styles.exploreButton} 
+            onPress={navigateToExplore}
+            activeOpacity={0.8}
           >
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>👤</Text>
-            </View>
+            <Text style={styles.exploreIcon}>💡</Text>
           </TouchableOpacity>
         </View>
       </View>
 
       {/* 過濾菜單 */}
       {showFilterMenu && (
-        <View style={styles.filterMenu}>
-          {filterOptions.map((option) => (
+        <View style={styles.filterMenuOverlay}>
+          <TouchableOpacity style={styles.filterMenuBackground} onPress={() => setShowFilterMenu(false)} />
+          <View style={styles.filterMenu}>
+            {filterOptions.map((option) => (
+              <TouchableOpacity
+                key={option.value}
+                style={[
+                  styles.filterMenuItem,
+                  selectedFilter === option.value && styles.filterMenuItemActive
+                ]}
+                onPress={() => handleFilterSelect(option.value)}
+              >
+                <View style={[styles.filterMenuIcon, { backgroundColor: option.bgColor }]}>
+                  <Text style={styles.filterMenuIconText}>{option.icon}</Text>
+                </View>
+                <Text style={[
+                  styles.filterMenuText,
+                  selectedFilter === option.value && styles.filterMenuTextActive
+                ]}>
+                  {option.label}
+                </Text>
+                {selectedFilter === option.value && (
+                  <Text style={styles.filterMenuCheck}>✓</Text>
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {showFamilyMenu && (
+        <View style={styles.familyMenuOverlay}>
+          <TouchableOpacity style={styles.familyMenuBackground} onPress={() => setShowFamilyMenu(false)} />
+          <View style={styles.familyMenu}>
+            {/* 個人選項 */}
             <TouchableOpacity
-              key={option.value}
-              style={styles.filterMenuItem}
-              onPress={() => handleFilterSelect(option.value)}
+              style={[
+                styles.familyMenuItem,
+                !activeFamily && styles.familyMenuItemActive
+              ]}
+              onPress={() => handleFamilySelect(null)}
             >
-              <Text style={styles.filterMenuText}>{option.label}</Text>
+              <View style={[styles.familyMenuIcon, { backgroundColor: '#F0F8FF' }]}>
+                <Text style={styles.familyMenuIconText}>👤</Text>
+              </View>
+              <Text style={[
+                styles.familyMenuText,
+                !activeFamily && styles.familyMenuTextActive
+              ]}>
+                個人
+              </Text>
+              {!activeFamily && (
+                <Text style={styles.familyMenuCheck}>✓</Text>
+              )}
             </TouchableOpacity>
-          ))}
+            
+            {/* 家庭列表 */}
+            {userFamilies.map((family) => (
+              <TouchableOpacity
+                key={family.id}
+                style={[
+                  styles.familyMenuItem,
+                  activeFamily?.id === family.id && styles.familyMenuItemActive
+                ]}
+                onPress={() => handleFamilySelect(family)}
+              >
+                <View style={[styles.familyMenuIcon, { backgroundColor: '#FFF3E0' }]}>
+                  <Text style={styles.familyMenuIconText}>🏠</Text>
+                </View>
+                <Text style={[
+                  styles.familyMenuText,
+                  activeFamily?.id === family.id && styles.familyMenuTextActive
+                ]}>
+                  {family.name}
+                </Text>
+                {activeFamily?.id === family.id && (
+                  <Text style={styles.familyMenuCheck}>✓</Text>
+                )}
+              </TouchableOpacity>
+                          ))}
+            </View>
         </View>
       )}
     </>
@@ -162,75 +253,229 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5EA',
+    position: 'relative',
   },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 20,
+    zIndex: 1,
   },
-  headerTitle: {
+  recordFilterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    paddingVertical: 4,
+  },
+  recordFilterText: {
     fontSize: 18,
     fontWeight: '600',
+    color: '#000',
+    borderBottomWidth: 2,
+    borderBottomColor: '#007AFF',
+    paddingBottom: 4,
+    marginRight: 8,
+  },
+  recordFilterIcon: {
+    fontSize: 12,
     color: '#8E8E93',
   },
-  activeTab: {
-    color: '#007AFF',
+  headerCenter: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-  },
-  filterButton: {
+    marginLeft: 'auto',
+    zIndex: 1,
+      },
+    familyButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F2F2F7',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    gap: 4,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    minWidth: 80,
+    maxWidth: 150,
   },
-  filterButtonText: {
-    fontSize: 14,
+  familyName: {
+    fontSize: 16,
+    fontWeight: '700',
     color: '#1D1D1F',
-    fontWeight: '500',
+    textAlign: 'center',
+    marginRight: 8,
   },
-  filterIcon: {
+  familyDropdownIcon: {
     fontSize: 10,
     color: '#8E8E93',
   },
-  avatarButton: {
-    padding: 4,
+  noFamilyText: {
+    fontSize: 13,
+    color: '#007AFF',
+    fontWeight: '600',
   },
-  avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#F2F2F7',
+  exploreButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F8F9FA',
     alignItems: 'center',
     justifyContent: 'center',
+    marginLeft: 12,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
-  avatarText: {
-    fontSize: 16,
+  exploreIcon: {
+    fontSize: 18,
+  },
+  filterMenuOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 1000,
+  },
+  filterMenuBackground: {
+    flex: 1,
   },
   filterMenu: {
+    position: 'absolute',
+    top: 55,
+    left: 16,
     backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
-    paddingVertical: 8,
+    borderRadius: 16,
+    padding: 8,
+    minWidth: 200,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.08)',
   },
   filterMenuItem: {
-    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginVertical: 2,
+  },
+  filterMenuItemActive: {
+    backgroundColor: '#F0F8FF',
+  },
+  filterMenuIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  filterMenuIconText: {
+    fontSize: 16,
   },
   filterMenuText: {
     fontSize: 16,
-    color: '#1D1D1F',
+    color: '#2C3E50',
+    fontWeight: '500',
+    flex: 1,
   },
-}); 
+  filterMenuTextActive: {
+    color: '#007AFF',
+    fontWeight: '600',
+  },
+  filterMenuCheck: {
+    fontSize: 16,
+    color: '#007AFF',
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+  familyMenuOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 1001,
+  },
+  familyMenuBackground: {
+    flex: 1,
+  },
+  familyMenu: {
+    position: 'absolute',
+    top: 55,
+    left: '50%',
+    transform: [{ translateX: -100 }],
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 8,
+    minWidth: 200,
+    maxWidth: 240,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.08)',
+  },
+  familyMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginVertical: 2,
+  },
+  familyMenuItemActive: {
+    backgroundColor: '#F0F8FF',
+  },
+  familyMenuIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  familyMenuIconText: {
+    fontSize: 16,
+  },
+  familyMenuText: {
+    fontSize: 16,
+    color: '#2C3E50',
+    fontWeight: '500',
+    flex: 1,
+  },
+  familyMenuTextActive: {
+    color: '#007AFF',
+    fontWeight: '600',
+  },
+  familyMenuCheck: {
+    fontSize: 16,
+    color: '#007AFF',
+    fontWeight: 'bold',
+          marginLeft: 8,
+    },
+  });  

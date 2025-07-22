@@ -64,7 +64,7 @@ export const useEvents = () => {
     [familyMembers]
   );
 
-  // 获取事件列表（只获取当前激活家庭群组的共享事件）
+  // 获取事件列表（根据模式获取相应的事件）
   const fetchEvents = useCallback(async (year?: number, month?: number) => {
     if (!user) return;
     
@@ -72,33 +72,95 @@ export const useEvents = () => {
       setLoading(true);
       setError(null);
 
-      // 只获取分享给当前激活家庭群组的事件
+      let allEvents: EventWithShares[] = [];
+
       if (!activeFamily) {
-        setEvents([]);
-        return;
+        // 个人模式：获取用户的所有事件
+        console.log('个人模式：获取用户的所有事件');
+
+        // 1. 获取用户创建的个人事件（没有分享给任何家庭的事件）
+        const { data: personalEvents, error: personalError } = await supabase
+          .from('events')
+          .select('*')
+          .eq('creator_id', user.id)
+          .is('family_id', null); // 个人事件（旧字段，可能还有一些历史数据）
+
+        if (personalError) {
+          console.warn('获取个人事件失败:', personalError);
+        }
+
+        // 2. 获取用户参与的所有家庭事件
+        const userFamilyIds = userFamilies;
+        if (userFamilyIds.length > 0) {
+          const { data: familySharedEvents, error: familyError } = await supabase
+            .from('event_shares')
+            .select(`
+              event_id,
+              family_id,
+              events (
+                *
+              )
+            `)
+            .in('family_id', userFamilyIds);
+
+          if (familyError) {
+            console.warn('获取家庭共享事件失败:', familyError);
+          }
+
+          if (familySharedEvents) {
+            const sharedEvents = familySharedEvents
+              .filter(share => share.events)
+              .map(share => ({ ...share.events, is_shared: true, shared_family_id: share.family_id }));
+            allEvents.push(...sharedEvents);
+          }
+        }
+
+        // 3. 获取用户参与的事件（通过 event_attendees 表）
+        const { data: attendeeEvents, error: attendeeError } = await supabase
+          .from('event_attendees')
+          .select(`
+            event_id,
+            events (
+              *
+            )
+          `)
+          .eq('user_id', user.id);
+
+        if (!attendeeError && attendeeEvents) {
+          const attendeeEventsList = attendeeEvents
+            .filter(att => att.events)
+            .map(att => ({ ...att.events, is_shared: true }));
+          allEvents.push(...attendeeEventsList);
+        }
+
+        // 添加个人事件
+        if (personalEvents) {
+          allEvents.push(...personalEvents.map(event => ({ ...event, is_shared: false })));
+        }
+
+      } else {
+        // 家庭模式：只获取分享给当前激活家庭的事件
+        console.log('家庭模式：获取家庭事件');
+
+        const { data: sharedResult, error: sharedError } = await supabase
+          .from('event_shares')
+          .select(`
+            event_id,
+            events (
+              *
+            )
+          `)
+          .eq('family_id', activeFamily.id);
+        
+        if (sharedError) throw sharedError;
+
+        // 只保留群組共享事件
+        allEvents = [
+          ...(sharedResult || [])
+            .filter(share => share.events)
+            .map(share => ({ ...share.events, is_shared: true }))
+        ];
       }
-
-      // 获取分享给当前激活家庭的所有事件
-      let sharedEventsQuery = supabase
-        .from('event_shares')
-        .select(`
-          event_id,
-          events (
-            *
-          )
-        `)
-        .eq('family_id', activeFamily.id);
-
-      const { data: sharedResult, error: sharedError } = await sharedEventsQuery;
-      
-      if (sharedError) throw sharedError;
-
-      // 只保留群組共享事件
-      const allEvents: EventWithShares[] = [
-        ...(sharedResult || [])
-          .filter(share => share.events)
-          .map(share => ({ ...share.events, is_shared: true }))
-      ];
 
       // 去重
       const eventMap = new Map<string, EventWithShares>();
@@ -161,7 +223,7 @@ export const useEvents = () => {
     } finally {
       setLoading(false);
     }
-  }, [user, activeFamily]);
+  }, [user, activeFamily, userFamilies]);
 
   // 扩展重复事件实例的辅助函数
   const expandRecurringEvents = async (events: EventWithShares[], year?: number, month?: number) => {
@@ -560,6 +622,38 @@ export const useEvents = () => {
         await supabase
           .from('event_attendees')
           .insert(attendeeInserts);
+      }
+
+      // 🚀 更新分享關係
+      if (shareToFamilies !== undefined) {
+        console.log('🔄 更新事件分享關係:', { eventId, shareToFamilies });
+        
+        // 先刪除現有的分享關係
+        await supabase
+          .from('event_shares')
+          .delete()
+          .eq('event_id', eventId)
+          .eq('shared_by', user.id);
+
+        // 如果有新的分享家庭，添加分享記錄
+        if (shareToFamilies && shareToFamilies.length > 0) {
+          const shareData = shareToFamilies.map(familyId => ({
+            event_id: eventId,
+            family_id: familyId,
+            shared_by: user.id
+          }));
+
+          const { error: shareError } = await supabase
+            .from('event_shares')
+            .insert(shareData);
+
+          if (shareError) {
+            console.error('更新分享關係失敗:', shareError);
+            // 不拋出錯誤，只記錄，避免影響主要更新
+          } else {
+            console.log('✅ 分享關係更新成功:', shareData);
+          }
+        }
       }
 
       // 🔄 如果重复状态发生变化，异步重新获取并展开事件

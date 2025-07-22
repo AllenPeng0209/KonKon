@@ -269,18 +269,31 @@ export default function AddEventModal({
               }
             }
 
+            console.log('🔍 查詢事件分享信息:', {
+              originalId: editingEvent.id,
+              queryId: eventIdToQuery,
+              hasParent: !!editingEvent.parent_event_id
+            });
+
             const { data: shares, error } = await supabase
               .from('event_shares')
               .select('family_id')
               .eq('event_id', eventIdToQuery);
 
-            if (!error && shares) {
+            console.log('🔍 分享查詢結果:', { shares, error });
+
+            if (!error && shares && shares.length > 0) {
               const familyIds = shares.map(share => share.family_id);
+              console.log('✅ 找到分享的家庭:', { 
+                count: familyIds.length, 
+                familyIds
+              });
               setSelectedFamilies(familyIds);
-                    } else {
-          // 重置為空，表示個人事件
-          setSelectedFamilies([]);
-        }
+            } else {
+              console.log('❌ 沒有找到分享信息，設置為個人事件');
+              // 重置為空，表示個人事件
+              setSelectedFamilies([]);
+            }
           } catch (error) {
             console.error('獲取事件分享信息失敗:', error);
             setSelectedFamilies([]);

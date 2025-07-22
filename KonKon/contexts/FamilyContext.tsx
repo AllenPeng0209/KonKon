@@ -39,7 +39,7 @@ interface FamilyContextType {
   updateFamilyName: (familyId: string, newName: string) => Promise<boolean>;
   joinFamilyByCode: (inviteCode: string) => Promise<boolean>;
   refreshFamilies: () => Promise<void>;
-  switchFamily: (familyId: string) => Promise<void>;
+  switchFamily: (familyId: string | null) => Promise<void>;
   removeMember: (memberId: string) => Promise<boolean>;
   leaveFamily: () => Promise<boolean>;
   deleteFamily: () => Promise<boolean>;
@@ -284,13 +284,20 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     await fetchUserFamilies();
   };
 
-  const switchFamily = async (familyId: string) => {
-    const familyToSwitch = userFamilies.find(f => f.id === familyId);
-    if (familyToSwitch && familyToSwitch.id !== activeFamily?.id) {
-      setLoading(true);
-      setActiveFamily(familyToSwitch);
-      await fetchFamilyMembers(familyToSwitch.id);
-      setLoading(false);
+  const switchFamily = async (familyId: string | null) => {
+    if (familyId === null) {
+      // 切換到個人模式，清除活躍家庭
+      setActiveFamily(null);
+      setFamilyMembers([]); // 清空家庭成員
+    } else {
+      // 切換到指定家庭
+      const familyToSwitch = userFamilies.find(f => f.id === familyId);
+      if (familyToSwitch && familyToSwitch.id !== activeFamily?.id) {
+        setLoading(true);
+        setActiveFamily(familyToSwitch);
+        await fetchFamilyMembers(familyToSwitch.id);
+        setLoading(false);
+      }
     }
   };
 
