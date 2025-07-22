@@ -1301,22 +1301,40 @@ export default function HomeScreen() {
 
   // 获取当前日期信息
   const currentDate = new Date();
-  const today = currentDate.toISOString().split('T')[0];
+  
+  // 获取本地日期字符串（避免时区问题）
+  const getLocalDateString = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  
+  const today = getLocalDateString(currentDate);
 
   // 生成日历标记数据
   const getCalendarMarkedDates = () => {
     const markedDates: { [key: string]: any } = {};
+    const selectedDateString = selectedDate ? getLocalDateString(selectedDate) : today;
     
-    // 标记今天
-    markedDates[today] = {
+    // 标记选中的日期
+    markedDates[selectedDateString] = {
       selected: true,
       selectedColor: '#3b82f6',
       selectedTextColor: '#ffffff',
     };
     
+    // 如果今天不是选中日期，为今天设置特殊的文字颜色
+    if (today !== selectedDateString) {
+      markedDates[today] = {
+        selected: false,
+        // todayTextColor 在 theme 中定义
+      };
+    }
+    
     // 标记有事件的日期
     events.forEach(event => {
-      const eventDate = new Date(event.start_ts * 1000).toISOString().split('T')[0];
+      const eventDate = getLocalDateString(new Date(event.start_ts * 1000));
       if (markedDates[eventDate]) {
         markedDates[eventDate] = {
           ...markedDates[eventDate],

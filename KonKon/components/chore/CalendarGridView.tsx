@@ -1,8 +1,7 @@
-import React from 'react';
-import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
+import { ChoreTaskWithDetails } from '@/lib/choreService';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Calendar, DateData } from 'react-native-calendars';
 import { ChoreViewProps } from './ChoreViewTypes';
-import { ChoreTaskWithDetails } from '@/lib/choreService';
 
 export default function CalendarGridView({
   tasks,
@@ -12,24 +11,44 @@ export default function CalendarGridView({
   onTaskPress,
   onMonthChange,
 }: ChoreViewProps) {
+  // 获取本地日期字符串（避免时区问题）
+  const getLocalDateString = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   // 生成日曆標記數據
   const getCalendarMarkedDates = () => {
     const markedDates: { [key: string]: any } = {};
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalDateString(new Date());
+    const selectedDateString = getLocalDateString(selectedDate);
     
-    // 標記今天
-    markedDates[today] = {
-      selected: selectedDate.toISOString().split('T')[0] === today,
+    // 標記選中的日期（藍色光標）
+    markedDates[selectedDateString] = {
+      selected: true,
       selectedColor: '#3B82F6',
       selectedTextColor: '#FFFFFF',
       marked: false,
     };
+    
+    // 如果今天不是選中日期，為今天設置特殊的文字顏色
+    if (today !== selectedDateString) {
+      markedDates[today] = {
+        selected: false,
+        selectedColor: '#3B82F6',
+        selectedTextColor: '#FFFFFF',
+        marked: false,
+        // todayTextColor 在 theme 中定義
+      };
+    }
 
     // 按日期分組任務
     const tasksByDate: { [key: string]: ChoreTaskWithDetails[] } = {};
     tasks.forEach(task => {
       if (task.due_date) {
-        const taskDate = new Date(task.due_date).toISOString().split('T')[0];
+        const taskDate = getLocalDateString(new Date(task.due_date));
         if (!tasksByDate[taskDate]) {
           tasksByDate[taskDate] = [];
         }
@@ -91,10 +110,10 @@ export default function CalendarGridView({
 
   // 獲取選中日期的任務
   const getSelectedDateTasks = () => {
-    const selectedDateString = selectedDate.toISOString().split('T')[0];
+    const selectedDateString = getLocalDateString(selectedDate);
     return tasks.filter(task => {
       if (!task.due_date) return false;
-      const taskDate = new Date(task.due_date).toISOString().split('T')[0];
+      const taskDate = getLocalDateString(new Date(task.due_date));
       return taskDate === selectedDateString;
     });
   };
