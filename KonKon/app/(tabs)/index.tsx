@@ -1972,6 +1972,13 @@ export default function HomeScreen() {
         onClose={handleCloseEditEvent}
         onSave={handleCreateEvent}
         onUpdate={handleUpdateEvent}
+        onDelete={async (eventId: string) => {
+          const success = await deleteEvent(eventId);
+          if (success) {
+            setShowAddEventModal(false);
+            setEditingEvent(null);
+          }
+        }}
         initialDate={selectedDate || new Date()}
         userFamilies={userFamilies}
         editingEvent={editingEvent}

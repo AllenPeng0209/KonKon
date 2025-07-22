@@ -1,14 +1,14 @@
 import { t } from '@/lib/i18n';
 import { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { RecurringEventData, useRecurringEvents } from '../../hooks/useRecurringEvents';
 import { RecurrenceInstance, RecurrenceRule } from '../../lib/recurrenceEngine';
@@ -330,6 +330,20 @@ export default function RecurringEventManager({
         }}
         onSave={handleSaveInstanceEdit}
         onUpdate={handleSaveInstanceEdit}
+        onDelete={async (eventId: string) => {
+          // 對於重複事件實例的刪除，我們可以選擇取消這個特定實例
+          if (selectedInstance) {
+            const success = await cancelRecurringEventInstance(parentEventId, selectedInstance.start);
+            if (success) {
+              Alert.alert('取消成功', '重複事件實例已取消');
+              setShowEditModal(false);
+              setEditingInstanceData(null);
+              loadInstances(); // 重新載入實例列表
+            } else {
+              Alert.alert('取消失敗', '無法取消事件實例');
+            }
+          }
+        }}
         initialDate={editingInstanceData?.originalDate || new Date()}
         userFamilies={[]} // 单个实例不允许修改分享设置
         editingEvent={editingInstanceData}

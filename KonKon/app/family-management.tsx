@@ -4,17 +4,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Clipboard,
-    RefreshControl,
-    ScrollView,
-    Share,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Clipboard,
+  RefreshControl,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -235,6 +235,8 @@ export default function FamilyManagement() {
   }, [activeFamily, newFamilyName, updateFamilyName]);
 
   const isOwner = activeFamily?.owner_id === user?.id;
+  // 檢查當前用戶是否是家庭成員（無論角色）
+  const isFamilyMember = familyMembers.some(member => member.user_id === user?.id);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -254,10 +256,11 @@ export default function FamilyManagement() {
           <RefreshControl refreshing={loading} onRefresh={refreshFamilies} />
         }
       >
-        {/* 当前家庭 */}
+        {/* 當前家庭信息 */}
         {activeFamily && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>当前家庭</Text>
+            
             <View style={styles.familyCard}>
               <View style={styles.familyInfo}>
                 <View style={styles.familyNameRow}>
@@ -281,7 +284,8 @@ export default function FamilyManagement() {
                 </Text>
               </View>
               
-              {isOwner && (
+              {/* 只要是家庭成員就能邀請其他人 */}
+              {isFamilyMember && (
                 <View style={styles.inviteActions}>
                   <TouchableOpacity
                     style={styles.inviteButton}
@@ -356,7 +360,8 @@ export default function FamilyManagement() {
             <Ionicons name="chevron-forward" size={16} color="#C7C7CD" />
           </TouchableOpacity>
 
-          {isOwner && (
+          {/* 只要是家庭成員就能使用郵箱邀請 */}
+          {isFamilyMember && (
             <TouchableOpacity
               style={styles.actionButton}
               onPress={() => setShowInviteForm(true)}

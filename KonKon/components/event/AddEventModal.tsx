@@ -148,6 +148,7 @@ interface AddEventModalProps {
   userFamilies?: Array<{id: string, name: string, [key: string]: any}>;
   editingEvent?: any;
   onUpdate?: (eventId: string, eventData: CreateEventData) => Promise<void>;
+  onDelete?: (eventId: string) => Promise<void>;
 }
 
 const repeatOptions = [
@@ -170,7 +171,8 @@ export default function AddEventModal({
   initialDate,
   userFamilies = [],
   editingEvent,
-  onUpdate
+  onUpdate,
+  onDelete
 }: AddEventModalProps) {
   const { user } = useAuth();
   const { familyMembers, activeFamily } = useFamily();
@@ -755,6 +757,56 @@ export default function AddEventModal({
     return repeatOptions.find(option => option.value === value)?.label || '从不';
   };
 
+  // 處理刪除事件
+  const handleDelete = async () => {
+    if (!editingEvent || !onDelete) return;
+
+    Alert.alert(
+      '確認刪除',
+      `確定要刪除事件"${title}"嗎？此操作無法撤銷。`,
+      [
+        {
+          text: '取消',
+          style: 'cancel',
+        },
+        {
+          text: '刪除',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setLoading(true);
+              
+              // 獲取要刪除的事件ID
+              let eventIdToDelete = editingEvent.id;
+              
+              // 如果是重複事件實例，刪除父事件
+              if (editingEvent.parent_event_id) {
+                eventIdToDelete = editingEvent.parent_event_id;
+              } else if (editingEvent.id.includes('_')) {
+                const idParts = editingEvent.id.split('_');
+                if (idParts.length > 1 && !isNaN(Number(idParts[1]))) {
+                  eventIdToDelete = idParts[0];
+                }
+              }
+              
+              await onDelete(eventIdToDelete);
+              
+              // 關閉模態框並重置表單
+              onClose();
+              resetForm();
+              
+              Alert.alert('刪除成功', '事件已被刪除');
+            } catch (error) {
+              Alert.alert('刪除失敗', '無法刪除事件，請稍後再試');
+            } finally {
+              setLoading(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   if (!visible) return null;
 
   return (
@@ -1132,15 +1184,32 @@ export default function AddEventModal({
 
             </ScrollView>
 
-            <TouchableOpacity
-              style={[styles.saveButton, loading && styles.saveButtonDisabled]}
-              onPress={handleSave}
-              disabled={loading}
-            >
-              <Text style={styles.saveButtonText}>
-                {loading ? '保存中...' : '保存'}
-              </Text>
-            </TouchableOpacity>
+            {/* 按鈕區域 - 水平佈局 */}
+            <View style={styles.buttonContainer}>
+              {/* 刪除按鈕 - 左下角，只在編輯模式下顯示 */}
+              {editingEvent && onDelete ? (
+                <TouchableOpacity
+                  style={[styles.deleteButton, loading && styles.deleteButtonDisabled]}
+                  onPress={handleDelete}
+                  disabled={loading}
+                >
+                  <Text style={styles.deleteButtonText}>刪除</Text>
+                </TouchableOpacity>
+              ) : (
+                <View style={styles.placeholder} />
+              )}
+
+              {/* 保存按鈕 - 右下角 */}
+              <TouchableOpacity
+                style={[styles.saveButton, loading && styles.saveButtonDisabled]}
+                onPress={handleSave}
+                disabled={loading}
+              >
+                <Text style={styles.saveButtonText}>
+                  {loading ? '保存中...' : '保存'}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </KeyboardAvoidingView>
       </BlurView>
@@ -1418,14 +1487,24 @@ const styles = StyleSheet.create({
     color: '#333',
     flex: 1,
   },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 20,
+    paddingHorizontal: 10,
+  },
+  placeholder: {
+    flex: 1,
+  },
   saveButton: {
     backgroundColor: '#007AFF',
-    borderRadius: 20,
+    borderRadius: 25,
     paddingVertical: 15,
     paddingHorizontal: 30,
     elevation: 2,
-    marginTop: 10,
-    minWidth: 120,
+    flex: 1,
+    marginLeft: 10,
   },
   saveButtonDisabled: {
     backgroundColor: '#ccc',
@@ -1434,7 +1513,25 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: 'bold',
     textAlign: 'center',
-    fontSize: 18,
+    fontSize: 16,
+  },
+  deleteButton: {
+    backgroundColor: '#FF3B30',
+    borderRadius: 25,
+    paddingVertical: 15,
+    paddingHorizontal: 30,
+    elevation: 2,
+    flex: 1,
+    marginRight: 10,
+  },
+  deleteButtonDisabled: {
+    backgroundColor: '#ccc',
+  },
+  deleteButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    textAlign: 'center',
+    fontSize: 16,
   },
   // New styles for AttendeeSelectionModal
   modalBackground: {
