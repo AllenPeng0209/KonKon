@@ -12,7 +12,9 @@ import EventListModal from '@/components/event/EventListModal';
 import { VoiceToCalendar } from '@/components/event/VoiceToCalendar';
 import MealViewSelector from '@/components/meal/MealViewSelector';
 import type { MealRecord } from '@/components/meal/MealViewTypes';
+import { TodoView } from '@/components/todo';
 import SmartButton from '@/components/ui/SmartButton';
+import todoService from '@/lib/todoService';
 
 import FamilyHealthDashboard from '@/components/health/FamilyHealthDashboard';
 import ShoppingViewSelector, {
@@ -30,9 +32,13 @@ import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import {
   CalendarEvent,
   ParsedCalendarResult,
+  ParsedTodoResult,
   processImageToCalendar,
+  processImageToTodo,
   processTextToCalendar,
-  processVoiceToCalendar
+  processTextToTodo,
+  processVoiceToCalendar,
+  processVoiceToTodo
 } from '@/lib/bailian_omni_calendar';
 import CalendarService from '@/lib/calendarService';
 import { t } from '@/lib/i18n';
@@ -207,7 +213,7 @@ export default function HomeScreen() {
 
     // 根据启用的功能添加选项
     if (featureSettings.familyAssistant.enabled) {
-      options.push({ label: t('home.assistant'), value: 'familyAssistant', icon: '🐱', color: '#007AFF', bgColor: '#E3F2FD' });
+      options.push({ label: t('home.assistant'), value: 'todos', icon: '✓', color: '#007AFF', bgColor: '#E3F2FD' });
     }
     
     if (featureSettings.choreAssignment.enabled) {
@@ -381,6 +387,22 @@ export default function HomeScreen() {
       return;
     }
     
+    // 如果是待辦模式，創建新的待辦事項
+    if (selectedFilter === 'todos') {
+      if (!activeFamily) {
+        Alert.alert('錯誤', '請先加入或創建家庭');
+        return;
+      }
+      // 使用SmartButton的文字輸入功能來創建待辦
+      // 或者直接打開事件創建模態框，但設置為無時間的類型
+      if (!selectedDate) {
+        setSelectedDate(new Date());
+      }
+      setEditingEvent(null);
+      setShowAddEventModal(true);
+      return;
+    }
+    
     // 其他模式（日曆等）打開事件添加模態框
     // 如果没有选中日期，则使用今天
     if (!selectedDate) {
@@ -397,30 +419,42 @@ export default function HomeScreen() {
       try {
         const base64Data = await stopRecording();
         if (base64Data) {
-          Alert.alert(
-            t('home.processVoiceTitle'),
-            t('home.processVoiceMessage'),
-            [
-              {
-                text: t('home.cancel'),
-                onPress: () => clearRecording(),
-                style: 'cancel',
-              },
-              {
-                text: t('home.convert'),
-                onPress: () => {
-                  if (selectedFilter === 'expense') {
-                    // handleVoiceToExpense(base64Data); // 移除记账相关功能
-                  } else {
-                    handleVoiceToCalendar(base64Data);
-                  }
+          // 根据当前filter决定处理方式
+          if (selectedFilter === 'todos') {
+            Alert.alert(
+              '語音處理',
+              '是否將語音轉換為待辦事項？',
+              [
+                {
+                  text: t('home.cancel'),
+                  onPress: () => clearRecording(),
+                  style: 'cancel',
                 },
-              },
-            ]
-          );
+                {
+                  text: '創建待辦',
+                  onPress: () => handleVoiceToTodo(base64Data),
+                },
+              ]
+            );
+          } else {
+            Alert.alert(
+              t('home.processVoiceTitle'),
+              t('home.processVoiceMessage'),
+              [
+                {
+                  text: t('home.cancel'),
+                  onPress: () => clearRecording(),
+                  style: 'cancel',
+                },
+                {
+                  text: t('home.convert'),
+                  onPress: () => handleVoiceToCalendar(base64Data),
+                },
+              ]
+            );
+          }
         }
       } catch (error) {
-        // console.error('停止录制失败:', error);
         Alert.alert(t('home.error'), t('home.recordingFailed'));
       }
     } else {
@@ -428,7 +462,6 @@ export default function HomeScreen() {
       try {
         await startRecording();
       } catch (error) {
-        // console.error('开始录制失败:', error);
         Alert.alert(t('home.error'), t('home.micPermissionError'));
       }
     }
@@ -498,7 +531,7 @@ export default function HomeScreen() {
     }
   };
 
-  // 處理拍照功能 - 直接拍照並添加到相簿
+  // 處理拍照功能 - 根據當前模式決定行為
   const handlePhotoPress = async () => {
     const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
     if (permissionResult.granted === false) {
@@ -514,9 +547,41 @@ export default function HomeScreen() {
     });
 
     if (!pickerResult.canceled && pickerResult.assets && pickerResult.assets.length > 0) {
-      // 直接打開 AddMemoryModal 來添加到相簿
-      setInitialMemoryImages(pickerResult.assets);
-      setShowAddMemoryModal(true);
+      const asset = pickerResult.assets[0];
+      
+      if (selectedFilter === 'familyAlbum') {
+        // 相簿模式：直接打開 AddMemoryModal 來添加到相簿
+        setInitialMemoryImages(pickerResult.assets);
+        setShowAddMemoryModal(true);
+      } else if (selectedFilter === 'todos' && asset.base64) {
+        // 待辦模式：使用OCR識別照片中的待辦事項
+        setIsProcessingImage(true);
+        setLoadingText('正在識別圖片中的待辦事項...');
+        try {
+          const result = await processImageToTodo(asset.base64);
+          await handleTodoResult(result);
+        } catch (error) {
+          console.error('圖片處理失敗:', error);
+          Alert.alert(t('home.error'), '圖片識別失敗，請重試');
+        } finally {
+          setIsProcessingImage(false);
+          setLoadingText('');
+        }
+      } else if (asset.base64) {
+        // 其他模式：使用OCR識別日程內容
+        setIsProcessingImage(true);
+        setLoadingText(t('home.processingImage'));
+        try {
+          const result = await processImageToCalendar(asset.base64);
+          handleAIResult(result);
+        } catch (error) {
+          console.error('圖片處理失敗:', error);
+          Alert.alert(t('home.error'), t('home.imageProcessingFailed'));
+        } finally {
+          setIsProcessingImage(false);
+          setLoadingText('');
+        }
+      }
     }
   };
 
@@ -542,6 +607,25 @@ export default function HomeScreen() {
     }
   };
 
+  // 處理語音轉待辦事項
+  const handleVoiceToTodo = async (base64Data: string) => {
+    setLoadingText('正在識別語音並創建待辦事項...');
+    setIsProcessingImage(true); // 使用現有的處理狀態
+    try {
+      const result = await processVoiceToTodo(base64Data, (progress) => {
+        setLoadingText(progress);
+      });
+      await handleTodoResult(result);
+    } catch (error) {
+      console.error('語音轉待辦失敗:', error);
+      Alert.alert(t('home.error'), '語音轉待辦事項失敗，請重試');
+    } finally {
+      setIsProcessingImage(false);
+      setLoadingText('');
+      clearRecording();
+    }
+  };
+
   // 处理语音转日程
   const handleVoiceToCalendar = async (base64Data: string) => {
     setLoadingText(t('home.processingVoice'));
@@ -556,19 +640,6 @@ export default function HomeScreen() {
     }
   };
 
-  // 新增：处理语音转记账
-  // const handleVoiceToExpense = async (base64Data: string) => { // 移除记账相关功能
-  //   setLoadingText(t('home.processingVoice'));
-  //   try {
-  //     const result = await processVoiceToExpense(base64Data);
-  //     handleAIExpenseResult(result);
-  //   } catch (error) {
-  //     Alert.alert(t('home.error'), t('home.expenseVoiceProcessingFailed'));
-  //   } finally {
-  //     clearRecording();
-  //   }
-  // };
-
   // 处理文字输入转日程的结果（兼容原有逻辑）
   const handleTextResult = async (result: string) => {
     console.log('接收到文本输入:', result);
@@ -576,8 +647,11 @@ export default function HomeScreen() {
     setIsProcessingText(true); // 使用新的状态
 
     try {
-      // 简单的意图识别
-      if (result.match(/记账|消费|收入|花了|赚了|买单|付款/)) {
+      // 根据当前filter决定如何处理
+      if (selectedFilter === 'todos') {
+        console.log('判断为待办意图');
+        await handleCreateTodoFromText(result);
+      } else if (result.match(/记账|消费|收入|花了|赚了|买单|付款/)) {
         console.log('判断为记账意图');
         // const expenseResult = await processTextToExpense(result); // 移除记账相关功能
         // handleAIExpenseResult(expenseResult); // 移除记账相关功能
@@ -591,6 +665,137 @@ export default function HomeScreen() {
     } finally {
       setIsProcessingText(false); // 结束时重置状态
       setLoadingText('');
+    }
+  };
+
+  // 新增：處理待辦事項結果
+  const handleTodoResult = async (result: ParsedTodoResult) => {
+    if (!activeFamily || !user) {
+      Alert.alert('錯誤', '請先登錄並加入家庭');
+      return;
+    }
+
+    if (result.todos && result.todos.length > 0) {
+      try {
+        // 批量創建待辦事項
+        const createdTodos = [];
+        for (const todo of result.todos) {
+          const createdTodo = await todoService.createTodo({
+            familyId: activeFamily.id,
+            title: todo.title,
+            description: todo.description,
+            priority: todo.priority,
+            dueDate: todo.dueDate,
+            assignedTo: user.id,
+          });
+          createdTodos.push(createdTodo);
+        }
+
+        if (createdTodos.length === 1) {
+          setSuccessTitle('待辦創建成功');
+          setSuccessMessage(`已成功創建待辦事項：${createdTodos[0].title}`);
+        } else {
+          setSuccessTitle('待辦創建成功');
+          setSuccessMessage(`已成功創建 ${createdTodos.length} 個待辦事項`);
+        }
+        setShowSuccessModal(true);
+      } catch (error) {
+        console.error('创建待办失败:', error);
+        Alert.alert('錯誤', '創建待辦事項失敗，請重試');
+      }
+    } else {
+      Alert.alert('提示', '未能從輸入中識別出待辦事項');
+    }
+  };
+
+  // 新增：从文字创建待办事项
+  const handleCreateTodoFromText = async (text: string) => {
+    if (!activeFamily || !user) {
+      Alert.alert('錯誤', '請先登錄並加入家庭');
+      return;
+    }
+
+    try {
+      // 使用AI解析待辦事項
+      const todoResult = await processTextToTodo(text);
+      
+      if (todoResult && todoResult.todos && todoResult.todos.length > 0) {
+        // 批量創建待辦事項
+        const createdTodos = [];
+        for (const todo of todoResult.todos) {
+          const createdTodo = await todoService.createTodo({
+            familyId: activeFamily.id,
+            title: todo.title,
+            description: todo.description,
+            priority: todo.priority,
+            dueDate: todo.dueDate,
+            assignedTo: user.id,
+          });
+          createdTodos.push(createdTodo);
+        }
+
+        if (createdTodos.length === 1) {
+          setSuccessTitle('待辦創建成功');
+          setSuccessMessage(`已成功創建待辦事項：${createdTodos[0].title}`);
+        } else {
+          setSuccessTitle('待辦創建成功');
+          setSuccessMessage(`已成功創建 ${createdTodos.length} 個待辦事項`);
+        }
+        setShowSuccessModal(true);
+      } else {
+        // 如果AI解析失敗，使用簡單解析
+        const lines = text.trim().split('\n').filter(line => line.trim());
+        const title = lines[0]?.trim() || text.substring(0, 50);
+        const description = lines.length > 1 ? lines.slice(1).join('\n') : undefined;
+        
+        // 检测优先级
+        let priority: 'low' | 'medium' | 'high' = 'medium';
+        if (text.match(/紧急|急|重要|高优先级|高/i)) {
+          priority = 'high';
+        } else if (text.match(/低优先级|不急|低/i)) {
+          priority = 'low';
+        }
+
+        // 檢測日期
+        let dueDate: string | undefined;
+        const today = new Date();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(today.getDate() + 1);
+        const dayAfterTomorrow = new Date(today);
+        dayAfterTomorrow.setDate(today.getDate() + 2);
+        
+        const toLocalDateString = (date: Date): string => {
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        };
+        
+        if (text.match(/今天|今日/i)) {
+          dueDate = toLocalDateString(today);
+        } else if (text.match(/明天|明日/i)) {
+          dueDate = toLocalDateString(tomorrow);
+        } else if (text.match(/後天/i)) {
+          dueDate = toLocalDateString(dayAfterTomorrow);
+        }
+
+        await todoService.createTodo({
+          familyId: activeFamily.id,
+          title,
+          description,
+          priority,
+          dueDate,
+          assignedTo: user.id,
+        });
+
+        setSuccessTitle('待辦創建成功');
+        setSuccessMessage(`已成功創建待辦事項：${title}`);
+        setShowSuccessModal(true);
+      }
+      
+    } catch (error) {
+      console.error('创建待办失败:', error);
+      Alert.alert('錯誤', '創建待辦事項失敗，請重試');
     }
   };
 
@@ -675,6 +880,24 @@ export default function HomeScreen() {
       setIsConfirmationModalVisible(true);
     } else {
       // handleTextError(); // No longer needed, SmartButton will handle it
+    }
+  };
+
+  // 新增：處理待辦事項語音結果的包裝函數
+  const handleTodoVoiceResult = async (result: ParsedCalendarResult) => {
+    // 注意：這裡的result實際上是來自processVoiceToCalendar的結果
+    // 我們需要從userInput重新處理為待辦事項
+    if (result.userInput) {
+      try {
+        // 直接使用AI文本處理來創建待辦事項
+        const todoResult = await processTextToTodo(result.userInput);
+        await handleTodoResult(todoResult);
+      } catch (error) {
+        console.error('語音轉待辦失敗:', error);
+        Alert.alert(t('home.error'), '語音轉待辦事項失敗，請重試');
+      }
+    } else {
+      Alert.alert('提示', '未能從語音中識別出待辦事項');
     }
   };
 
@@ -1194,7 +1417,7 @@ export default function HomeScreen() {
         </View>
       )}
 
-      {/* 相冊功能需要直接渲染避免嵌套問題 */}
+      {/* 直接渲染避免嵌套問題的功能 */}
       {selectedFilter === 'familyAlbum' ? (
         <SimpleAlbumView 
           onAlbumPress={(album) => {
@@ -1206,6 +1429,9 @@ export default function HomeScreen() {
           }}
           refreshTrigger={albumRefreshTrigger}
         />
+      ) : selectedFilter === 'todos' ? (
+        // 待辦功能 - 避免FlatList嵌套在ScrollView中
+        <TodoView />
       ) : (
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           {selectedFilter === 'familyRecipes' ? (
@@ -1720,15 +1946,18 @@ export default function HomeScreen() {
         text={voiceState.isRecording ? 
           t('home.isRecording', { duration: Math.floor(voiceState.duration / 1000) }) : 
           (selectedFilter === 'familyAlbum' ? 
-            '🎤 說話創建智能相簿 (如：小孩成長視頻)' : 
-            t('home.longPressToTalk')
+            '🎤 長按說話, 快速創建' : 
+            selectedFilter === 'todos' ?
+              '🎤 按說話, 快速創建' :
+              t('home.longPressToTalk')
           )
         }
         onTextInputPress={() => {
           // console.log('Text input pressed')
         }}
         onTextResult={handleTextResult}
-        {...(selectedFilter !== 'familyAlbum' ? { onParseResult: handleAIResult } : {})}
+        onParseResult={selectedFilter === 'todos' ? handleTodoVoiceResult : 
+          (selectedFilter !== 'familyAlbum' ? handleAIResult : undefined)}
         onAlbumParseResult={selectedFilter === 'familyAlbum' ? handleAlbumAIResult : undefined}
         onError={handleTextError}
         onManualAddPress={handleManualAdd}

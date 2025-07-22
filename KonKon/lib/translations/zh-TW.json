@@ -15,7 +15,7 @@
     "expense": "開銷",
     "idea": "想法",
     "mood": "心情",
-    "assistant": "管家",
+    "assistant": "待辦",
     "chores": "家務",
     "activities": "健康",
     "health": "健康",
@@ -361,24 +361,24 @@
   },
   "profile": {
     "title": "個人中心",
-    "createOrJoinFamilyTitle": "建立或加入家庭",
-    "createOrJoinFamilyMessage": "選取一個選項以開始管理您的家庭",
+    "recordedDays": "已記錄 {days} 天",
+    "createOrJoinFamilyTitle": "家庭設置",
+    "createOrJoinFamilyMessage": "請選擇建立新家庭或加入現有家庭",
     "cancel": "取消",
     "createFamily": "建立家庭",
     "joinFamily": "加入家庭",
-    "recordedDays": "您已記錄 %{days} 天",
-    "family": "家庭：%{familyName}",
-    "createOrJoin": "建立或加入",
+    "family": "家庭：{familyName}",
+    "createOrJoin": "建立或加入家庭",
     "loading": "載入中...",
-    "manageFamily": "家庭管理",
+    "manageFamily": "管理家庭",
     "familySchedule": "家庭日程",
-    "familyAssistant": "萌咪管家",
+    "familyAssistant": "待辦事項",
     "choreAssignment": "家務分配",
     "familyActivities": "健康管理",
     "familyAlbum": "家庭相簿",
     "shoppingList": "購物清單",
     "familyFinance": "家庭財務",
-    "familyRecipes": "家庭餐食",
+    "familyRecipes": "餐食管理",
     "settings": "設定",
     "userAgreement": "使用者協議",
     "privacyPolicy": "隱私權政策",
@@ -672,6 +672,6 @@
   },
   "animatedLogo": {
     "welcome": "你好！我是你的AI助理",
-    "subtitle": "有什麼可以幫助你的嗎？"
+          "subtitle": "有什麼可以幫助你的嗎？"
+    }
   }
-}

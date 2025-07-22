@@ -315,6 +315,293 @@ export async function processVoiceToExpense(
   }
 }
 
+// 新增：待辦事項相關類型定義
+export interface TodoItem {
+  title: string;
+  description?: string;
+  priority: 'low' | 'medium' | 'high';
+  dueDate?: string; // ISO date string
+}
+
+export interface ParsedTodoResult {
+  todos: TodoItem[];
+  summary: string;
+  confidence: number;
+  userInput?: string;
+}
+
+// 新增：文字轉待辦事項處理
+export async function processTextToTodo(
+  text: string,
+  onProgress?: (chunk: string) => void
+): Promise<ParsedTodoResult> {
+  try {
+    if (onProgress) {
+      onProgress('正在分析待辦事項...');
+    }
+
+    const config = await getOmniConfig();
+    
+    // 動態生成當前日期範例
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
+    
+    const response = await fetch(`${config.baseURL}/api/v1/services/aigc/text-generation/generation`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${config.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'qwen-turbo',
+        input: {
+          messages: [{
+            role: "system",
+            content: `你是一個智能待辦事項助手。請分析用戶的文字輸入，提取待辦事項信息。
+
+返回JSON格式：
+{
+  "todos": [
+    {
+      "title": "待辦事項標題",
+      "description": "詳細描述（可選）",
+      "priority": "low|medium|high",
+      "dueDate": "YYYY-MM-DD（可選）"
+    }
+  ],
+  "summary": "解析摘要",
+  "confidence": 0.95
+}
+
+優先級判斷規則：
+- high: 包含"緊急"、"重要"、"急"、"馬上"、"立刻"等詞
+- low: 包含"不急"、"有空再"、"慢慢"等詞
+- medium: 其他情況
+
+日期解析規則：
+- "今天"、"今日" -> ${todayStr}
+- "明天"、"明日" -> ${tomorrowStr}
+- "後天" -> 後天日期
+- "這週"、"本週" -> 本週末
+- "下週" -> 下週末
+- 具體日期格式：YYYY-MM-DD
+
+範例：
+用戶說："買菜，記得買蘋果和牛奶，明天要用"
+輸出：{
+  "todos": [{
+    "title": "買菜",
+    "description": "記得買蘋果和牛奶",
+    "priority": "medium",
+    "dueDate": "${tomorrowStr}"
+  }],
+  "summary": "創建了1個待辦事項：買菜",
+  "confidence": 0.9
+}`
+          }, {
+            role: "user",
+            content: text
+          }]
+        },
+        parameters: {
+          result_format: "json_object",
+          max_tokens: 1000
+        }
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`待辦解析API錯誤: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const resultText = data.output?.text || '{}';
+    
+    try {
+      const parsed = JSON.parse(resultText);
+      
+      // 處理日期格式
+      const processedTodos = parsed.todos?.map((todo: any) => ({
+        ...todo,
+        dueDate: todo.dueDate ? formatDateString(todo.dueDate) : undefined
+      })) || [];
+
+      return {
+        todos: processedTodos,
+        summary: parsed.summary || '成功解析待辦事項',
+        confidence: parsed.confidence || 0.8,
+        userInput: text
+      };
+    } catch (parseError) {
+      console.error('解析JSON失敗:', parseError, resultText);
+      throw new Error('AI返回格式錯誤');
+    }
+
+  } catch (error) {
+    console.error('文字轉待辦失敗:', error);
+    throw error;
+  }
+}
+
+// 新增：語音轉待辦事項處理
+export async function processVoiceToTodo(
+  audioBase64: string,
+  onProgress?: (chunk: string) => void
+): Promise<ParsedTodoResult> {
+  try {
+    const transcribedText = await speechToText(audioBase64, onProgress);
+    if (!transcribedText || transcribedText.trim() === '') {
+      throw new Error('语音识别结果为空');
+    }
+    return await processTextToTodo(transcribedText, onProgress);
+  } catch (error) {
+    console.error('语音转待办失败:', error);
+    throw error;
+  }
+}
+
+// 新增：圖片轉待辦事項處理（OCR + AI解析）
+export async function processImageToTodo(
+  imageBase64: string,
+  onProgress?: (chunk: string) => void
+): Promise<ParsedTodoResult> {
+  try {
+    if (onProgress) {
+      onProgress('正在識別圖片中的文字...');
+    }
+
+    const config = await getOmniConfig();
+    
+    // 使用qwen-vl-max進行圖片分析和文字提取
+    const response = await fetch(`${config.baseURL}/api/v1/services/aigc/multimodal-generation/generation`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${config.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'qwen-vl-max',
+        input: {
+          messages: [{
+            role: "user",
+            content: [
+              {
+                type: "image_url",
+                image_url: {
+                  url: `data:image/jpeg;base64,${imageBase64}`
+                }
+              },
+              {
+                type: "text",
+                text: `請分析這張圖片，提取其中的待辦事項信息。可能包含：
+1. 手寫或打字的待辦清單
+2. 便利貼上的任務
+3. 日程表或行事曆
+4. 購物清單
+5. 工作任務列表
+
+返回JSON格式：
+{
+  "todos": [
+    {
+      "title": "待辦事項標題",
+      "description": "詳細描述（可選）",
+      "priority": "low|medium|high",
+      "dueDate": "YYYY-MM-DD（如果圖片中有日期）"
+    }
+  ],
+  "summary": "從圖片中識別到的待辦事項摘要",
+  "confidence": 0.95
+}
+
+如果圖片中沒有明確的待辦事項，請返回空的todos數組。`
+              }
+            ]
+          }]
+        },
+        parameters: {
+          result_format: "json_object",
+          max_tokens: 1500
+        }
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`圖片分析API錯誤: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const resultText = data.output?.text || '{}';
+    
+    try {
+      const parsed = JSON.parse(resultText);
+      
+      // 處理日期格式
+      const processedTodos = parsed.todos?.map((todo: any) => ({
+        ...todo,
+        dueDate: todo.dueDate ? formatDateString(todo.dueDate) : undefined
+      })) || [];
+
+      return {
+        todos: processedTodos,
+        summary: parsed.summary || '成功從圖片中識別待辦事項',
+        confidence: parsed.confidence || 0.7,
+        userInput: '圖片識別'
+      };
+    } catch (parseError) {
+      console.error('解析JSON失敗:', parseError, resultText);
+      throw new Error('AI返回格式錯誤');
+    }
+
+  } catch (error) {
+    console.error('圖片轉待辦失敗:', error);
+    throw error;
+  }
+}
+
+// 輔助函數：格式化日期字符串
+function formatDateString(dateStr: string): string {
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+  const dayAfterTomorrow = new Date(today);
+  dayAfterTomorrow.setDate(today.getDate() + 2);
+  
+  // 輔助函數：將Date轉為本地日期字符串 (YYYY-MM-DD)
+  const toLocalDateString = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  
+  switch (dateStr) {
+    case '今天':
+    case '今日':
+      return toLocalDateString(today);
+    case '明天':
+    case '明日':
+      return toLocalDateString(tomorrow);
+    case '後天':
+      return toLocalDateString(dayAfterTomorrow);
+    case '這週':
+    case '本週':
+      const thisWeekEnd = new Date(today);
+      thisWeekEnd.setDate(today.getDate() + (7 - today.getDay()));
+      return toLocalDateString(thisWeekEnd);
+    case '下週':
+      const nextWeekEnd = new Date(today);
+      nextWeekEnd.setDate(today.getDate() + (14 - today.getDay()));
+      return toLocalDateString(nextWeekEnd);
+    default:
+      // 如果已經是標準格式或其他格式，直接返回
+      return dateStr;
+  }
+}
+
 // 新增：图片转记账处理
 export async function processImageToExpense(
   base64Image: string

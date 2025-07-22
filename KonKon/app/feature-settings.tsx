@@ -37,9 +37,9 @@ const featureInfoMap: Record<FeatureKey, FeatureInfo> = {
     }
   },
   familyAssistant: {
-    name: '萌咪管家',
-    icon: '🐱',
-    description: '智能家庭助手，提供個性化服務',
+    name: '待办事项',
+    icon: '✓',
+    description: '简单易用的家庭待办事项管理',
     defaultSettings: {
       voiceEnabled: true,
       autoRespond: false,

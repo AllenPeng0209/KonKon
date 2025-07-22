@@ -15,7 +15,7 @@
     "expense": "経費",
     "idea": "アイデア",
     "mood": "気分",
-    "assistant": "執事",
+    "assistant": "タスク",
     "chores": "家事",
     "activities": "健康",
     "health": "健康",
@@ -327,7 +327,7 @@
     "loading": "読み込み中...",
     "manageFamily": "家族管理",
     "familySchedule": "家庭日程",
-    "familyAssistant": "萌咪バトラー",
+    "familyAssistant": "タスク一覧",
     "choreAssignment": "家事分担",
     "familyActivities": "健康管理",
     "familyAlbum": "家庭アルバム",
@@ -648,5 +648,29 @@
     "aiWriteStory": "AIが記述補助",
     "aiEditPhoto": "AIマジック編集",
     "publish": "公開"
+  },
+  "featureSettings": {
+    "title": "機能設定",
+    "enableFeature": "機能を有効にする",
+    "settingsSection": "機能設定",
+    "infoSection": "機能情報",
+    "infoText": "%{featureName}機能は家族の生活をより良く管理するのに役立ちます",
+    "settings": {
+      "syncWithSystem": "システム同期",
+      "enableReminders": "リマインダーを有効にする",
+      "reminderMinutes": "リマインダー時間（分）",
+      "voiceEnabled": "音声機能を有効にする",
+      "autoRespond": "自動応答",
+      "language": "言語",
+      "autoBackup": "自動バックアップ",
+      "enableSharing": "共有を有効にする",
+      "qualityLevel": "品質レベル",
+      "syncAcrossDevices": "デバイス間同期",
+      "enableCategories": "カテゴリーを有効にする",
+      "budgetTracking": "予算追跡",
+      "enableBudgetAlerts": "予算アラートを有効にする",
+      "monthlyBudget": "月次予算",
+      "trackCategories": "カテゴリー追跡"
+    }
   }
 }

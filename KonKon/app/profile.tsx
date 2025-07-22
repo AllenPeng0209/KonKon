@@ -136,7 +136,7 @@ export default function ProfileScreen() {
               <Text style={styles.functionText}>{t('profile.familySchedule')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.functionItem} onPress={() => handleFunction('familyAssistant')}>
-              <Text style={styles.functionIcon}>🐱</Text>
+              <Text style={styles.functionIcon}>✓</Text>
               <Text style={styles.functionText}>{t('profile.familyAssistant')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.functionItem} onPress={() => handleFunction('choreAssignment')}>
