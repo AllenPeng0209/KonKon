@@ -37,6 +37,7 @@ const TAG_ICONS: { [key: string]: string } = {
   school: '🏫',
   club: '⭐',
   hobby: '💡',
+  meta: '🌌', // 元空間圖標
   other: '👥'
 };
 
@@ -48,6 +49,21 @@ interface DrawerProps {
   onClose: () => void;
   translateX: SharedValue<number>;
 }
+
+// 元空間對象定義
+const META_SPACE: Family = {
+  id: 'meta-space',
+  name: '元空間',
+  description: '查看所有空間信息',
+  avatar_url: null,
+  owner_id: '',
+  invite_code: null,
+  timezone: null,
+  created_at: null,
+  updated_at: null,
+  member_count: 0,
+  tag: 'meta'
+};
 
 interface Family {
   id: string;
@@ -67,22 +83,26 @@ interface DraggableFamilyItemProps {
   family: Family;
   index: number;
   isActive: boolean;
+  isMetaSpace?: boolean; // 新增：標識是否為元空間
   familyMembers: any[];
   onSwitchFamily: (familyId: string) => void;
   onDragEnd: (fromIndex: number, toIndex: number) => void;
   draggedIndex: SharedValue<number>;
   colorScheme: 'light' | 'dark' | null | undefined;
+  totalSpacesCount?: number; // 新增：總空間數量
 }
 
 const DraggableFamilyItem: React.FC<DraggableFamilyItemProps> = ({
   family,
   index,
   isActive,
+  isMetaSpace = false, // 默認為 false
   familyMembers,
   onSwitchFamily,
   onDragEnd,
   draggedIndex,
   colorScheme,
+  totalSpacesCount = 0,
 }) => {
   const translateY = useSharedValue(0);
   const scale = useSharedValue(1);
@@ -109,7 +129,7 @@ const DraggableFamilyItem: React.FC<DraggableFamilyItemProps> = ({
   }, [isActive, index, draggedIndex, resetDragState]);
 
   const animatedStyle = useAnimatedStyle(() => {
-    const isBeingDragged = draggedIndex.value === index;
+    const isBeingDragged = draggedIndex.value === index && !isMetaSpace; // 元空間不參與拖拽
     const currentScale = isBeingDragged ? withSpring(1.08) : scale.value;
     const currentOpacity = isBeingDragged ? 0.95 : opacity.value;
     
@@ -132,6 +152,9 @@ const DraggableFamilyItem: React.FC<DraggableFamilyItemProps> = ({
   });
 
   const onLongPress = useCallback(({ nativeEvent }: LongPressGestureHandlerGestureEvent) => {
+    // 元空間不參與拖拽
+    if (isMetaSpace) return;
+    
     if (nativeEvent.state === State.ACTIVE) {
       // 苹果风格的haptic feedback
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -144,9 +167,12 @@ const DraggableFamilyItem: React.FC<DraggableFamilyItemProps> = ({
         runOnJS(resetDragState)();
       }
     }
-  }, [draggedIndex, index, isDragging, resetDragState]);
+  }, [draggedIndex, index, isDragging, resetDragState, isMetaSpace]);
 
   const onPanGesture = useCallback(({ nativeEvent }: PanGestureHandlerGestureEvent) => {
+    // 元空間不參與拖拽
+    if (isMetaSpace) return;
+    
     // 只有在拖拽模式下或者长按已激活时才响应拖拽
     if (draggedIndex.value !== index && draggedIndex.value !== -1) return;
     
@@ -181,7 +207,7 @@ const DraggableFamilyItem: React.FC<DraggableFamilyItemProps> = ({
       // 處理拖拽被取消或失敗的情況
       runOnJS(resetDragState)();
     }
-  }, [draggedIndex, index, translateY, onDragEnd, isDragging, resetDragState]);
+  }, [draggedIndex, index, translateY, onDragEnd, isDragging, resetDragState, isMetaSpace]);
 
   const handlePress = useCallback(() => {
     // 直接切換，不要中間步驟
@@ -196,6 +222,7 @@ const DraggableFamilyItem: React.FC<DraggableFamilyItemProps> = ({
       onHandlerStateChange={onLongPress}
       minDurationMs={500}
       simultaneousHandlers={panRef}
+      enabled={!isMetaSpace} // 元空間不啟用長按
     >
       <Animated.View>
         <PanGestureHandler
@@ -203,28 +230,46 @@ const DraggableFamilyItem: React.FC<DraggableFamilyItemProps> = ({
           onGestureEvent={onPanGesture}
           onHandlerStateChange={onPanGesture}
           simultaneousHandlers={longPressRef}
-          enabled={true}
+          enabled={!isMetaSpace} // 元空間不啟用拖拽
         >
           <Animated.View style={[animatedStyle]}>
             <TouchableOpacity
               style={[
                 styles.familyItem,
                 isActive && styles.activeFamilyItem,
+                isMetaSpace && styles.metaSpaceItem, // 元空間特殊樣式
               ]}
               onPress={handlePress}
               activeOpacity={0.8}
             >
-              <View style={[styles.familyIcon, isActive && styles.activeFamilyIcon]}>
-                <Text style={[styles.familyIconText, isActive && styles.activeFamilyIconText]}>
+              <View style={[
+                styles.familyIcon, 
+                isActive && styles.activeFamilyIcon,
+                isMetaSpace && styles.metaSpaceIcon
+              ]}>
+                <Text style={[
+                  styles.familyIconText, 
+                  isActive && styles.activeFamilyIconText,
+                  isMetaSpace && styles.metaSpaceIconText
+                ]}>
                   {getTagIcon(family.tag) || family.name.charAt(0).toUpperCase()}
                 </Text>
               </View>
               <View style={styles.familyInfo}>
-                <Text style={[styles.familyName, isActive && styles.activeFamilyName]}>
+                <Text style={[
+                  styles.familyName, 
+                  isActive && styles.activeFamilyName,
+                  isMetaSpace && styles.metaSpaceName
+                ]}>
                   {family.name}
                 </Text>
                 <Text style={styles.familyMemberCount}>
-                  {isActive ? `${familyMembers.length} 位成員` : `共 ${family.member_count || 1} 位成員`}
+                  {isMetaSpace 
+                    ? `所有 ${totalSpacesCount} 個空間` 
+                    : isActive 
+                      ? `${familyMembers.length} 位成員` 
+                      : `共 ${family.member_count || 1} 位成員`
+                  }
                 </Text>
               </View>
               {isActive && (
@@ -263,10 +308,14 @@ const Drawer: React.FC<DrawerProps> = ({ onClose, translateX }) => {
   };
 
   const handleDragEnd = useCallback((fromIndex: number, toIndex: number) => {
-    if (fromIndex !== toIndex) {
+    // 調整索引，因為元空間占用了第0位
+    const adjustedFromIndex = fromIndex - 1;
+    const adjustedToIndex = toIndex - 1;
+    
+    if (adjustedFromIndex !== adjustedToIndex && adjustedFromIndex >= 0 && adjustedToIndex >= 0) {
       const reorderedIds = [...userFamilies];
-      const [movedItem] = reorderedIds.splice(fromIndex, 1);
-      reorderedIds.splice(toIndex, 0, movedItem);
+      const [movedItem] = reorderedIds.splice(adjustedFromIndex, 1);
+      reorderedIds.splice(adjustedToIndex, 0, movedItem);
       
       reorderFamilies(reorderedIds.map(family => family.id));
     }
@@ -298,6 +347,9 @@ const Drawer: React.FC<DrawerProps> = ({ onClose, translateX }) => {
     return 'https://example.com/default-avatar.png';
   }
 
+  // 檢查當前是否選中元空間
+  const isMetaSpaceActive = activeFamily?.id === 'meta-space';
+
   return (
     <>
       <Animated.View style={[styles.container, animatedStyle]}>
@@ -320,14 +372,31 @@ const Drawer: React.FC<DrawerProps> = ({ onClose, translateX }) => {
             style={styles.familyList} 
             showsVerticalScrollIndicator={false}
           >
+            {/* 元空間 - 固定在最上方 */}
+            <DraggableFamilyItem
+              key="meta-space"
+              family={META_SPACE}
+              index={0}
+              isActive={isMetaSpaceActive}
+              isMetaSpace={true}
+              familyMembers={familyMembers}
+              onSwitchFamily={handleSwitchFamily}
+              onDragEnd={handleDragEnd}
+              draggedIndex={draggedIndex}
+              colorScheme={colorScheme}
+              totalSpacesCount={userFamilies.length}
+            />
+            
+            {/* 用戶的其他空間 */}
             {userFamilies.map((family, index) => {
               const isActive = activeFamily?.id === family.id;
               return (
                 <DraggableFamilyItem
                   key={family.id}
                   family={family}
-                  index={index}
+                  index={index + 1} // 調整索引，因為元空間占用了第0位
                   isActive={isActive}
+                  isMetaSpace={false}
                   familyMembers={familyMembers}
                   onSwitchFamily={handleSwitchFamily}
                   onDragEnd={handleDragEnd}
@@ -547,6 +616,25 @@ const getStyles = (colorScheme: 'light' | 'dark' | null | undefined) => {
       marginLeft: 15,
       fontSize: 16,
       color: colors.text,
+    },
+    // 元空間特殊樣式
+    metaSpaceItem: {
+      backgroundColor: colorScheme === 'dark' ? '#2a2a2a' : '#f8f9fa',
+      marginHorizontal: 16,
+      borderRadius: 12,
+      borderWidth: 2,
+      borderColor: colorScheme === 'dark' ? '#444' : '#e0e6ed',
+      borderStyle: 'dashed',
+    },
+    metaSpaceIcon: {
+      backgroundColor: '#6366f1',
+    },
+    metaSpaceIconText: {
+      color: '#ffffff',
+    },
+    metaSpaceName: {
+      color: '#6366f1',
+      fontWeight: '700',
     },
   });
 }

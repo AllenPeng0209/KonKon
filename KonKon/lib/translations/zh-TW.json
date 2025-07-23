@@ -369,7 +369,7 @@
     "cancel": "取消",
     "createFamily": "建立家庭",
     "joinFamily": "加入家庭",
-    "family": "家庭：{familyName}",
+    "family": "%{familyName}",
     "createOrJoin": "建立或加入家庭",
     "loading": "載入中...",
     "manageFamily": "管理家庭",

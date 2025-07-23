@@ -1487,6 +1487,35 @@ export default function HomeScreen() {
         <View style={styles.familyMenuOverlay}>
           <TouchableOpacity style={styles.familyMenuBackground} onPress={() => setShowFamilyMenu(false)} />
           <View style={styles.familyMenu}>
+            {/* 元空間選項 - 固定在最上方 */}
+            <TouchableOpacity
+              style={[
+                styles.familyMenuItem,
+                styles.metaSpaceMenuItem,
+                activeFamily?.id === 'meta-space' && styles.familyMenuItemActive
+              ]}
+              onPress={() => handleFamilySelect({ id: 'meta-space', name: '元空間' })}
+            >
+              <View style={[styles.familyMenuIcon, styles.metaSpaceIcon]}>
+                <Text style={styles.familyMenuIconText}>🌌</Text>
+              </View>
+              <Text style={[
+                styles.familyMenuText,
+                styles.metaSpaceText,
+                activeFamily?.id === 'meta-space' && styles.familyMenuTextActive
+              ]}>
+                元空間
+              </Text>
+              {activeFamily?.id === 'meta-space' && (
+                <Text style={styles.familyMenuCheck}>✓</Text>
+              )}
+            </TouchableOpacity>
+            
+            {/* 分隔線 */}
+            {userFamilies.length > 0 && (
+              <View style={styles.familyMenuSeparator} />
+            )}
+            
             {/* 家庭列表 */}
             {userFamilies.map((family) => (
               <TouchableOpacity
@@ -1510,8 +1539,8 @@ export default function HomeScreen() {
                   <Text style={styles.familyMenuCheck}>✓</Text>
                 )}
               </TouchableOpacity>
-                          ))}
-            </View>
+            ))}
+          </View>
         </View>
       )}
 
@@ -2577,13 +2606,32 @@ const styles = StyleSheet.create({
     color: '#007AFF',
     fontWeight: '600',
   },
-  familyMenuCheck: {
+    familyMenuCheck: {
     fontSize: 16,
     color: '#007AFF',
     fontWeight: 'bold',
-          marginLeft: 8,
-    },
-    content: {
+    marginLeft: 8,
+  },
+  metaSpaceMenuItem: {
+    borderWidth: 1,
+    borderColor: '#E3F2FD',
+    borderStyle: 'dashed',
+    borderRadius: 12,
+  },
+  metaSpaceIcon: {
+    backgroundColor: '#6366f1',
+  },
+  metaSpaceText: {
+    color: '#6366f1',
+    fontWeight: '700',
+  },
+  familyMenuSeparator: {
+    height: 1,
+    backgroundColor: '#E5E5EA',
+    marginVertical: 8,
+    marginHorizontal: 12,
+  },
+  content: {
     flex: 1,
   },
 

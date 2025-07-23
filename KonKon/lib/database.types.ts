@@ -1984,29 +1984,41 @@ export type Database = {
       users: {
         Row: {
           avatar_url: string | null
+          birth_date: string | null
           created_at: string | null
           display_name: string
           email: string
+          gender: string | null
           id: string
+          interests: string | null
           language_preference: string | null
+          phone: string | null
           updated_at: string | null
         }
         Insert: {
           avatar_url?: string | null
+          birth_date?: string | null
           created_at?: string | null
           display_name: string
           email: string
+          gender?: string | null
           id: string
+          interests?: string | null
           language_preference?: string | null
+          phone?: string | null
           updated_at?: string | null
         }
         Update: {
           avatar_url?: string | null
+          birth_date?: string | null
           created_at?: string | null
           display_name?: string
           email?: string
+          gender?: string | null
           id?: string
+          interests?: string | null
           language_preference?: string | null
+          phone?: string | null
           updated_at?: string | null
         }
         Relationships: []

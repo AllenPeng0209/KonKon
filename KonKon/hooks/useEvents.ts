@@ -138,6 +138,61 @@ export const useEvents = () => {
           allEvents.push(...personalEvents.map(event => ({ ...event, is_shared: false })));
         }
 
+      } else if (activeFamily.id === 'meta-space') {
+        // 元空間模式：獲取所有空間的事件
+        console.log('元空間模式：獲取所有空間的事件');
+
+        // 1. 获取用户创建的个人事件
+        const { data: personalEvents, error: personalError } = await supabase
+          .from('events')
+          .select('*')
+          .eq('creator_id', user.id)
+          .is('family_id', null);
+
+        if (personalEvents && !personalError) {
+          allEvents.push(...personalEvents.map(event => ({ ...event, is_shared: false })));
+        }
+
+        // 2. 获取用户参与的所有家庭事件
+        const userFamilyIds = userFamilies;
+        if (userFamilyIds.length > 0) {
+          const { data: familySharedEvents, error: familyError } = await supabase
+            .from('event_shares')
+            .select(`
+              event_id,
+              family_id,
+              events (
+                *
+              )
+            `)
+            .in('family_id', userFamilyIds);
+
+          if (familySharedEvents && !familyError) {
+            const sharedEvents = familySharedEvents
+              .filter(share => share.events)
+              .map(share => ({ ...share.events, is_shared: true, shared_family_id: share.family_id }));
+            allEvents.push(...sharedEvents);
+          }
+        }
+
+        // 3. 获取用户参与的事件（通过 event_attendees 表）
+        const { data: attendeeEvents, error: attendeeError } = await supabase
+          .from('event_attendees')
+          .select(`
+            event_id,
+            events (
+              *
+            )
+          `)
+          .eq('user_id', user.id);
+
+        if (attendeeEvents && !attendeeError) {
+          const attendeeEventsList = attendeeEvents
+            .filter(att => att.events)
+            .map(att => ({ ...att.events, is_shared: true }));
+          allEvents.push(...attendeeEventsList);
+        }
+
       } else {
         // 家庭模式：只获取分享给当前激活家庭的事件
         console.log('家庭模式：获取家庭事件');

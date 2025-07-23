@@ -42,6 +42,7 @@ export default function FamilyManagement() {
   const [showJoinForm, setShowJoinForm] = useState(false);
   const [showInviteForm, setShowInviteForm] = useState(false);
   const [showEditNameForm, setShowEditNameForm] = useState(false);
+  const [showFamilySelector, setShowFamilySelector] = useState(false);
   const [familyName, setFamilyName] = useState('');
   const [familyDescription, setFamilyDescription] = useState('');
   const [inviteCode, setInviteCode] = useState('');
@@ -234,6 +235,21 @@ export default function FamilyManagement() {
     }
   }, [activeFamily, newFamilyName, updateFamilyName]);
 
+  const handleSelectFamily = useCallback(async (familyId: string) => {
+    setIsSubmitting(true);
+    setShowFamilySelector(false);
+    
+    try {
+      await switchFamily(familyId);
+      Alert.alert('切换成功', '已切换到新的家庭');
+    } catch (error) {
+      console.error('切换家庭失败:', error);
+      Alert.alert('切换失败', '切换家庭时发生错误');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [switchFamily]);
+
   const isOwner = activeFamily?.owner_id === user?.id;
   // 檢查當前用戶是否是家庭成員（無論角色）
   const isFamilyMember = familyMembers.some(member => member.user_id === user?.id);
@@ -263,17 +279,29 @@ export default function FamilyManagement() {
             
             <View style={styles.familyCard}>
               <View style={styles.familyInfo}>
-                <View style={styles.familyNameRow}>
-                  <Text style={styles.familyName}>{activeFamily.name}</Text>
-                  {isOwner && (
-                    <TouchableOpacity
-                      style={styles.editNameButton}
-                      onPress={handleEditFamilyName}
-                    >
-                      <Ionicons name="pencil" size={16} color="#007AFF" />
-                    </TouchableOpacity>
-                  )}
-                </View>
+                                  <View style={styles.familyNameRow}>
+                    <Text style={styles.familyName}>{activeFamily.name}</Text>
+                    <View style={styles.familyNameActions}>
+                      {userFamilies.length > 1 && (
+                        <TouchableOpacity
+                          style={styles.selectFamilyButton}
+                          onPress={() => setShowFamilySelector(true)}
+                        >
+                          <Ionicons name="swap-horizontal" size={18} color="#fff" />
+                          <Text style={styles.buttonText}>切換</Text>
+                        </TouchableOpacity>
+                      )}
+                      {isOwner && (
+                        <TouchableOpacity
+                          style={styles.editNameButton}
+                          onPress={handleEditFamilyName}
+                        >
+                          <Ionicons name="pencil" size={18} color="#fff" />
+                          <Text style={styles.buttonText}>編輯</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  </View>
                 {activeFamily.description && (
                   <Text style={styles.familyDescription}>
                     {activeFamily.description}
@@ -284,26 +312,7 @@ export default function FamilyManagement() {
                 </Text>
               </View>
               
-              {/* 只要是家庭成員就能邀請其他人 */}
-              {isFamilyMember && (
-                <View style={styles.inviteActions}>
-                  <TouchableOpacity
-                    style={styles.inviteButton}
-                    onPress={handleShareInviteCode}
-                  >
-                    <Ionicons name="share" size={16} color="#007AFF" />
-                    <Text style={styles.inviteButtonText}>分享邀请</Text>
-                  </TouchableOpacity>
-                  
-                  <TouchableOpacity
-                    style={styles.inviteButton}
-                    onPress={handleCopyInviteCode}
-                  >
-                    <Ionicons name="copy" size={16} color="#007AFF" />
-                    <Text style={styles.inviteButtonText}>复制邀请码</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
+
             </View>
           </View>
         )}
@@ -368,6 +377,29 @@ export default function FamilyManagement() {
             >
               <Ionicons name="mail" size={24} color="#FF9500" />
               <Text style={styles.actionButtonText}>邮箱邀请</Text>
+              <Ionicons name="chevron-forward" size={16} color="#C7C7CD" />
+            </TouchableOpacity>
+          )}
+
+          {/* 只要是家庭成員就能分享和複製邀請碼 */}
+          {isFamilyMember && (
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={handleShareInviteCode}
+            >
+              <Ionicons name="share" size={24} color="#007AFF" />
+              <Text style={styles.actionButtonText}>分享邀请</Text>
+              <Ionicons name="chevron-forward" size={16} color="#C7C7CD" />
+            </TouchableOpacity>
+          )}
+
+          {isFamilyMember && (
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={handleCopyInviteCode}
+            >
+              <Ionicons name="copy" size={24} color="#007AFF" />
+              <Text style={styles.actionButtonText}>复制邀请码</Text>
               <Ionicons name="chevron-forward" size={16} color="#C7C7CD" />
             </TouchableOpacity>
           )}
@@ -572,6 +604,55 @@ export default function FamilyManagement() {
           </View>
         </View>
       )}
+
+      {/* 家庭選擇器 */}
+      {showFamilySelector && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>選擇家庭</Text>
+            
+            <ScrollView style={styles.familyListContainer}>
+              {userFamilies.map((family) => (
+                <TouchableOpacity
+                  key={family.id}
+                  style={[
+                    styles.familyOption,
+                    activeFamily?.id === family.id && styles.familyOptionActive
+                  ]}
+                  onPress={() => handleSelectFamily(family.id)}
+                >
+                  <View style={styles.familyOptionContent}>
+                    <Text style={[
+                      styles.familyOptionName,
+                      activeFamily?.id === family.id && styles.familyOptionNameActive
+                    ]}>
+                      {family.name}
+                    </Text>
+                    {family.description && (
+                      <Text style={styles.familyOptionDescription}>
+                        {family.description}
+                      </Text>
+                    )}
+                    <Text style={styles.familyOptionMeta}>
+                      {family.member_count || 0} 名成員
+                    </Text>
+                  </View>
+                  {activeFamily?.id === family.id && (
+                    <Ionicons name="checkmark" size={20} color="#007AFF" />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => setShowFamilySelector(false)}
+            >
+              <Text style={styles.cancelButtonText}>取消</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -586,10 +667,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
+    paddingVertical: 12,
+    backgroundColor: '#F2F2F7',
   },
   backButton: {
     width: 40,
@@ -646,10 +725,43 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1C1C1E',
   },
+  familyNameActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  selectFamilyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: '#007AFF',
+    marginLeft: 8,
+    shadowColor: '#007AFF',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
   editNameButton: {
-    padding: 4,
-    borderRadius: 4,
-    backgroundColor: '#F2F2F7',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: '#34C759',
+    marginLeft: 8,
+    shadowColor: '#34C759',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  buttonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#fff',
+    marginLeft: 4,
   },
   familyDescription: {
     fontSize: 14,
@@ -660,23 +772,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#8E8E93',
   },
-  inviteActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  inviteButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F2F2F7',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  inviteButtonText: {
-    fontSize: 14,
-    color: '#007AFF',
-    marginLeft: 4,
-  },
+
   memberCard: {
     backgroundColor: '#fff',
     marginHorizontal: 20,
@@ -790,5 +886,44 @@ const styles = StyleSheet.create({
     color: '#fff',
     textAlign: 'center',
     fontWeight: '600',
+  },
+  familyListContainer: {
+    maxHeight: 200, // 限制列表高度
+    marginBottom: 20,
+  },
+  familyOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+  },
+  familyOptionActive: {
+    backgroundColor: '#F2F2F7',
+    borderRadius: 8,
+    padding: 8,
+  },
+  familyOptionContent: {
+    flex: 1,
+  },
+  familyOptionName: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#1C1C1E',
+  },
+  familyOptionNameActive: {
+    color: '#007AFF',
+  },
+  familyOptionDescription: {
+    fontSize: 12,
+    color: '#8E8E93',
+    marginTop: 2,
+  },
+  familyOptionMeta: {
+    fontSize: 12,
+    color: '#8E8E93',
+    marginTop: 4,
   },
 }); 

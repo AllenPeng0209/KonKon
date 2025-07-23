@@ -3,6 +3,20 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 
+// 元空間定義
+const META_SPACE_FAMILY: Family = {
+  id: 'meta-space',
+  name: '元空間',
+  description: '查看所有空間信息',
+  avatar_url: null,
+  owner_id: '',
+  invite_code: null,
+  timezone: null,
+  created_at: null,
+  updated_at: null,
+  member_count: 0,
+};
+
 interface Family {
   id: string;
   name: string;
@@ -35,6 +49,7 @@ interface FamilyContextType {
   familyMembers: FamilyMember[];
   loading: boolean;
   error: string | null;
+  isMetaSpaceActive: boolean; // 新增：標識是否為元空間狀態
   
   createFamily: (data: { name: string; description?: string; tag?: string }) => Promise<Family | null>;
   updateFamilyName: (familyId: string, newName: string) => Promise<boolean>;
@@ -57,6 +72,9 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
   const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // 新增：計算元空間狀態
+  const isMetaSpaceActive = activeFamily?.id === 'meta-space';
 
   useEffect(() => {
     if (user) {
@@ -349,6 +367,49 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       // 清除活躍家庭
       setActiveFamily(null);
       setFamilyMembers([]); // 清空家庭成員
+    } else if (familyId === 'meta-space') {
+      // 切換到元空間
+      setActiveFamily(META_SPACE_FAMILY);
+      // 元空間顯示所有空間的聚合成員信息
+      const allMembers: FamilyMember[] = [];
+      for (const family of userFamilies) {
+        try {
+          const { data, error } = await supabase
+            .from('family_members')
+            .select(`
+              id,
+              family_id,
+              user_id,
+              role,
+              joined_at,
+              users (
+                display_name,
+                email,
+                avatar_url
+              )
+            `)
+            .eq('family_id', family.id);
+
+          if (!error && data) {
+            allMembers.push(...data.map(member => ({
+              ...member,
+              user: member.users
+            })) as FamilyMember[]);
+          }
+        } catch (err) {
+          console.error(`獲取空間 ${family.id} 成員失敗:`, err);
+        }
+      }
+      
+      // 去重處理（同一用戶可能在多個空間中）
+      const uniqueMembers = allMembers.reduce((acc, member) => {
+        if (!acc.find(m => m.user_id === member.user_id)) {
+          acc.push(member);
+        }
+        return acc;
+      }, [] as FamilyMember[]);
+      
+      setFamilyMembers(uniqueMembers);
     } else {
       // 切換到指定家庭
       const familyToSwitch = userFamilies.find(f => f.id === familyId);
@@ -522,6 +583,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
         familyMembers,
         loading,
         error,
+        isMetaSpaceActive, // 新增
         createFamily,
         updateFamilyName,
         joinFamilyByCode,

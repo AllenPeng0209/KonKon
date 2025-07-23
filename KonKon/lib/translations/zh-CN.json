@@ -296,7 +296,7 @@
     "createFamily": "创建家庭",
     "joinFamily": "加入家庭",
     "recordedDays": "您已记录%{days}天",
-    "family": "家庭: %{familyName}",
+    "family": "%{familyName}",
     "createOrJoin": "创建或加入",
     "loading": "加载中...",
     "manageFamily": "家庭管理",
