@@ -115,11 +115,12 @@ const DraggableFamilyItem: React.FC<DraggableFamilyItemProps> = ({
   const styles = getStyles(colorScheme);
 
   const resetDragState = useCallback(() => {
+    console.log(`[DRAG] resetDragState 被調用 - index: ${index}`);
+    translateY.value = 0; // 立即重置，不使用動畫
     draggedIndex.value = -1;
     isDragging.value = false;
     setIsCurrentlyDragging(false);
-    translateY.value = withSpring(0);
-  }, [draggedIndex, isDragging, translateY]);
+  }, [draggedIndex, isDragging, translateY, index]);
 
   // 當空間變為非激活狀態時，重置拖拽狀態
   useEffect(() => {
@@ -151,63 +152,70 @@ const DraggableFamilyItem: React.FC<DraggableFamilyItemProps> = ({
     };
   });
 
+  // 簡化的手勢處理邏輯
   const onLongPress = useCallback(({ nativeEvent }: LongPressGestureHandlerGestureEvent) => {
-    // 元空間不參與拖拽
     if (isMetaSpace) return;
     
     if (nativeEvent.state === State.ACTIVE) {
-      // 苹果风格的haptic feedback
+      console.log(`[DRAG] 長按激活 - index: ${index}`);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       draggedIndex.value = index;
       isDragging.value = true;
       setIsCurrentlyDragging(true);
-    } else if (nativeEvent.state === State.END || nativeEvent.state === State.CANCELLED || nativeEvent.state === State.FAILED) {
-      // 長按結束、取消或失敗時，重置狀態
-      if (draggedIndex.value === index) {
-        runOnJS(resetDragState)();
-      }
     }
-  }, [draggedIndex, index, isDragging, resetDragState, isMetaSpace]);
+  }, [draggedIndex, index, isDragging, isMetaSpace]);
 
-  const onPanGesture = useCallback(({ nativeEvent }: PanGestureHandlerGestureEvent) => {
-    // 元空間不參與拖拽
+  // 連續的手勢事件處理（用於流暢動畫）
+  const onPanGestureEvent = useCallback((event: any) => {
+    'worklet';
+    // 只有在拖拽模式激活時才更新位置
+    if (draggedIndex.value === index && !isMetaSpace) {
+      translateY.value = event.translationY;
+    }
+  }, [draggedIndex, index, translateY, isMetaSpace]);
+
+  // 手勢狀態變化處理（用於邏輯控制）
+  const onPanGestureStateChange = useCallback(({ nativeEvent }: PanGestureHandlerGestureEvent) => {
     if (isMetaSpace) return;
     
-    // 只有在拖拽模式下或者长按已激活时才响应拖拽
-    if (draggedIndex.value !== index && draggedIndex.value !== -1) return;
-    
-    if (nativeEvent.state === State.BEGAN) {
-      // 如果还没有激活拖拽模式，在开始拖拽时也可以激活
-      if (draggedIndex.value === -1) {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        draggedIndex.value = index;
-        isDragging.value = true;
-        runOnJS(setIsCurrentlyDragging)(true);
-      }
-    } else if (nativeEvent.state === State.ACTIVE && draggedIndex.value === index) {
-      translateY.value = nativeEvent.translationY;
-    } else if (nativeEvent.state === State.END && draggedIndex.value === index) {
-      const currentPosition = index * (ITEM_HEIGHT + MARGIN_BOTTOM) + nativeEvent.translationY;
-      const newIndex = Math.round(currentPosition / (ITEM_HEIGHT + MARGIN_BOTTOM));
-      const clampedIndex = Math.max(0, Math.min(4, newIndex)); // 假設最多5個家庭
-      
-      if (clampedIndex !== index && clampedIndex >= 0) {
-        // 轻微的完成haptic feedback
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        runOnJS(onDragEnd)(index, clampedIndex);
-        // 延遲重置拖拽狀態，確保重排完成後才允許點擊
-        setTimeout(() => {
-          runOnJS(resetDragState)();
-        }, 100);
-      } else {
-        // 沒有重排，立即重置狀態
-        runOnJS(resetDragState)();
-      }
+    if (nativeEvent.state === State.END && draggedIndex.value === index) {
+      // 拖動結束 - 全部使用 runOnJS 包裝，在 JS 線程中處理
+      runOnJS(() => {
+        console.log(`[DRAG] 拖動結束 - translationY: ${nativeEvent.translationY}`);
+        
+        const dragDistance = nativeEvent.translationY;
+        const itemDistance = ITEM_HEIGHT + MARGIN_BOTTOM;
+        const steps = Math.round(dragDistance / itemDistance);
+        const newIndex = index + steps;
+        
+        // 限制在有效範圍內（1 到 totalSpacesCount）
+        const minIndex = 1; // 不能拖到元空間位置
+        const maxIndex = totalSpacesCount; // 用戶空間的最大索引
+        const clampedIndex = Math.max(minIndex, Math.min(maxIndex, newIndex));
+        
+        console.log(`[DRAG] 計算結果 - 從 ${index} 到 ${clampedIndex}`);
+        
+        // 先重置狀態
+        resetDragState();
+        
+        // 如果位置有變化，延遲執行重新排序，確保動畫狀態完全重置
+        if (clampedIndex !== index) {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          
+          // 延遲觸發重新排序，讓 React 有時間處理狀態重置
+          setTimeout(() => {
+            console.log(`[DRAG] 延遲觸發重新排序 - 從 ${index} 到 ${clampedIndex}`);
+            onDragEnd(index, clampedIndex);
+          }, 50);
+        }
+      })();
     } else if ((nativeEvent.state === State.CANCELLED || nativeEvent.state === State.FAILED) && draggedIndex.value === index) {
-      // 處理拖拽被取消或失敗的情況
-      runOnJS(resetDragState)();
+      runOnJS(() => {
+        console.log(`[DRAG] 拖動取消或失敗`);
+        resetDragState();
+      })();
     }
-  }, [draggedIndex, index, translateY, onDragEnd, isDragging, resetDragState, isMetaSpace]);
+  }, [draggedIndex, index, onDragEnd, resetDragState, isMetaSpace, totalSpacesCount]);
 
   const handlePress = useCallback(() => {
     // 直接切換，不要中間步驟
@@ -227,8 +235,8 @@ const DraggableFamilyItem: React.FC<DraggableFamilyItemProps> = ({
       <Animated.View>
         <PanGestureHandler
           ref={panRef}
-          onGestureEvent={onPanGesture}
-          onHandlerStateChange={onPanGesture}
+          onGestureEvent={onPanGestureEvent}
+          onHandlerStateChange={onPanGestureStateChange}
           simultaneousHandlers={longPressRef}
           enabled={!isMetaSpace} // 元空間不啟用拖拽
         >
@@ -307,17 +315,27 @@ const Drawer: React.FC<DrawerProps> = ({ onClose, translateX }) => {
     onClose();
   };
 
-  const handleDragEnd = useCallback((fromIndex: number, toIndex: number) => {
-    // 調整索引，因為元空間占用了第0位
-    const adjustedFromIndex = fromIndex - 1;
-    const adjustedToIndex = toIndex - 1;
+  const handleDragEnd = useCallback((fromVisualIndex: number, toVisualIndex: number) => {
+    console.log(`[DRAG] handleDragEnd 被調用 - 從 ${fromVisualIndex} 到 ${toVisualIndex}`);
     
-    if (adjustedFromIndex !== adjustedToIndex && adjustedFromIndex >= 0 && adjustedToIndex >= 0) {
-      const reorderedIds = [...userFamilies];
-      const [movedItem] = reorderedIds.splice(adjustedFromIndex, 1);
-      reorderedIds.splice(adjustedToIndex, 0, movedItem);
+    // 將視覺索引轉換為用戶空間數組索引（減去元空間占用的第0位）
+    const fromIndex = fromVisualIndex - 1;
+    const toIndex = toVisualIndex - 1;
+    
+    console.log(`[DRAG] 轉換後的索引 - 從 ${fromIndex} 到 ${toIndex}, 用戶空間數量: ${userFamilies.length}`);
+    
+    if (fromIndex !== toIndex && fromIndex >= 0 && toIndex >= 0 && 
+        fromIndex < userFamilies.length && toIndex < userFamilies.length) {
+      console.log(`[DRAG] 開始重新排序`);
       
+      const reorderedIds = [...userFamilies];
+      const [movedItem] = reorderedIds.splice(fromIndex, 1);
+      reorderedIds.splice(toIndex, 0, movedItem);
+      
+      console.log(`[DRAG] 重新排序完成，新順序:`, reorderedIds.map(f => f.name));
       reorderFamilies(reorderedIds.map(family => family.id));
+    } else {
+      console.log(`[DRAG] 跳過重新排序 - 條件不滿足`);
     }
   }, [userFamilies, reorderFamilies]);
 
@@ -371,6 +389,7 @@ const Drawer: React.FC<DrawerProps> = ({ onClose, translateX }) => {
           <ScrollView 
             style={styles.familyList} 
             showsVerticalScrollIndicator={false}
+            scrollEnabled={true} // 暫時保持滾動開啟
           >
             {/* 元空間 - 固定在最上方 */}
             <DraggableFamilyItem
@@ -402,6 +421,7 @@ const Drawer: React.FC<DrawerProps> = ({ onClose, translateX }) => {
                   onDragEnd={handleDragEnd}
                   draggedIndex={draggedIndex}
                   colorScheme={colorScheme}
+                  totalSpacesCount={userFamilies.length}
                 />
               );
             })}
