@@ -2,7 +2,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Dimensions, Image, Modal, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import {
   LongPressGestureHandler,
@@ -23,8 +23,26 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useFamily } from '../../contexts/FamilyContext';
 
 const { width } = Dimensions.get('window');
-const ITEM_HEIGHT = 68; // 家庭項目高度
+const ITEM_HEIGHT = 68; // 空間項目高度
 const MARGIN_BOTTOM = 8; // 項目間距
+
+// 空間標籤圖標映射
+const TAG_ICONS: { [key: string]: string } = {
+  family: '🏠',
+  personal: '🔒', 
+  couple: '💖',
+  work: '💼',
+  friend: '👥',
+  course: '🎯',
+  school: '🏫',
+  club: '⭐',
+  hobby: '💡',
+  other: '👥'
+};
+
+const getTagIcon = (tag?: string): string => {
+  return tag ? TAG_ICONS[tag] || '🏠' : '🏠';
+};
 
 interface DrawerProps {
   onClose: () => void;
@@ -42,6 +60,7 @@ interface Family {
   created_at: string | null;
   updated_at: string | null;
   member_count?: number;
+  tag?: string;
 }
 
 interface DraggableFamilyItemProps {
@@ -69,10 +88,25 @@ const DraggableFamilyItem: React.FC<DraggableFamilyItemProps> = ({
   const scale = useSharedValue(1);
   const opacity = useSharedValue(1);
   const isDragging = useSharedValue(false);
+  const [isCurrentlyDragging, setIsCurrentlyDragging] = useState(false);
   const longPressRef = React.useRef<LongPressGestureHandler>(null);
   const panRef = React.useRef<PanGestureHandler>(null);
 
   const styles = getStyles(colorScheme);
+
+  const resetDragState = useCallback(() => {
+    draggedIndex.value = -1;
+    isDragging.value = false;
+    setIsCurrentlyDragging(false);
+    translateY.value = withSpring(0);
+  }, [draggedIndex, isDragging, translateY]);
+
+  // 當空間變為非激活狀態時，重置拖拽狀態
+  useEffect(() => {
+    if (!isActive && draggedIndex.value === index) {
+      resetDragState();
+    }
+  }, [isActive, index, draggedIndex, resetDragState]);
 
   const animatedStyle = useAnimatedStyle(() => {
     const isBeingDragged = draggedIndex.value === index;
@@ -103,8 +137,14 @@ const DraggableFamilyItem: React.FC<DraggableFamilyItemProps> = ({
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       draggedIndex.value = index;
       isDragging.value = true;
+      setIsCurrentlyDragging(true);
+    } else if (nativeEvent.state === State.END || nativeEvent.state === State.CANCELLED || nativeEvent.state === State.FAILED) {
+      // 長按結束、取消或失敗時，重置狀態
+      if (draggedIndex.value === index) {
+        runOnJS(resetDragState)();
+      }
     }
-  }, [draggedIndex, index, isDragging]);
+  }, [draggedIndex, index, isDragging, resetDragState]);
 
   const onPanGesture = useCallback(({ nativeEvent }: PanGestureHandlerGestureEvent) => {
     // 只有在拖拽模式下或者长按已激活时才响应拖拽
@@ -116,6 +156,7 @@ const DraggableFamilyItem: React.FC<DraggableFamilyItemProps> = ({
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         draggedIndex.value = index;
         isDragging.value = true;
+        runOnJS(setIsCurrentlyDragging)(true);
       }
     } else if (nativeEvent.state === State.ACTIVE && draggedIndex.value === index) {
       translateY.value = nativeEvent.translationY;
@@ -124,29 +165,36 @@ const DraggableFamilyItem: React.FC<DraggableFamilyItemProps> = ({
       const newIndex = Math.round(currentPosition / (ITEM_HEIGHT + MARGIN_BOTTOM));
       const clampedIndex = Math.max(0, Math.min(4, newIndex)); // 假設最多5個家庭
       
-      translateY.value = withSpring(0);
-      draggedIndex.value = -1;
-      isDragging.value = false;
-      
       if (clampedIndex !== index && clampedIndex >= 0) {
         // 轻微的完成haptic feedback
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         runOnJS(onDragEnd)(index, clampedIndex);
+        // 延遲重置拖拽狀態，確保重排完成後才允許點擊
+        setTimeout(() => {
+          runOnJS(resetDragState)();
+        }, 100);
+      } else {
+        // 沒有重排，立即重置狀態
+        runOnJS(resetDragState)();
       }
+    } else if ((nativeEvent.state === State.CANCELLED || nativeEvent.state === State.FAILED) && draggedIndex.value === index) {
+      // 處理拖拽被取消或失敗的情況
+      runOnJS(resetDragState)();
     }
-  }, [draggedIndex, index, translateY, onDragEnd, isDragging]);
+  }, [draggedIndex, index, translateY, onDragEnd, isDragging, resetDragState]);
 
   const handlePress = useCallback(() => {
-    if (draggedIndex.value === -1 && family.id !== onSwitchFamily.toString()) {
+    // 直接切換，不要中間步驟
+    if (!isActive) {
       onSwitchFamily(family.id);
     }
-  }, [family.id, onSwitchFamily, draggedIndex]);
+  }, [family.id, onSwitchFamily, isActive]);
 
   return (
     <LongPressGestureHandler
       ref={longPressRef}
       onHandlerStateChange={onLongPress}
-      minDurationMs={300}
+      minDurationMs={500}
       simultaneousHandlers={panRef}
     >
       <Animated.View>
@@ -168,7 +216,7 @@ const DraggableFamilyItem: React.FC<DraggableFamilyItemProps> = ({
             >
               <View style={[styles.familyIcon, isActive && styles.activeFamilyIcon]}>
                 <Text style={[styles.familyIconText, isActive && styles.activeFamilyIconText]}>
-                  {family.name.charAt(0).toUpperCase()}
+                  {getTagIcon(family.tag) || family.name.charAt(0).toUpperCase()}
                 </Text>
               </View>
               <View style={styles.familyInfo}>
@@ -293,7 +341,7 @@ const Drawer: React.FC<DrawerProps> = ({ onClose, translateX }) => {
           <View style={styles.footer}>
             <TouchableOpacity style={styles.addGroupButton} onPress={() => setModalVisible(true)}>
               <Ionicons name="add" size={24} color={Colors.dark.text} />
-              <Text style={styles.addGroupButtonText}>新建群組</Text>
+              <Text style={styles.addGroupButtonText}>新建空間</Text>
             </TouchableOpacity>
           </View>
         </SafeAreaView>
@@ -314,11 +362,11 @@ const Drawer: React.FC<DrawerProps> = ({ onClose, translateX }) => {
           <View style={styles.modalView}>
             <TouchableOpacity style={styles.modalButton} onPress={handleCreateFamily}>
               <Ionicons name="add-circle-outline" size={22} color={Colors.light.tint} />
-              <Text style={styles.modalButtonText}>創建新家庭</Text>
+              <Text style={styles.modalButtonText}>創建新空間</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.modalButton} onPress={handleJoinFamily}>
               <Ionicons name="enter-outline" size={22} color={Colors.light.tint} />
-              <Text style={styles.modalButtonText}>加入家庭</Text>
+              <Text style={styles.modalButtonText}>加入空間</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.modalButton, { marginTop: 10, backgroundColor: '#f0f0f0' }]}

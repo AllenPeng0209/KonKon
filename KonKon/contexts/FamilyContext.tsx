@@ -36,7 +36,7 @@ interface FamilyContextType {
   loading: boolean;
   error: string | null;
   
-  createFamily: (data: { name: string; description?: string }) => Promise<Family | null>;
+  createFamily: (data: { name: string; description?: string; tag?: string }) => Promise<Family | null>;
   updateFamilyName: (familyId: string, newName: string) => Promise<boolean>;
   joinFamilyByCode: (inviteCode: string) => Promise<boolean>;
   refreshFamilies: () => Promise<void>;
@@ -245,7 +245,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const createFamily = async (data: { name: string; description?: string }) => {
+  const createFamily = async (data: { name: string; description?: string; tag?: string }) => {
     if (!user) {
       setError('用户未登录');
       return null;
@@ -260,6 +260,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
         .insert({
           name: data.name,
           description: data.description,
+          tag: data.tag || 'family',
           owner_id: user.id,
         })
         .select()

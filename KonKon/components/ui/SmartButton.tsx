@@ -1,3 +1,4 @@
+import { ParsedAlbumResult, voiceAlbumService } from '@/lib/voiceAlbumService';
 import { Audio } from 'expo-av';
 import * as FileSystem from 'expo-file-system';
 import { useRef, useState } from 'react';
@@ -13,8 +14,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { t } from '@/lib/i18n';
-import { ParsedAlbumResult, voiceAlbumService } from '@/lib/voiceAlbumService';
 
 interface SmartButtonProps {
   onPress?: () => void;
@@ -362,7 +361,6 @@ export default function SmartButton({
                 onChangeText={setInputText}
                 multiline
                 maxLength={1000}
-                autoFocus
                 editable={!isProcessing}
               />
             </View>

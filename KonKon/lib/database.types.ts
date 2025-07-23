@@ -491,6 +491,7 @@ export type Database = {
           name: string
           owner_id: string
           settings: Json | null
+          tag: string | null
           timezone: string | null
           updated_at: string | null
         }
@@ -504,6 +505,7 @@ export type Database = {
           name: string
           owner_id: string
           settings?: Json | null
+          tag?: string | null
           timezone?: string | null
           updated_at?: string | null
         }
@@ -517,6 +519,7 @@ export type Database = {
           name?: string
           owner_id?: string
           settings?: Json | null
+          tag?: string | null
           timezone?: string | null
           updated_at?: string | null
         }
@@ -802,6 +805,120 @@ export type Database = {
             columns: ["family_id"]
             isOneToOne: false
             referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      family_notifications: {
+        Row: {
+          created_at: string | null
+          family_id: string
+          id: string
+          is_read: boolean | null
+          is_sent: boolean | null
+          message: string
+          metadata: Json | null
+          push_notification_id: string | null
+          push_notification_sent: boolean | null
+          read_at: string | null
+          recipient_id: string
+          related_id: string | null
+          related_type: string | null
+          sender_id: string
+          sent_at: string | null
+          title: string
+          type: string
+        }
+        Insert: {
+          created_at?: string | null
+          family_id: string
+          id?: string
+          is_read?: boolean | null
+          is_sent?: boolean | null
+          message: string
+          metadata?: Json | null
+          push_notification_id?: string | null
+          push_notification_sent?: boolean | null
+          read_at?: string | null
+          recipient_id: string
+          related_id?: string | null
+          related_type?: string | null
+          sender_id: string
+          sent_at?: string | null
+          title: string
+          type: string
+        }
+        Update: {
+          created_at?: string | null
+          family_id?: string
+          id?: string
+          is_read?: boolean | null
+          is_sent?: boolean | null
+          message?: string
+          metadata?: Json | null
+          push_notification_id?: string | null
+          push_notification_sent?: boolean | null
+          read_at?: string | null
+          recipient_id?: string
+          related_id?: string | null
+          related_type?: string | null
+          sender_id?: string
+          sent_at?: string | null
+          title?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "family_notifications_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "family_notifications_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "family_notifications_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      family_order_preferences: {
+        Row: {
+          created_at: string | null
+          family_order: Json
+          id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          family_order?: Json
+          id?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          family_order?: Json
+          id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "family_order_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -1696,136 +1813,6 @@ export type Database = {
           },
         ]
       }
-      tags: {
-        Row: {
-          color: string
-          created_at: string | null
-          family_id: string
-          id: string
-          name: string
-        }
-        Insert: {
-          color?: string
-          created_at?: string | null
-          family_id: string
-          id?: string
-          name: string
-        }
-        Update: {
-          color?: string
-          created_at?: string | null
-          family_id?: string
-          id?: string
-          name?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "tags_family_id_fkey"
-            columns: ["family_id"]
-            isOneToOne: false
-            referencedRelation: "families"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      users: {
-        Row: {
-          avatar_url: string | null
-          created_at: string | null
-          display_name: string
-          email: string
-          id: string
-          language_preference: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          avatar_url?: string | null
-          created_at?: string | null
-          display_name: string
-          email: string
-          id: string
-          language_preference?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          avatar_url?: string | null
-          created_at?: string | null
-          display_name?: string
-          email?: string
-          id?: string
-          language_preference?: string | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      family_notifications: {
-        Row: {
-          created_at: string | null
-          family_id: string
-          id: string
-          is_read: boolean | null
-          is_sent: boolean | null
-          message: string
-          metadata: Json | null
-          push_notification_id: string | null
-          push_notification_sent: boolean | null
-          read_at: string | null
-          recipient_id: string
-          related_id: string | null
-          related_type: string | null
-          sender_id: string
-          sent_at: string | null
-          title: string
-          type: string
-        }
-        Insert: {
-          created_at?: string | null
-          family_id: string
-          id?: string
-          is_read?: boolean | null
-          is_sent?: boolean | null
-          message: string
-          metadata?: Json | null
-          push_notification_id?: string | null
-          push_notification_sent?: boolean | null
-          read_at?: string | null
-          recipient_id: string
-          related_id?: string | null
-          related_type?: string | null
-          sender_id: string
-          sent_at?: string | null
-          title: string
-          type: string
-        }
-        Update: {
-          created_at?: string | null
-          family_id?: string
-          id?: string
-          is_read?: boolean | null
-          is_sent?: boolean | null
-          message?: string
-          metadata?: Json | null
-          push_notification_id?: string | null
-          push_notification_sent?: boolean | null
-          read_at?: string | null
-          recipient_id?: string
-          related_id?: string | null
-          related_type?: string | null
-          sender_id?: string
-          sent_at?: string | null
-          title?: string
-          type?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "family_notifications_family_id_fkey"
-            columns: ["family_id"]
-            isOneToOne: false
-            referencedRelation: "families"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       notification_preferences: {
         Row: {
           created_at: string | null
@@ -1886,9 +1873,144 @@ export type Database = {
             referencedRelation: "families"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "notification_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
         ]
       }
-      [key: string]: any  // 临时解决其他表的类型
+      tags: {
+        Row: {
+          color: string
+          created_at: string | null
+          family_id: string
+          id: string
+          name: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string | null
+          family_id: string
+          id?: string
+          name: string
+        }
+        Update: {
+          color?: string
+          created_at?: string | null
+          family_id?: string
+          id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tags_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      todos: {
+        Row: {
+          assigned_to: string | null
+          completed_at: string | null
+          created_at: string | null
+          description: string | null
+          due_date: string | null
+          family_id: string
+          id: string
+          priority: string
+          status: string
+          title: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          description?: string | null
+          due_date?: string | null
+          family_id: string
+          id?: string
+          priority?: string
+          status?: string
+          title: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          assigned_to?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          description?: string | null
+          due_date?: string | null
+          family_id?: string
+          id?: string
+          priority?: string
+          status?: string
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "todos_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "todos_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "todos_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      users: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          display_name: string
+          email: string
+          id: string
+          language_preference: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          display_name: string
+          email: string
+          id: string
+          language_preference?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          display_name?: string
+          email?: string
+          id?: string
+          language_preference?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
