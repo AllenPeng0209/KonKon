@@ -1,6 +1,7 @@
 import { ParsedAlbumResult, voiceAlbumService } from '@/lib/voiceAlbumService';
 import { Audio } from 'expo-av';
 import * as FileSystem from 'expo-file-system';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -132,6 +133,7 @@ export default function SmartButton({
         onAlbumParseResult({
           albumName: albumRequest.albumName,
           theme: albumRequest.theme || '日常生活',
+          keywords: albumRequest.keywords || [],
           success: true
         });
       } else if (onTextResult) {
@@ -348,7 +350,11 @@ export default function SmartButton({
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <View style={styles.bottomBar}>
+        <LinearGradient
+          colors={['rgba(255, 255, 255, 0)', 'rgba(255, 255, 255, 0.6)', 'rgba(255, 255, 255, 0.9)', '#ffffff']}
+          locations={[0, 0.2, 0.6, 1]}
+          style={styles.bottomBar}
+        >
           <View style={styles.textModeContainer}>
             {/* 返回语音模式按钮 */}
             <TouchableOpacity 
@@ -398,14 +404,18 @@ export default function SmartButton({
               <Text style={styles.processingText}>正在智能解析日程...</Text>
             </View>
           )}
-        </View>
+        </LinearGradient>
       </KeyboardAvoidingView>
     );
   }
 
   // 语音录制模式
   return (
-    <View style={styles.bottomBar}>
+    <LinearGradient
+      colors={['rgba(255, 255, 255, 0)', 'rgba(255, 255, 255, 0.6)', 'rgba(255, 255, 255, 0.9)', '#ffffff']}
+      locations={[0, 0.2, 0.6, 1]}
+      style={styles.bottomBar}
+    >
       {/* 展开的功能按钮 */}
       {isExpanded && (
         <View style={styles.expandedButtons}>
@@ -480,10 +490,10 @@ export default function SmartButton({
           style={styles.textInputButton} 
           onPress={handleTextInputPress}
         >
-          <Text style={styles.textInputButtonText}>✏️</Text>
+          <Text style={styles.textInputButtonText}>⌨️</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </LinearGradient>
   );
 }
 
@@ -491,9 +501,8 @@ const styles = StyleSheet.create({
   bottomBar: {
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+    paddingTop: 12,
+    minHeight: 60,
   },
   expandedButtons: {
     flexDirection: 'row',
@@ -523,15 +532,18 @@ const styles = StyleSheet.create({
   mainButtonContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#007AFF',
+    borderRadius: 24,
+    padding: 4,
+    gap: 8,
   },
   plusButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#007AFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
   },
   plusIcon: {
     fontSize: 20,
@@ -540,7 +552,7 @@ const styles = StyleSheet.create({
   },
   smartButton: {
     flex: 1,
-    backgroundColor: '#007AFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
     borderRadius: 20,
     paddingVertical: 12,
     paddingHorizontal: 20,
@@ -548,7 +560,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   smartButtonDisabled: {
-    backgroundColor: '#999',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
   smartButtonRecording: {
     backgroundColor: '#FF3B30',
@@ -565,10 +577,9 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#007AFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 12,
   },
   textInputButtonText: {
     fontSize: 16,

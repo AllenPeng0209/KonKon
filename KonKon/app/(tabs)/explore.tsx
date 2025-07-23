@@ -1,14 +1,14 @@
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef } from 'react';
 import {
-    KeyboardAvoidingView,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../contexts/AuthContext';
@@ -254,9 +254,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   toolbarContainer: {
-    paddingHorizontal: 16,
-    paddingBottom: 8,
-    paddingTop: 8,
+    paddingHorizontal: 0,
+    paddingBottom: 0,
+    paddingTop: 0,
   },
   calendarStatus: {
     flexDirection: 'row',
