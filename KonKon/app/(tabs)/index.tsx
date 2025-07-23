@@ -23,6 +23,7 @@ import ShoppingViewSelector, {
   ShoppingItem,
   Store,
 } from '@/components/shopping/ShoppingViewSelector';
+import { useDrawer } from '@/contexts/DrawerContext';
 import { useFamily } from '@/contexts/FamilyContext';
 import { useFeatureSettings } from '@/contexts/FeatureSettingsContext';
 import { useChores } from '@/hooks/useChores';
@@ -45,6 +46,7 @@ import { t } from '@/lib/i18n';
 import type { MealPlan } from '@/lib/mealService';
 import mealService from '@/lib/mealService';
 import { ParsedAlbumResult, voiceAlbumService } from '@/lib/voiceAlbumService';
+import { Ionicons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
@@ -71,6 +73,7 @@ export default function HomeScreen() {
   const { user, loading } = useAuth();
   const { userFamilies, activeFamily, switchFamily } = useFamily();
   const { featureSettings, resetAllSettings } = useFeatureSettings();
+  const { openDrawer } = useDrawer();
   const router = useRouter();
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [showFamilyMenu, setShowFamilyMenu] = useState(false);
@@ -1517,6 +1520,13 @@ export default function HomeScreen() {
       {/* 顶部标题栏 */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
+          <TouchableOpacity 
+            style={styles.hamburgerButton} 
+            onPress={openDrawer}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="menu" size={24} color="#000" />
+          </TouchableOpacity>
           <TouchableOpacity style={styles.recordFilterButton} onPress={toggleFilterMenu}>
             <Text style={styles.recordFilterText}>{filterOptions.find(opt => opt.value === selectedFilter)?.label}</Text>
             <Text style={styles.recordFilterIcon}>▼</Text>
@@ -2493,6 +2503,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     zIndex: 1,
+  },
+  hamburgerButton: {
+    padding: 8,
+    marginRight: 8,
   },
   recordFilterButton: {
     flexDirection: 'row',

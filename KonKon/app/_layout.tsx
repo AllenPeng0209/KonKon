@@ -20,6 +20,7 @@ import 'react-native-reanimated';
 import { useSharedValue, withTiming } from 'react-native-reanimated';
 import Drawer from '../components/common/Drawer';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
+import { DrawerProvider } from '../contexts/DrawerContext';
 import { FamilyProvider } from '../contexts/FamilyContext';
 import { FeatureSettingsProvider } from '../contexts/FeatureSettingsContext';
 import { LanguageProvider } from '../contexts/LanguageContext';
@@ -51,8 +52,16 @@ function ProtectedLayout() {
       return;
     }
     if (event.nativeEvent.oldState === State.ACTIVE) {
-      const { translationX, translationY } = event.nativeEvent;
-      if (translationX > 100 && Math.abs(translationY) < 50) {
+      const { translationX, translationY, x } = event.nativeEvent;
+      
+      // 計算手勢開始位置：當前位置減去移動距離
+      const startX = x - translationX;
+      
+      // 只有從屏幕左側邊緣開始的滑動才觸發Drawer
+      // 限制在左側60px以內才能觸發
+      const isFromLeftEdge = startX <= 60;
+      
+      if (isFromLeftEdge && translationX > 100 && Math.abs(translationY) < 50) {
         setDrawerVisible(true);
       } 
       // else if (translationX < -100 && Math.abs(translationY) < 50) {
@@ -63,6 +72,10 @@ function ProtectedLayout() {
 
   const closeDrawer = () => {
     setDrawerVisible(false);
+  };
+
+  const openDrawer = () => {
+    setDrawerVisible(true);
   };
 
   useEffect(() => {
@@ -91,43 +104,43 @@ function ProtectedLayout() {
       <View style={{ flex: 1 }}>
         <FeatureSettingsProvider>
           <FamilyProvider>
-            <>
-            <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-              <Stack>
-                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                <Stack.Screen name="login" options={{ headerShown: false }} />
-                <Stack.Screen name="register" options={{ headerShown: false }} />
-                <Stack.Screen name="profile" options={{ headerShown: false }} />
-                <Stack.Screen name="create-family" options={{ headerShown: false }} />
-                <Stack.Screen name="family-management" options={{ headerShown: false }} />
-                <Stack.Screen name="join-family" options={{ headerShown: false }} />
-                <Stack.Screen name="settings" options={{ headerShown: false }} />
-                <Stack.Screen name="notifications" options={{ headerShown: false }} />
-                <Stack.Screen name="user-agreement" options={{ headerShown: false }} />
-                <Stack.Screen name="privacy-policy" options={{ headerShown: false }} />
-                <Stack.Screen name="about" options={{ headerShown: false }} />
-                <Stack.Screen name="edit-profile" options={{ headerShown: false }} />
-                <Stack.Screen name="change-password" options={{ headerShown: false }} />
-                <Stack.Screen name="notification-settings" options={{ headerShown: false }} />
-                <Stack.Screen name="language-selection" options={{ headerShown: false }} />
-                <Stack.Screen name="calendar-settings" options={{ headerShown: false }} />
-                <Stack.Screen name="feature-settings" options={{ headerShown: false }} />
-                <Stack.Screen name="calendar-style-selection" options={{ headerShown: false }} />
-                <Stack.Screen name="finance-management" options={{ headerShown: false }} />
-                <Stack.Screen name="assistant-settings" options={{ headerShown: false }} />
-                <Stack.Screen name="avatar" options={{ headerShown: false, animation: 'slide_from_right' }} />
-                <Stack.Screen name="+not-found" />
-              </Stack>
-              <StatusBar style="auto" />
-            </ThemeProvider>
-            
-            {isDrawerVisible && (
-              <TouchableWithoutFeedback onPress={closeDrawer}>
-                <View style={StyleSheet.absoluteFill} />
-              </TouchableWithoutFeedback>
-            )}
-            <Drawer onClose={closeDrawer} translateX={translateX} />
-            </>
+            <DrawerProvider openDrawer={openDrawer}>
+              <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+                <Stack>
+                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                  <Stack.Screen name="login" options={{ headerShown: false }} />
+                  <Stack.Screen name="register" options={{ headerShown: false }} />
+                  <Stack.Screen name="profile" options={{ headerShown: false }} />
+                  <Stack.Screen name="create-family" options={{ headerShown: false }} />
+                  <Stack.Screen name="family-management" options={{ headerShown: false }} />
+                  <Stack.Screen name="join-family" options={{ headerShown: false }} />
+                  <Stack.Screen name="settings" options={{ headerShown: false }} />
+                  <Stack.Screen name="notifications" options={{ headerShown: false }} />
+                  <Stack.Screen name="user-agreement" options={{ headerShown: false }} />
+                  <Stack.Screen name="privacy-policy" options={{ headerShown: false }} />
+                  <Stack.Screen name="about" options={{ headerShown: false }} />
+                  <Stack.Screen name="edit-profile" options={{ headerShown: false }} />
+                  <Stack.Screen name="change-password" options={{ headerShown: false }} />
+                  <Stack.Screen name="notification-settings" options={{ headerShown: false }} />
+                  <Stack.Screen name="language-selection" options={{ headerShown: false }} />
+                  <Stack.Screen name="calendar-settings" options={{ headerShown: false }} />
+                  <Stack.Screen name="feature-settings" options={{ headerShown: false }} />
+                  <Stack.Screen name="calendar-style-selection" options={{ headerShown: false }} />
+                  <Stack.Screen name="finance-management" options={{ headerShown: false }} />
+                  <Stack.Screen name="assistant-settings" options={{ headerShown: false }} />
+                  <Stack.Screen name="avatar" options={{ headerShown: false, animation: 'slide_from_right' }} />
+                  <Stack.Screen name="+not-found" />
+                </Stack>
+                <StatusBar style="auto" />
+              </ThemeProvider>
+              
+              {isDrawerVisible && (
+                <TouchableWithoutFeedback onPress={closeDrawer}>
+                  <View style={StyleSheet.absoluteFill} />
+                </TouchableWithoutFeedback>
+              )}
+              <Drawer onClose={closeDrawer} translateX={translateX} />
+            </DrawerProvider>
           </FamilyProvider>
         </FeatureSettingsProvider>
       </View>

@@ -1,7 +1,6 @@
-import React from 'react';
-import { StyleSheet, Text, View, Image } from 'react-native';
-import { UIFamilyChatMessage } from '@/lib/familyChat';
 import { useAuth } from '@/contexts/AuthContext';
+import { UIFamilyChatMessage } from '@/lib/familyChat';
+import { Image, StyleSheet, Text, View } from 'react-native';
 
 interface FamilyChatMessageProps {
   message: UIFamilyChatMessage;
@@ -144,7 +143,7 @@ const styles = StyleSheet.create({
   },
   avatarContainer: {
     marginRight: 8,
-    marginTop: 20, // 对齐消息气泡顶部
+    marginTop: 0, // 与顶部对齐
   },
   avatar: {
     width: 40,
