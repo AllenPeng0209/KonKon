@@ -1,27 +1,27 @@
-import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFamily } from '@/contexts/FamilyContext';
+import { BailianMessage, sendBailianMessage } from '@/lib/bailian';
 import {
-  UIFamilyChatMessage,
-  sendFamilyChatMessage,
-  getFamilyChatHistory,
-  subscribeFamilyChatMessages,
-  saveFamilyChatSession
+    UIFamilyChatMessage,
+    getFamilyChatHistory,
+    saveFamilyChatSession,
+    sendFamilyChatMessage,
+    subscribeFamilyChatMessages
 } from '@/lib/familyChat';
 import {
-  loadFamilyChatCache,
-  saveFamilyChatCache,
-  addMessageToCache,
-  mergeHistoryToCache,
-  isCacheExpired,
-  getCacheConfig,
-  FamilyChatCache
+    FamilyChatCache,
+    addMessageToCache,
+    getCacheConfig,
+    isCacheExpired,
+    loadFamilyChatCache,
+    mergeHistoryToCache,
+    saveFamilyChatCache
 } from '@/lib/familyChatCache';
-import { sendBailianMessage, BailianMessage } from '@/lib/bailian';
 import { getCurrentLocation } from '@/lib/location';
-import { useEvents } from './useEvents';
 import { nanoid } from '@/lib/nanoid';
 import { supabase } from '@/lib/supabase';
+import { useCallback, useEffect, useState } from 'react';
+import { useEvents } from './useEvents';
 
 export function useFamilyChat() {
   const { user } = useAuth();
@@ -196,6 +196,11 @@ export function useFamilyChat() {
 
   // 格式化事件数据为可读文本
   const formatEventsForAI = useCallback(() => {
+    // 特殊處理元空間：元空間是純粹的個人AI對話空間，不包含任何日程信息
+    if (activeFamily?.id === 'meta-space') {
+      return "";
+    }
+
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
@@ -238,12 +243,17 @@ export function useFamilyChat() {
     });
 
     return eventsText;
-  }, [events]);
+  }, [events, activeFamily]);
 
   // 格式化家庭信息
   const formatFamilyInfoForAI = useCallback(() => {
     if (!activeFamily) {
       return "用户暂未加入任何家庭群组。";
+    }
+
+    // 特殊處理元空間：元空間是純粹的個人AI對話空間，不包含家庭信息
+    if (activeFamily.id === 'meta-space') {
+      return "这是你的个人AI助手对话空间。";
     }
 
     let familyText = `【家庭信息】\n`;
@@ -303,12 +313,14 @@ export function useFamilyChat() {
     setIsLoading(true);
 
     try {
-      // 1. 异步保存用户消息到数据库
-      sendFamilyChatMessage({
-        family_id: activeFamily.id,
-        content,
-        message_type: 'user'
-      }).catch(err => console.error('保存用户消息失败:', err));
+      // 1. 异步保存用户消息到数据库（元空間不保存到資料庫）
+      if (activeFamily.id !== 'meta-space') {
+        sendFamilyChatMessage({
+          family_id: activeFamily.id,
+          content,
+          message_type: 'user'
+        }).catch(err => console.error('保存用户消息失败:', err));
+      }
 
       // 2. 并行准备AI响应数据（无需等待定位完成）
       const locationPromise = getCurrentLocation().catch(() => null);
@@ -319,16 +331,24 @@ export function useFamilyChat() {
       
       // 简化聊天历史构建（只取最近10条消息，减少处理时间）
       const recentMessages = messages.slice(-10);
-      const baseHistory: BailianMessage[] = [
-        {
-          role: 'system',
-          content: `你是家庭智能助理"喵萌"，专门为家庭群组提供贴心服务。你能看到家庭的日历安排和成员信息，请基于这些数据给出智能建议。
+      
+      // 根據空間類型設定不同的系統提示詞
+      const systemPrompt = activeFamily.id === 'meta-space' 
+        ? `你是個人AI助手"喵萌"，專門為個人用戶提供貼心服務。你是用戶的私人助手，可以協助解答各種問題、提供建議和進行日常對話。
+
+特點：友善親切，樂於助人，擅長傾聽和理解用戶需求。這是你與用戶的私人對話空間。`
+        : `你是家庭智能助理"喵萌"，专门为家庭群组提供贴心服务。你能看到家庭的日历安排和成员信息，请基于这些数据给出智能建议。
 
 ${familyInfo}
 
 ${eventsInfo}
 
-特点：卖萌可爱，讲话简洁温馨，擅长分析家庭日程，关注家庭成员的协调。这是家庭群聊，可能有多个成员参与对话。`,
+特点：卖萌可爱，讲话简洁温馨，擅长分析家庭日程，关注家庭成员的协调。这是家庭群聊，可能有多个成员参与对话。`;
+      
+      const baseHistory: BailianMessage[] = [
+        {
+          role: 'system',
+          content: systemPrompt,
         },
         ...recentMessages
           .filter(msg => msg.content.trim() !== '' && !msg.isLoading)
@@ -384,12 +404,14 @@ ${eventsInfo}
           .catch(err => console.warn('[FamilyChat] 保存緩存失敗:', err));
       }
 
-      // 5. 异步保存AI响应到数据库（不阻塞UI）
-      sendFamilyChatMessage({
-        family_id: activeFamily.id,
-        content: assistantResponse,
-        message_type: 'assistant'
-      }).catch(err => console.error('保存AI响应失败:', err));
+      // 5. 异步保存AI响应到数据库（不阻塞UI，元空間不保存到資料庫）
+      if (activeFamily.id !== 'meta-space') {
+        sendFamilyChatMessage({
+          family_id: activeFamily.id,
+          content: assistantResponse,
+          message_type: 'assistant'
+        }).catch(err => console.error('保存AI响应失败:', err));
+      }
 
     } catch (error) {
       console.error('发送消息失败:', error);
@@ -420,13 +442,15 @@ ${eventsInfo}
         setCurrentCache(updatedCache);
       }
 
-      // 异步保存错误信息
-      sendFamilyChatMessage({
-        family_id: activeFamily.id,
-        content: '抱歉，我遇到了一些问题，请稍后再试。',
-        message_type: 'assistant',
-        metadata: { error: true }
-      }).catch(err => console.error('保存错误消息失败:', err));
+      // 异步保存错误信息（元空間不保存到資料庫）
+      if (activeFamily.id !== 'meta-space') {
+        sendFamilyChatMessage({
+          family_id: activeFamily.id,
+          content: '抱歉，我遇到了一些问题，请稍后再试。',
+          message_type: 'assistant',
+          metadata: { error: true }
+        }).catch(err => console.error('保存错误消息失败:', err));
+      }
     } finally {
       setIsLoading(false);
     }
@@ -434,7 +458,7 @@ ${eventsInfo}
 
   // 保存聊天会话
   const saveChatSession = useCallback(async () => {
-    if (!activeFamily || messages.length === 0) return;
+    if (!activeFamily || messages.length === 0 || activeFamily.id === 'meta-space') return;
 
     try {
       await saveFamilyChatSession(activeFamily.id, messages);

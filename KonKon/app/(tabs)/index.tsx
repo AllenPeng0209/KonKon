@@ -44,7 +44,7 @@ import CalendarService from '@/lib/calendarService';
 import { t } from '@/lib/i18n';
 import type { MealPlan } from '@/lib/mealService';
 import mealService from '@/lib/mealService';
-import { ParsedAlbumResult } from '@/lib/voiceAlbumService';
+import { ParsedAlbumResult, voiceAlbumService } from '@/lib/voiceAlbumService';
 import * as FileSystem from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
@@ -423,7 +423,10 @@ export default function HomeScreen() {
         const base64Data = await stopRecording();
         if (base64Data) {
           // 根据当前filter决定处理方式
-          if (selectedFilter === 'todos') {
+          if (selectedFilter === 'familyAlbum') {
+            // 相簿模式：讓用戶選擇功能
+            handleAlbumModeVoiceResult(base64Data);
+          } else if (selectedFilter === 'todos') {
             Alert.alert(
               '語音處理',
               '是否將語音轉換為待辦事項？',
@@ -588,7 +591,7 @@ export default function HomeScreen() {
     }
   };
 
-  // 處理相簿選取功能 - 從相簿選取照片並添加到家庭相簿
+  // 處理相簿選取功能 - 根據當前模式決定行為
   const handleAlbumPress = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (permissionResult.granted === false) {
@@ -598,15 +601,47 @@ export default function HomeScreen() {
 
     const pickerResult = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsMultipleSelection: true,
+      allowsMultipleSelection: selectedFilter === 'familyAlbum', // 只有相簿模式才允許多選
       quality: 0.7,
-      base64: true, // 需要base64用於上傳
+      base64: true, // 需要base64用於上傳和OCR識別
     });
 
     if (!pickerResult.canceled && pickerResult.assets && pickerResult.assets.length > 0) {
-      // 打開 AddMemoryModal 來添加到相簿
-      setInitialMemoryImages(pickerResult.assets);
-      setShowAddMemoryModal(true);
+      const asset = pickerResult.assets[0];
+      
+      if (selectedFilter === 'familyAlbum') {
+        // 相簿模式：打開 AddMemoryModal 來添加到相簿
+        setInitialMemoryImages(pickerResult.assets);
+        setShowAddMemoryModal(true);
+      } else if (selectedFilter === 'todos' && asset.base64) {
+        // 待辦模式：使用OCR識別圖片中的待辦事項
+        setIsProcessingImage(true);
+        setLoadingText('正在識別圖片中的待辦事項...');
+        try {
+          const result = await processImageToTodo(asset.base64);
+          await handleTodoResult(result);
+        } catch (error) {
+          console.error('圖片處理失敗:', error);
+          Alert.alert(t('home.error'), '圖片識別失敗，請重試');
+        } finally {
+          setIsProcessingImage(false);
+          setLoadingText('');
+        }
+      } else if (asset.base64) {
+        // 其他模式（日曆等）：使用OCR識別日程內容
+        setIsProcessingImage(true);
+        setLoadingText(t('home.processingImage'));
+        try {
+          const result = await processImageToCalendar(asset.base64);
+          handleAIResult(result);
+        } catch (error) {
+          console.error('圖片處理失敗:', error);
+          Alert.alert(t('home.error'), t('home.imageProcessingFailed'));
+        } finally {
+          setIsProcessingImage(false);
+          setLoadingText('');
+        }
+      }
     }
   };
 
@@ -707,7 +742,15 @@ export default function HomeScreen() {
         Alert.alert('錯誤', '創建待辦事項失敗，請重試');
       }
     } else {
-      Alert.alert('提示', '未能從輸入中識別出待辦事項');
+      Alert.alert(
+        '圖片解析結果',
+        '未能從圖片中識別出待辦事項。\n\n請確保圖片中包含明確的任務描述。',
+        [
+          { text: '重新選擇', onPress: () => handleAlbumPress() },
+          { text: '手動添加', onPress: () => handleManualAdd() },
+          { text: '取消', style: 'cancel' }
+        ]
+      );
     }
   };
 
@@ -882,7 +925,17 @@ export default function HomeScreen() {
       setPendingSummary(result.summary);
       setIsConfirmationModalVisible(true);
     } else {
-      // handleTextError(); // No longer needed, SmartButton will handle it
+      // 當沒有解析出事件時，給用戶友好的反饋
+      const summary = result.summary || '未能從圖片中識別出日程信息';
+      Alert.alert(
+        '圖片解析結果',
+        `${summary}\n\n請確保圖片中包含明確的日程信息，如時間、地點、事件名稱等。`,
+        [
+          { text: '重新選擇', onPress: () => handleAlbumPress() },
+          { text: '手動添加', onPress: () => handleManualAdd() },
+          { text: '取消', style: 'cancel' }
+        ]
+      );
     }
   };
 
@@ -927,6 +980,44 @@ export default function HomeScreen() {
     } else {
       Alert.alert('語音識別失敗', result.error || '無法識別相簿創建指令，請重新嘗試');
     }
+  };
+
+  // 新增：處理相簿模式下的語音輸入，讓用戶選擇功能
+  const handleAlbumModeVoiceResult = async (base64Data: string) => {
+    Alert.alert(
+      '語音功能選擇',
+      '您想要用這段語音做什麼？',
+      [
+        {
+          text: '取消',
+          style: 'cancel',
+          onPress: () => clearRecording()
+        },
+        {
+          text: '創建相簿',
+          onPress: async () => {
+            try {
+              setLoadingText('正在解析相簿創建指令...');
+              setIsProcessingImage(true);
+              const result = await voiceAlbumService.processVoiceToAlbum(base64Data);
+              handleAlbumAIResult(result);
+            } catch (error: any) {
+              Alert.alert('錯誤', error.message || '相簿創建失敗');
+            } finally {
+              setIsProcessingImage(false);
+              setLoadingText('');
+              clearRecording();
+            }
+          }
+        },
+        {
+          text: '創建日程',
+          onPress: () => {
+            handleVoiceToCalendar(base64Data);
+          }
+        }
+      ]
+    );
   };
 
   const handleConfirmCreateEvent = () => {
@@ -2075,7 +2166,7 @@ export default function HomeScreen() {
         text={voiceState.isRecording ? 
           t('home.isRecording', { duration: Math.floor(voiceState.duration / 1000) }) : 
           (selectedFilter === 'familyAlbum' ? 
-            '🎤 長按說話, 快速創建' : 
+            '🎤 長按說話, 智能選擇功能' : 
             selectedFilter === 'todos' ?
               '🎤 按說話, 快速創建' :
               t('home.longPressToTalk')
@@ -2087,7 +2178,7 @@ export default function HomeScreen() {
         onTextResult={handleTextResult}
         onParseResult={selectedFilter === 'todos' ? handleTodoVoiceResult : 
           (selectedFilter !== 'familyAlbum' ? handleAIResult : undefined)}
-        onAlbumParseResult={selectedFilter === 'familyAlbum' ? handleAlbumAIResult : undefined}
+        onAlbumParseResult={undefined} // 相簿模式不再自動解析，改為用戶選擇
         onError={handleTextError}
         onManualAddPress={handleManualAdd}
         onPhotoPress={handlePhotoPress}

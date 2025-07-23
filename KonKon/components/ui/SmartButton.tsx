@@ -275,7 +275,11 @@ export default function SmartButton({
             console.log('AI 相簿创建解析完成:', result);
             
             if (!result || !result.success) {
-              throw new Error(result.error || '未能解析出相簿创建指令');
+              // 直接調用錯誤處理，不要拋出異常避免觸發其他邏輯
+              const errorMessage = result?.error || '未能解析出相簿创建指令';
+              console.error('相簿創建解析失敗:', errorMessage);
+              onError?.(errorMessage);
+              return; // 提前返回，避免執行後續邏輯
             }
 
             onAlbumParseResult(result);
@@ -289,7 +293,10 @@ export default function SmartButton({
             console.log('Bailian Omni Calendar 解析完成:', result);
             
             if (!result || result.events.length === 0) {
-              throw new Error('未能解析出任何日程事件');
+              const errorMessage = '未能解析出任何日程事件';
+              console.error('日程解析失敗:', errorMessage);
+              onError?.(errorMessage);
+              return; // 提前返回，避免執行後續邏輯
             }
 
             onParseResult(result);

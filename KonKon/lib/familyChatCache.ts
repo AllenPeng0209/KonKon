@@ -21,6 +21,11 @@ export interface FamilyChatCache {
  * 保存家庭聊天緩存
  */
 export async function saveFamilyChatCache(familyId: string, messages: UIFamilyChatMessage[], hasMoreMessages: boolean = true): Promise<void> {
+  // 特殊處理元空間：元空間是虛擬概念，不需要保存緩存
+  if (familyId === 'meta-space') {
+    return;
+  }
+
   try {
     const cacheKey = `${CACHE_CONFIG.cacheKeyPrefix}${familyId}`;
     
@@ -46,6 +51,11 @@ export async function saveFamilyChatCache(familyId: string, messages: UIFamilyCh
  * 讀取家庭聊天緩存
  */
 export async function loadFamilyChatCache(familyId: string): Promise<FamilyChatCache | null> {
+  // 特殊處理元空間：元空間是虛擬概念，不需要緩存
+  if (familyId === 'meta-space') {
+    return null;
+  }
+
   try {
     const cacheKey = `${CACHE_CONFIG.cacheKeyPrefix}${familyId}`;
     const cachedData = await AsyncStorage.getItem(cacheKey);

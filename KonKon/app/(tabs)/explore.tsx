@@ -136,7 +136,7 @@ export default function ExploreScreen() {
           
           <View style={styles.headerCenter}>
             <Text style={styles.groupTitle}>
-              {familyName}（{memberCount}人）
+              {familyName === '元空間' ? '元空間' : `${familyName}（${memberCount}人）`}
             </Text>
             {isLoadingHistory && (
               <Text style={styles.loadingHint}>正在加载聊天记录...</Text>

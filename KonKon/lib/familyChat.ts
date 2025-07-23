@@ -1,5 +1,5 @@
-import { supabase } from './supabase';
 import { Tables, TablesInsert } from './database.types';
+import { supabase } from './supabase';
 
 // 类型定义
 export type FamilyChatMessage = Tables<'family_chat_messages'>;
@@ -38,6 +38,11 @@ export async function sendFamilyChatMessage({
   reply_to_id,
   metadata = {}
 }: SendFamilyMessageParams): Promise<FamilyChatMessage> {
+  // 特殊處理元空間：元空間是虛擬概念，無法發送消息
+  if (family_id === 'meta-space') {
+    throw new Error('無法向元空間發送消息');
+  }
+
   const { data: user } = await supabase.auth.getUser();
   
   if (!user.user) {
@@ -73,6 +78,11 @@ export async function getFamilyChatHistory({
   limit = 50,
   before
 }: FamilyChatHistoryParams): Promise<UIFamilyChatMessage[]> {
+  // 特殊處理元空間：元空間是虛擬概念，沒有聊天記錄
+  if (family_id === 'meta-space') {
+    return [];
+  }
+
   let query = supabase
     .from('family_chat_messages')
     .select(`
@@ -230,6 +240,14 @@ export function subscribeFamilyChatMessages(
   onMessage: (message: UIFamilyChatMessage) => void,
   onDelete: (messageId: string) => void
 ) {
+  // 特殊處理元空間：元空間是虛擬概念，無需實時訂閱
+  if (family_id === 'meta-space') {
+    // 返回一個虛擬的 channel，提供 unsubscribe 方法但不執行任何操作
+    return {
+      unsubscribe: () => {}
+    };
+  }
+
   const channel = supabase
     .channel(`family_chat:${family_id}`)
     .on(

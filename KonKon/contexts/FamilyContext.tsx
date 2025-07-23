@@ -370,46 +370,8 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     } else if (familyId === 'meta-space') {
       // 切換到元空間
       setActiveFamily(META_SPACE_FAMILY);
-      // 元空間顯示所有空間的聚合成員信息
-      const allMembers: FamilyMember[] = [];
-      for (const family of userFamilies) {
-        try {
-          const { data, error } = await supabase
-            .from('family_members')
-            .select(`
-              id,
-              family_id,
-              user_id,
-              role,
-              joined_at,
-              users (
-                display_name,
-                email,
-                avatar_url
-              )
-            `)
-            .eq('family_id', family.id);
-
-          if (!error && data) {
-            allMembers.push(...data.map(member => ({
-              ...member,
-              user: member.users
-            })) as FamilyMember[]);
-          }
-        } catch (err) {
-          console.error(`獲取空間 ${family.id} 成員失敗:`, err);
-        }
-      }
-      
-      // 去重處理（同一用戶可能在多個空間中）
-      const uniqueMembers = allMembers.reduce((acc, member) => {
-        if (!acc.find(m => m.user_id === member.user_id)) {
-          acc.push(member);
-        }
-        return acc;
-      }, [] as FamilyMember[]);
-      
-      setFamilyMembers(uniqueMembers);
+      // 元空間是純粹的個人AI對話空間，不顯示任何家庭成員信息
+      setFamilyMembers([]);
     } else {
       // 切換到指定家庭
       const familyToSwitch = userFamilies.find(f => f.id === familyId);
