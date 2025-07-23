@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
     KeyboardAvoidingView,
     Platform,
@@ -20,14 +20,14 @@ import { BailianConfig } from '../../components/chat/BailianConfig';
 import { ChatContainer } from '../../components/chat/ChatContainer';
 import { ChatToolbar } from '../../components/chat/ChatToolbar';
 
-import { FamilyChatMessage } from '../../components/chat/FamilyChatMessage';
 import { ChatTimeStamp } from '../../components/chat/ChatTimeStamp';
+import { FamilyChatMessage } from '../../components/chat/FamilyChatMessage';
 
 // 自定义 Hook
 import { t } from '@/lib/i18n';
 
-import { useFamilyChat } from '../../hooks/useFamilyChat';
 import { useEvents } from '../../hooks/useEvents';
+import { useFamilyChat } from '../../hooks/useFamilyChat';
 
 export default function ExploreScreen() {
   const { user, loading } = useAuth();
@@ -63,7 +63,7 @@ export default function ExploreScreen() {
 
   useEffect(() => {
     if (scrollViewRef.current) {
-      scrollViewRef.current.scrollToEnd({ animated: true });
+      scrollViewRef.current.scrollToEnd({ animated: false });
     }
   }, [familyMessages]);
 
@@ -163,8 +163,8 @@ export default function ExploreScreen() {
             ref={scrollViewRef}
             style={styles.messagesContainer}
             contentContainerStyle={styles.messagesContentContainer}
-            onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
-            onLayout={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+            onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: false })}
+            onLayout={() => scrollViewRef.current?.scrollToEnd({ animated: false })}
             onScroll={handleScroll}
             scrollEventThrottle={100}
           >
