@@ -107,8 +107,8 @@ export default function ExploreScreen() {
     router.back();
   };
 
-  const navigateToProfile = () => {
-    router.push('/profile');
+  const navigateToAssistantSettings = () => {
+    router.push('/assistant-settings');
   };
 
   // 移除清除聊天功能，因为群聊记录需要保持持久化
@@ -143,7 +143,7 @@ export default function ExploreScreen() {
             )}
           </View>
 
-          <TouchableOpacity style={styles.moreButton} onPress={navigateToProfile}>
+          <TouchableOpacity style={styles.moreButton} onPress={navigateToAssistantSettings}>
             <Text style={styles.moreButtonText}>•••</Text>
           </TouchableOpacity>
         </View>

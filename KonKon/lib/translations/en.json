@@ -655,5 +655,52 @@
       "monthlyBudget": "Monthly Budget",
       "trackCategories": "Track Categories"
     }
+  },
+  "assistantSettings": {
+    "title": "Assistant Settings",
+    "loading": "Loading...",
+    "reset": "Reset",
+    "resetConfirmTitle": "Reset Settings",
+    "resetConfirmMessage": "Are you sure you want to reset all assistant settings to default values?",
+    "cancel": "Cancel",
+    "resetButton": "Reset",
+    "saveFailed": "Save Failed",
+    "saveFailedMessage": "Unable to save settings, please try again later.",
+    "trackingFeatures": {
+      "title": "Feature Tracking",
+      "description": "Choose which features the assistant can actively monitor and remind you about",
+      "calendar": {
+        "name": "Calendar Events",
+        "description": "Track family schedules and reminders"
+      },
+      "tasks": {
+        "name": "Todo Items",
+        "description": "Monitor task completion status"
+      },
+      "album": {
+        "name": "Family Album",
+        "description": "Stay updated on latest photos and memories"
+      },
+      "chores": {
+        "name": "Chore Assignment",
+        "description": "Track household chore completion"
+      },
+      "shopping": {
+        "name": "Shopping List",
+        "description": "Manage shopping needs"
+      },
+      "finance": {
+        "name": "Family Finance",
+        "description": "Monitor expenses and budget"
+      },
+      "health": {
+        "name": "Health Management",
+        "description": "Keep track of family health status"
+      }
+    },
+    "proactiveReminders": {
+      "name": "Proactive Reminders",
+      "description": "Allow the assistant to send proactive reminders and suggestions"
+    }
   }
 }

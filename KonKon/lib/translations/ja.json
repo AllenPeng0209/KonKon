@@ -671,5 +671,52 @@
       "monthlyBudget": "月次予算",
       "trackCategories": "カテゴリー追跡"
     }
+  },
+  "assistantSettings": {
+    "title": "アシスタント設定",
+    "loading": "読み込み中...",
+    "reset": "リセット",
+    "resetConfirmTitle": "設定をリセット",
+    "resetConfirmMessage": "アシスタントの設定をすべてデフォルト値にリセットしますか？",
+    "cancel": "キャンセル",
+    "resetButton": "リセット",
+    "saveFailed": "保存に失敗",
+    "saveFailedMessage": "設定を保存できませんでした。後でもう一度お試しください。",
+    "trackingFeatures": {
+      "title": "機能追跡",
+      "description": "アシスタントが積極的に監視し、リマインドする機能を選択してください",
+      "calendar": {
+        "name": "カレンダーイベント",
+        "description": "家族のスケジュールとリマインダーを追跡"
+      },
+      "tasks": {
+        "name": "タスク一覧",
+        "description": "タスクの完了状況を監視"
+      },
+      "album": {
+        "name": "家族アルバム",
+        "description": "最新の写真と思い出を把握"
+      },
+      "chores": {
+        "name": "家事分担",
+        "description": "家事の完了状況を追跡"
+      },
+      "shopping": {
+        "name": "買い物リスト",
+        "description": "買い物のニーズを管理"
+      },
+      "finance": {
+        "name": "家計管理",
+        "description": "支出と予算を監視"
+      },
+      "health": {
+        "name": "健康管理",
+        "description": "家族の健康状態を気にかける"
+      }
+    },
+    "proactiveReminders": {
+      "name": "プロアクティブリマインダー",
+      "description": "アシスタントが積極的にリマインダーや提案を送信することを許可"
+    }
   }
 }
