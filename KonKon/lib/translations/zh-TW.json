@@ -363,7 +363,6 @@
   },
   "profile": {
     "title": "個人中心",
-    "recordedDays": "已記錄 {days} 天",
     "createOrJoinFamilyTitle": "家庭設置",
     "createOrJoinFamilyMessage": "請選擇建立新家庭或加入現有家庭",
     "cancel": "取消",

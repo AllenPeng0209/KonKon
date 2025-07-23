@@ -162,7 +162,9 @@ export default function HomeScreen() {
     setShoppingItems(items => items.map(item => item.id === itemId ? { ...item, completed: !item.completed, completedDate: !item.completed ? new Date() : undefined } : item));
   };
   const handleItemAdd = (item: Omit<ShoppingItem, 'id'>) => {
-    const newItem = { ...item, id: Math.random().toString(), ...item };
+    // 使用時間戳和隨機數組合生成唯一ID
+    const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+    const newItem = { ...item, id: uniqueId };
     setShoppingItems(items => [...items, newItem]);
   };
   const handleItemDelete = (itemId: string) => {

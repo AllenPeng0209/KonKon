@@ -102,6 +102,7 @@ function ProtectedLayout() {
                 <Stack.Screen name="family-management" options={{ headerShown: false }} />
                 <Stack.Screen name="join-family" options={{ headerShown: false }} />
                 <Stack.Screen name="settings" options={{ headerShown: false }} />
+                <Stack.Screen name="notifications" options={{ headerShown: false }} />
                 <Stack.Screen name="user-agreement" options={{ headerShown: false }} />
                 <Stack.Screen name="privacy-policy" options={{ headerShown: false }} />
                 <Stack.Screen name="about" options={{ headerShown: false }} />

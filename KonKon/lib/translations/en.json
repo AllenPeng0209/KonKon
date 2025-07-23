@@ -312,7 +312,6 @@
     "cancel": "Cancel",
     "createFamily": "Create Family",
     "joinFamily": "Join Family",
-    "recordedDays": "You have recorded for %{days} days",
     "family": "%{familyName}",
     "createOrJoin": "Create or Join",
     "loading": "Loading...",

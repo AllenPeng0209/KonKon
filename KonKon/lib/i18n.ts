@@ -205,7 +205,6 @@ type TranslationKeys =
   | 'profile.createFamily'
   | 'profile.joinFamily'
   | 'profile.title'
-  | 'profile.recordedDays'
   | 'profile.family'
   | 'profile.createOrJoin'
   | 'profile.loading'

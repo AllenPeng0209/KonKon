@@ -159,7 +159,6 @@ export default function ProfileScreen() {
                 </View>
               </View>
               <Text style={styles.userId}>ID: {user?.id.slice(0, 8).toUpperCase()}</Text>
-              <Text style={styles.recordDays}>{t('profile.recordedDays', { days: 0 })}</Text>
             </View>
             <TouchableOpacity style={styles.editButton} onPress={() => router.push('/edit-profile')}>
               <Text style={styles.editIcon}>✏️</Text>
@@ -339,14 +338,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6b7280',
     marginBottom: 5,
-  },
-  recordDays: {
-    fontSize: 14,
-    color: '#6b7280',
-  },
-  daysNumber: {
-    color: '#007AFF',
-    fontWeight: '600',
   },
   editButton: {
     width: 30,
