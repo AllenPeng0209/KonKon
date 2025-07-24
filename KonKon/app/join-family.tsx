@@ -11,7 +11,7 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    View,
+    View
 } from 'react-native';
 import { useFamily } from '../contexts/FamilyContext';
 
@@ -56,59 +56,67 @@ export default function JoinFamilyScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* 顶部标题栏 */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color="#007AFF" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>{t('joinFamily.title')}</Text>
+        <View style={styles.headerRight} />
+      </View>
+
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardAvoidingView}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
-        {/* 顶部标题栏 */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#007AFF" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>{t('joinFamily.title')}</Text>
-          <View style={styles.headerRight} />
-        </View>
+        <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.content}>
+            {/* 说明文本 */}
+            <View style={styles.introSection}>
+              <Text style={styles.introIcon}>👨‍👩‍👧‍👦</Text>
+              <Text style={styles.introTitle}>{t('joinFamily.introTitle')}</Text>
+              <Text style={styles.introText}>
+                {t('joinFamily.introText')}
+              </Text>
+            </View>
 
-        <View style={styles.content}>
-          {/* 说明文本 */}
-          <View style={styles.introSection}>
-            <Text style={styles.introIcon}>👨‍👩‍👧‍👦</Text>
-            <Text style={styles.introTitle}>{t('joinFamily.introTitle')}</Text>
-            <Text style={styles.introText}>
-              {t('joinFamily.introText')}
-            </Text>
-          </View>
+            {/* 表单区域 */}
+            <View style={styles.formSection}>
+              <Text style={styles.label}>{t('joinFamily.inviteCode')}</Text>
+              <TextInput
+                style={styles.input}
+                value={inviteCode}
+                onChangeText={setInviteCode}
+                placeholder={t('joinFamily.inviteCodePlaceholder')}
+                placeholderTextColor="#9CA3AF"
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              
+              {error && (
+                <View style={styles.errorContainer}>
+                  <Text style={styles.errorText}>{error}</Text>
+                </View>
+              )}
+            </View>
 
-          {/* 表单区域 */}
-          <View style={styles.formSection}>
-            <Text style={styles.label}>{t('joinFamily.inviteCode')}</Text>
-            <TextInput
-              style={styles.input}
-              value={inviteCode}
-              onChangeText={setInviteCode}
-              placeholder={t('joinFamily.inviteCodePlaceholder')}
-              placeholderTextColor="#9CA3AF"
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            
-            {error && (
-              <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{error}</Text>
-              </View>
-            )}
+            {/* 说明 */}
+            <View style={styles.helpSection}>
+              <Text style={styles.helpTitle}>{t('joinFamily.helpTitle')}</Text>
+              <Text style={styles.helpText}>
+                {t('joinFamily.helpText1')}{'\n'}
+                {t('joinFamily.helpText2')}{'\n'}
+                {t('joinFamily.helpText3')}
+              </Text>
+            </View>
           </View>
-
-          {/* 说明 */}
-          <View style={styles.helpSection}>
-            <Text style={styles.helpTitle}>{t('joinFamily.helpTitle')}</Text>
-            <Text style={styles.helpText}>
-              {t('joinFamily.helpText1')}{'\n'}
-              {t('joinFamily.helpText2')}{'\n'}
-              {t('joinFamily.helpText3')}
-            </Text>
-          </View>
-        </View>
+        </ScrollView>
 
         {/* 底部按钮 */}
         <View style={styles.bottomSection}>
@@ -134,6 +142,12 @@ const styles = StyleSheet.create({
   },
   keyboardAvoidingView: {
     flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   header: {
     flexDirection: 'row',

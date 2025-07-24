@@ -145,7 +145,11 @@ interface AddEventModalProps {
   onClose: () => void;
   onSave: (eventData: CreateEventData) => Promise<void>;
   initialDate?: Date;
-  userFamilies?: Array<{id: string, name: string, [key: string]: any}>;
+  userFamilies: Array<{
+    id: string;
+    name: string;
+    tag?: string | null;
+  }>;
   editingEvent?: any;
   onUpdate?: (eventId: string, eventData: CreateEventData) => Promise<void>;
   onDelete?: (eventId: string) => Promise<void>;
@@ -240,6 +244,11 @@ export default function AddEventModal({
     return availableUsers.filter(user => selectedAttendees.includes(user.id));
   }, [availableUsers, selectedAttendees]);
 
+  // 過濾出可分享的家庭（排除個人空間）
+  const shareableFamilies = React.useMemo(() => {
+    return userFamilies.filter(family => family.tag !== 'personal');
+  }, [userFamilies]);
+
   useEffect(() => {
     if (visible) {
       if (editingEvent) {
@@ -269,33 +278,48 @@ export default function AddEventModal({
               }
             }
 
-            console.log('🔍 查詢事件分享信息:', {
+            console.log('🔍 查詢事件分享信息 - 開始:', {
               originalId: editingEvent.id,
               queryId: eventIdToQuery,
-              hasParent: !!editingEvent.parent_event_id
+              hasParent: !!editingEvent.parent_event_id,
+              localIsShared: editingEvent.is_shared,
+              localSharedFamilies: editingEvent.shared_families
             });
 
+            // 使用 DISTINCT 確保沒有重複的家庭ID，並獲取詳細信息
             const { data: shares, error } = await supabase
               .from('event_shares')
-              .select('family_id')
+              .select('family_id, shared_by, created_at')
               .eq('event_id', eventIdToQuery);
 
-            console.log('🔍 分享查詢結果:', { shares, error });
+            console.log('🔍 分享查詢結果 - 詳細:', { 
+              shares, 
+              error,
+              queryId: eventIdToQuery,
+              shareCount: shares?.length || 0 
+            });
 
             if (!error && shares && shares.length > 0) {
-              const familyIds = shares.map(share => share.family_id);
-              console.log('✅ 找到分享的家庭:', { 
-                count: familyIds.length, 
-                familyIds
+              // 使用 Set 確保家庭ID唯一性
+              const uniqueFamilyIds = [...new Set(shares.map(share => share.family_id))];
+              console.log('✅ 找到分享的家庭 - 詳細:', { 
+                count: uniqueFamilyIds.length, 
+                familyIds: uniqueFamilyIds,
+                allShares: shares
               });
-              setSelectedFamilies(familyIds);
+              setSelectedFamilies(uniqueFamilyIds);
             } else {
-              console.log('❌ 沒有找到分享信息，設置為私人事件');
+              console.log('❌ 沒有找到分享信息，設置為私人事件 - 詳細:', {
+                hasError: !!error,
+                errorMessage: error?.message,
+                sharesLength: shares?.length || 0,
+                queryId: eventIdToQuery
+              });
               // 重置為空，表示私人事件
               setSelectedFamilies([]);
             }
           } catch (error) {
-            console.error('獲取事件分享信息失敗:', error);
+            console.error('獲取事件分享信息失敗 - 異常:', error);
             setSelectedFamilies([]);
           }
         };
@@ -531,12 +555,12 @@ export default function AddEventModal({
         // 如果沒有base64數據，跳過
         if (!image.base64) continue;
 
-        // 使用正確的路徑格式：{family_id}/{user_id}/{filename}
+        // 使用事件專用路徑格式：{family_id}/{user_id}/events/{filename}
         const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
-        const filePath = `${activeFamily.id}/${user.id}/${fileName}`;
+        const filePath = `${activeFamily.id}/${user.id}/events/${fileName}`;
         
         const { data, error: uploadError } = await supabase.storage
-          .from('memories')
+          .from('event-attachments')
           .upload(filePath, decode(image.base64), {
             contentType: 'image/jpeg',
             upsert: false, // 避免覆蓋現有文件
@@ -551,7 +575,7 @@ export default function AddEventModal({
         }
 
         const { data: { publicUrl } } = supabase.storage
-          .from('memories')
+          .from('event-attachments')
           .getPublicUrl(data.path);
           
         imageUrls.push(publicUrl);
@@ -587,7 +611,8 @@ export default function AddEventModal({
         endTime: allDay ? undefined : endTime,
         color: selectedColor,
         type: 'calendar',
-        shareToFamilies: selectedFamilies.length > 0 ? selectedFamilies : undefined,
+        // 🔥 修復：總是傳遞 selectedFamilies，包括空數組，這樣才能正確處理私人事件的情況
+        shareToFamilies: selectedFamilies,
         attendees: selectedAttendees,
         imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
       };
@@ -1012,7 +1037,7 @@ export default function AddEventModal({
                 </TouchableOpacity>
 
                 {/* 家庭分享选择 */}
-                {userFamilies.length > 0 && (
+                {shareableFamilies.length > 0 && (
                   <>
                     <TouchableOpacity
                       style={[styles.dateTimeButton, showFamilySection && styles.dateTimeButtonActive]}
@@ -1033,7 +1058,7 @@ export default function AddEventModal({
                           {selectedFamilies.length === 0 
                             ? '私人事件' 
                             : selectedFamilies.length === 1
-                              ? userFamilies.find(f => f.id === selectedFamilies[0])?.name || '1 個家庭'
+                              ? shareableFamilies.find(f => f.id === selectedFamilies[0])?.name || '1 個家庭'
                               : `${selectedFamilies.length} 個家庭`
                           }
                         </Text>
@@ -1053,7 +1078,35 @@ export default function AddEventModal({
                           選擇家庭後，該家庭的所有成員都能看到這個事件
                         </Text>
                         <View style={styles.familyContainer}>
-                          {userFamilies.map((family, index) => (
+                          {/* 私人事件按鈕 */}
+                          <TouchableOpacity
+                            style={[
+                              styles.familyButton,
+                              styles.privateEventButton,
+                              selectedFamilies.length === 0 && styles.familyButtonSelected,
+                            ]}
+                            onPress={() => {
+                              console.log('🔒 用戶點擊私人事件按鈕');
+                              setSelectedFamilies([]);
+                            }}
+                          >
+                            <Ionicons 
+                              name="lock-closed" 
+                              size={14} 
+                              color={selectedFamilies.length === 0 ? 'white' : '#666'} 
+                              style={{ marginRight: 5 }} 
+                            />
+                            <Text style={[
+                              styles.familyButtonText,
+                              selectedFamilies.length === 0 && styles.familyButtonTextSelected
+                            ]}>
+                              私人事件
+                            </Text>
+                            {selectedFamilies.length === 0 && (
+                              <Ionicons name="checkmark" size={16} color="white" style={{ marginLeft: 5 }} />
+                            )}
+                          </TouchableOpacity>
+                          {shareableFamilies.map((family, index) => (
                             <TouchableOpacity
                               key={`family-${index}`}
                               style={[
@@ -1447,6 +1500,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#f2f2f2',
     borderWidth: 1,
     borderColor: '#e0e0e0',
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   familyButtonSelected: {
     backgroundColor: '#007AFF',
@@ -1459,6 +1514,11 @@ const styles = StyleSheet.create({
   familyButtonTextSelected: {
     color: 'white',
     fontWeight: '500',
+  },
+  privateEventButton: {
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderColor: '#007AFF',
   },
   attendeesSection: {
     marginBottom: 15,

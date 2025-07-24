@@ -1333,7 +1333,11 @@ export default function HomeScreen() {
           }
         }
         
-        Alert.alert(t('home.success'), t('home.eventCreationSuccess'));
+        // 使用美化的成功模態框
+        setSuccessTitle(t('home.eventCreationSuccess'));
+        setSuccessMessage(t('home.eventCreationSuccessMessage', { title: eventData.title }));
+        setShowSuccessModal(true);
+        
         // 重新获取当月事件
         const currentDate = new Date();
         fetchEvents(currentDate.getFullYear(), currentDate.getMonth() + 1);
@@ -1355,7 +1359,10 @@ export default function HomeScreen() {
       const result = await updateEvent(eventId, eventData);
       
       if (result) {
-        Alert.alert(t('home.success'), t('home.eventUpdateSuccess'));
+        // 使用美化的成功模態框
+        setSuccessTitle(t('home.eventUpdateSuccess'));
+        setSuccessMessage(`事件「${eventData.title || ''}」已更新成功`);
+        setShowSuccessModal(true);
         // ✅ 移除不必要的 fetchEvents 调用 - updateEvent 内部已经处理了乐观更新
         // 只有在重复状态变化时，updateEvent 内部会异步刷新
       } else {
@@ -1614,13 +1621,39 @@ export default function HomeScreen() {
               )}
             </TouchableOpacity>
             
+            {/* 個人空間選項 */}
+            {userFamilies.find(f => f.tag === 'personal') && (
+              <TouchableOpacity
+                style={[
+                  styles.familyMenuItem,
+                  styles.metaSpaceMenuItem,
+                  activeFamily?.tag === 'personal' && styles.familyMenuItemActive
+                ]}
+                onPress={() => handleFamilySelect(userFamilies.find(f => f.tag === 'personal'))}
+              >
+                <View style={[styles.familyMenuIcon, styles.metaSpaceIcon]}>
+                  <Text style={styles.familyMenuIconText}>👤</Text>
+                </View>
+                <Text style={[
+                  styles.familyMenuText,
+                  styles.metaSpaceText,
+                  activeFamily?.tag === 'personal' && styles.familyMenuTextActive
+                ]}>
+                  個人空間
+                </Text>
+                {activeFamily?.tag === 'personal' && (
+                  <Text style={styles.familyMenuCheck}>✓</Text>
+                )}
+              </TouchableOpacity>
+            )}
+            
             {/* 分隔線 */}
-            {userFamilies.length > 0 && (
+            {userFamilies.filter(f => f.tag !== 'personal').length > 0 && (
               <View style={styles.familyMenuSeparator} />
             )}
             
-            {/* 家庭列表 */}
-            {userFamilies.map((family) => (
+            {/* 其他家庭列表（排除個人空間） */}
+            {userFamilies.filter(f => f.tag !== 'personal').map((family) => (
               <TouchableOpacity
                 key={family.id}
                 style={[
@@ -2328,7 +2361,11 @@ export default function HomeScreen() {
         onDeleteEvent={async (eventId: string) => {
           const success = await deleteEvent(eventId);
           if (success) {
-            Alert.alert(t('home.success'), t('home.eventDeleted'));
+            // 使用美化的成功模態框
+            setSuccessTitle(t('home.success'));
+            setSuccessMessage(t('home.eventDeleted'));
+            setShowSuccessModal(true);
+            
             // 重新获取当月事件
             const currentDate = new Date();
             fetchEvents(currentDate.getFullYear(), currentDate.getMonth() + 1);

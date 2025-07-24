@@ -80,9 +80,85 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         throw error;
       }
       setUserFamilyDetails(data);
+
+      // 自動創建個人空間（如果不存在）
+      await createPersonalSpaceIfNeeded(userId);
     } catch (error) {
       console.error('Error fetching user family details:', error);
       setUserFamilyDetails(null);
+    }
+  };
+
+  // 新增：自動創建個人空間
+  const createPersonalSpaceIfNeeded = async (userId: string) => {
+    try {
+      // 檢查用戶是否已有個人空間
+      const { data: existingPersonalSpace, error: checkError } = await supabase
+        .from('families')
+        .select('id')
+        .eq('owner_id', userId)
+        .eq('tag', 'personal')
+        .limit(1);
+
+      if (checkError) {
+        console.error('檢查個人空間時出錯:', checkError);
+        return;
+      }
+
+      // 如果已有個人空間，則不重複創建
+      if (existingPersonalSpace && existingPersonalSpace.length > 0) {
+        console.log('用戶已有個人空間，跳過創建');
+        return;
+      }
+
+      // 獲取用戶資料
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('display_name, email')
+        .eq('id', userId)
+        .single();
+
+      if (userError) {
+        console.error('獲取用戶資料失敗:', userError);
+        return;
+      }
+
+      const displayName = userData?.display_name || userData?.email?.split('@')[0] || '我';
+      
+      // 創建個人空間
+      const { data: personalSpace, error: createError } = await supabase
+        .from('families')
+        .insert({
+          name: '個人空間',
+          description: '我的私人日程和任務管理空間',
+          tag: 'personal',
+          owner_id: userId,
+        })
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('創建個人空間失敗:', createError);
+        return;
+      }
+
+      // 將用戶添加為個人空間的所有者
+      const { error: memberError } = await supabase
+        .from('family_members')
+        .insert({
+          family_id: personalSpace.id,
+          user_id: userId,
+          role: 'owner',
+        });
+
+      if (memberError) {
+        console.error('添加個人空間成員失敗:', memberError);
+        return;
+      }
+
+      console.log('個人空間創建成功:', personalSpace.id);
+    } catch (error) {
+      console.error('創建個人空間時發生異常:', error);
     }
   };
   

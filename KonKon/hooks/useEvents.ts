@@ -75,82 +75,68 @@ export const useEvents = () => {
       let allEvents: EventWithShares[] = [];
 
       if (!activeFamily) {
-        // 个人模式：获取用户的所有事件
-        console.log('个人模式：获取用户的所有事件');
+        // 无活跃家庭：不获取任何事件（这种情况应该很少见）
+        console.log('無活躍家庭：不獲取任何事件');
+        allEvents = [];
 
-        // 1. 获取用户创建的个人事件（没有分享给任何家庭的事件）
-        const { data: personalEvents, error: personalError } = await supabase
+      } else if (activeFamily.tag === 'personal') {
+        // 個人空間模式：只獲取用戶創建且未分享的私人事件
+        console.log('個人空間模式：獲取用戶創建的私人事件');
+        
+        // 1. 獲取用戶創建的所有事件
+        const { data: userCreatedEvents, error: userEventsError } = await supabase
           .from('events')
           .select('*')
-          .eq('creator_id', user.id)
-          .is('family_id', null); // 个人事件（旧字段，可能还有一些历史数据）
+          .eq('creator_id', user.id);
 
-        if (personalError) {
-          console.warn('获取个人事件失败:', personalError);
+        if (userEventsError) {
+          console.warn('獲取用戶創建的事件失敗:', userEventsError);
         }
 
-        // 2. 获取用户参与的所有家庭事件
-        const userFamilyIds = userFamilies;
-        if (userFamilyIds.length > 0) {
-          const { data: familySharedEvents, error: familyError } = await supabase
+        if (userCreatedEvents && userCreatedEvents.length > 0) {
+          // 2. 檢查這些事件是否被分享給任何家庭
+          const eventIds = userCreatedEvents.map(e => e.id);
+          const { data: sharedEvents, error: shareError } = await supabase
             .from('event_shares')
-            .select(`
-              event_id,
-              family_id,
-              events (
-                *
-              )
-            `)
-            .in('family_id', userFamilyIds);
+            .select('event_id')
+            .in('event_id', eventIds);
 
-          if (familyError) {
-            console.warn('获取家庭共享事件失败:', familyError);
+          if (shareError) {
+            console.warn('檢查事件分享狀態失敗:', shareError);
           }
 
-          if (familySharedEvents) {
-            const sharedEvents = familySharedEvents
-              .filter(share => share.events)
-              .map(share => ({ ...share.events, is_shared: true, shared_family_id: share.family_id }));
-            allEvents.push(...sharedEvents);
-          }
-        }
-
-        // 3. 获取用户参与的事件（通过 event_attendees 表）
-        const { data: attendeeEvents, error: attendeeError } = await supabase
-          .from('event_attendees')
-          .select(`
-            event_id,
-            events (
-              *
-            )
-          `)
-          .eq('user_id', user.id);
-
-        if (!attendeeError && attendeeEvents) {
-          const attendeeEventsList = attendeeEvents
-            .filter(att => att.events)
-            .map(att => ({ ...att.events, is_shared: true }));
-          allEvents.push(...attendeeEventsList);
-        }
-
-        // 添加个人事件
-        if (personalEvents) {
-          allEvents.push(...personalEvents.map(event => ({ ...event, is_shared: false })));
+          // 3. 過濾出沒有被分享的事件（私人事件）
+          const sharedEventIds = new Set((sharedEvents || []).map(s => s.event_id));
+          const privateEvents = userCreatedEvents.filter(event => !sharedEventIds.has(event.id));
+          
+          console.log(`✅ 找到 ${privateEvents.length} 個私人事件，過濾掉 ${userCreatedEvents.length - privateEvents.length} 個已分享事件`);
+          
+          allEvents = privateEvents.map(event => ({ ...event, is_shared: false }));
         }
 
       } else if (activeFamily.id === 'meta-space') {
         // 元空間模式：獲取所有空間的事件
         console.log('元空間模式：獲取所有空間的事件');
 
-        // 1. 获取用户创建的个人事件
-        const { data: personalEvents, error: personalError } = await supabase
+        // 1. 获取用户创建的个人事件（未分享的）
+        const { data: userCreatedEvents, error: userEventsError } = await supabase
           .from('events')
           .select('*')
-          .eq('creator_id', user.id)
-          .is('family_id', null);
+          .eq('creator_id', user.id);
 
-        if (personalEvents && !personalError) {
-          allEvents.push(...personalEvents.map(event => ({ ...event, is_shared: false })));
+        if (userCreatedEvents && !userEventsError && userCreatedEvents.length > 0) {
+          // 檢查哪些事件沒有被分享
+          const eventIds = userCreatedEvents.map(e => e.id);
+          const { data: sharedEvents, error: shareError } = await supabase
+            .from('event_shares')
+            .select('event_id')
+            .in('event_id', eventIds);
+
+          if (!shareError) {
+            const sharedEventIds = new Set((sharedEvents || []).map(s => s.event_id));
+            const privateEvents = userCreatedEvents.filter(event => !sharedEventIds.has(event.id));
+            allEvents.push(...privateEvents.map(event => ({ ...event, is_shared: false })));
+          }
         }
 
         // 2. 获取用户参与的所有家庭事件
@@ -222,7 +208,7 @@ export const useEvents = () => {
       allEvents.forEach(event => {
         const existing = eventMap.get(event.id);
         if (existing) {
-          existing.is_shared = true;
+          existing.is_shared = existing.is_shared || event.is_shared;
         } else {
           eventMap.set(event.id, event);
         }
@@ -453,22 +439,31 @@ export const useEvents = () => {
         }
       }
       
-      // 🚀 支持真正的多家庭共享机制
+      // 🚀 支持真正的多家庭共享机制 - 過濾掉無效的 family_id
       if (shareToFamilies && shareToFamilies.length > 0) {
-        // 为每个选择的家庭创建共享记录
-        const shareData = shareToFamilies.map(familyId => ({
-          event_id: newEvent.id,
-          family_id: familyId,
-          shared_by: user.id
-        }));
+        // 過濾掉 "meta-space" 和其他無效的 UUID
+        const validFamilyIds = shareToFamilies.filter(familyId => {
+          // 檢查是否為有效的 UUID 格式
+          const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+          return familyId && familyId !== 'meta-space' && uuidRegex.test(familyId);
+        });
 
-        const { error: shareError } = await supabase
-          .from('event_shares')
-          .insert(shareData);
-        
-        if (shareError) {
-          console.error('分享事件失败:', shareError);
-          // 即使分享失败，事件本身已创建，可以考虑回滚或提示
+        if (validFamilyIds.length > 0) {
+          // 为每个选择的家庭创建共享记录
+          const shareData = validFamilyIds.map(familyId => ({
+            event_id: newEvent.id,
+            family_id: familyId,
+            shared_by: user.id
+          }));
+
+          const { error: shareError } = await supabase
+            .from('event_shares')
+            .insert(shareData);
+          
+          if (shareError) {
+            console.error('分享事件失败:', shareError);
+            // 即使分享失败，事件本身已创建，可以考虑回滚或提示
+          }
         }
       }
 
@@ -603,6 +598,22 @@ export const useEvents = () => {
           if (event.id === eventId || 
               (event.parent_event_id === eventId) || 
               (event.id.startsWith(eventId + '_'))) {
+            
+            // 🚀 計算新的分享狀態
+            let newIsShared = event.is_shared;
+            let newSharedFamilies = event.shared_families;
+            
+            if (Array.isArray(shareToFamilies)) {
+              // 如果有分享更新，計算新的分享狀態（包括空數組，表示清除分享）
+              const validFamilyIds = shareToFamilies.filter(familyId => {
+                const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+                return familyId && familyId !== 'meta-space' && uuidRegex.test(familyId);
+              });
+              
+              newIsShared = validFamilyIds.length > 0;
+              newSharedFamilies = validFamilyIds;
+            }
+            
             return {
               ...event,
               title: eventToUpdate.title || event.title,
@@ -613,6 +624,9 @@ export const useEvents = () => {
               image_urls: eventToUpdate.image_urls !== undefined ? eventToUpdate.image_urls : event.image_urls,
               recurrence_rule: eventToUpdate.recurrence_rule !== undefined ? eventToUpdate.recurrence_rule : event.recurrence_rule,
               updated_at: eventToUpdate.updated_at || event.updated_at,
+              // 🚀 更新分享狀態
+              is_shared: newIsShared,
+              shared_families: newSharedFamilies,
             };
           }
           return event;
@@ -680,53 +694,143 @@ export const useEvents = () => {
       }
 
       // 🚀 更新分享關係
-      if (shareToFamilies !== undefined) {
-        console.log('🔄 更新事件分享關係:', { eventId, shareToFamilies });
+      if (Array.isArray(shareToFamilies)) {
+        console.log('🔄 更新事件分享關係:', { 
+          eventId, 
+          shareToFamilies, 
+          originalLength: shareToFamilies.length,
+          activeFamily: activeFamily?.tag 
+        });
         
-        // 先刪除現有的分享關係
-        await supabase
+        // 先刪除現有的分享關係（刪除該事件的所有分享記錄）
+        const { data: deletedShares, error: deleteError } = await supabase
           .from('event_shares')
           .delete()
           .eq('event_id', eventId)
-          .eq('shared_by', user.id);
-
-        // 如果有新的分享家庭，添加分享記錄
-        if (shareToFamilies && shareToFamilies.length > 0) {
-          const shareData = shareToFamilies.map(familyId => ({
-            event_id: eventId,
-            family_id: familyId,
-            shared_by: user.id
-          }));
-
-          const { error: shareError } = await supabase
-            .from('event_shares')
-            .insert(shareData);
-
-          if (shareError) {
-            console.error('更新分享關係失敗:', shareError);
-            // 不拋出錯誤，只記錄，避免影響主要更新
-          } else {
-            console.log('✅ 分享關係更新成功:', shareData);
+          .select();
+          
+        if (deleteError) {
+          console.error('❌ 刪除現有分享關係失敗:', deleteError);
+          
+          // 🔄 如果用戶想設置為私人事件但刪除失敗，嘗試替代方案
+          if (!shareToFamilies || shareToFamilies.length === 0) {
+            console.log('⚠️  用戶想設置為私人事件但刪除失敗，可能是權限問題');
+            console.log('💡 建議：請聯繫管理員或嘗試重新登錄');
+            
+            // 設置錯誤信息給用戶
+            setError('無法將事件設置為私人狀態，可能是權限問題。請嘗試重新登錄或聯繫管理員。');
+            return false;
           }
+        } else {
+          console.log('✅ 已清除事件的所有分享關係:', { 
+            deletedCount: deletedShares?.length || 0,
+            deletedShares 
+          });
+        }
+
+        // 如果有新的分享家庭，添加分享記錄 - 過濾無效的 family_id
+        if (shareToFamilies && shareToFamilies.length > 0) {
+          console.log('📤 準備添加新的分享記錄:', { shareToFamilies });
+          
+          // 過濾掉 "meta-space" 和其他無效的 UUID
+          const validFamilyIds = shareToFamilies.filter(familyId => {
+            // 檢查是否為有效的 UUID 格式
+            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+            const isValid = familyId && familyId !== 'meta-space' && uuidRegex.test(familyId);
+            console.log(`🔍 驗證家庭ID: ${familyId} -> ${isValid ? '有效' : '無效'}`);
+            return isValid;
+          });
+
+          console.log('📋 過濾後的有效家庭ID:', { 
+            original: shareToFamilies,
+            valid: validFamilyIds,
+            filteredCount: validFamilyIds.length 
+          });
+
+          if (validFamilyIds.length > 0) {
+            // 🔍 檢查現有分享記錄，避免重複插入
+            const { data: existingShares, error: checkError } = await supabase
+              .from('event_shares')
+              .select('family_id')
+              .eq('event_id', eventId)
+              .in('family_id', validFamilyIds);
+
+            if (checkError) {
+              console.error('❌ 檢查現有分享記錄失敗:', checkError);
+            }
+
+            const existingFamilyIds = new Set((existingShares || []).map(s => s.family_id));
+            const newFamilyIds = validFamilyIds.filter(familyId => !existingFamilyIds.has(familyId));
+
+            console.log('🔄 分享記錄狀態檢查:', {
+              existing: Array.from(existingFamilyIds),
+              new: newFamilyIds,
+              needsInsert: newFamilyIds.length > 0
+            });
+
+            if (newFamilyIds.length > 0) {
+              const shareData = newFamilyIds.map(familyId => ({
+                event_id: eventId,
+                family_id: familyId,
+                shared_by: user.id
+              }));
+
+              console.log('💾 嘗試插入新分享記錄:', shareData);
+
+              const { data: insertedShares, error: shareError } = await supabase
+                .from('event_shares')
+                .insert(shareData)
+                .select();
+
+              if (shareError) {
+                console.error('❌ 插入分享關係失敗:', shareError);
+                // 不拋出錯誤，只記錄，避免影響主要更新
+              } else {
+                console.log('✅ 分享關係插入成功:', { 
+                  insertedShares,
+                  insertedCount: insertedShares?.length || 0 
+                });
+              }
+            } else {
+              console.log('ℹ️  所有分享記錄已存在，跳過插入');
+            }
+          } else {
+            console.log('⚠️  沒有有效的家庭ID，跳過分享記錄插入');
+          }
+        } else {
+          console.log('📝 設置為私人事件，不添加分享記錄');
         }
       }
 
-      // 🔄 如果重复状态发生变化，异步重新获取并展开事件
-      if (wasRecurring !== willBeRecurring) {
-        // 使用 setTimeout 避免阻塞 UI
-        setTimeout(async () => {
-          try {
-            const currentDate = new Date();
-            const year = currentDate.getFullYear();
-            const month = currentDate.getMonth() + 1;
-            
-            // 重新获取数据（这次是准确的）
-            await fetchEvents(year, month);
-          } catch (error) {
-            console.error('Background refresh failed:', error);
+      // 🔄 異步重新獲取事件數據以確保數據一致性
+      setTimeout(async () => {
+        try {
+          console.log('🔄 開始後台數據刷新:', { 
+            eventId, 
+            wasRecurring, 
+            willBeRecurring,
+            shareToFamiliesUpdated: Array.isArray(shareToFamilies),
+            shareToFamiliesValue: shareToFamilies
+          });
+          
+          const currentDate = new Date();
+          const year = currentDate.getFullYear();
+          const month = currentDate.getMonth() + 1;
+          
+          // 如果重複狀態發生變化，需要重新獲取並展開事件
+          if (wasRecurring !== willBeRecurring) {
+            console.log('🔄 重複狀態變化，清除緩存');
+            setLastExpandKey(''); // 清除緩存強制重新展開
           }
-        }, 100);
-      }
+          
+          // 重新获取数据以確保分享狀態準確
+          console.log('🔄 重新獲取事件數據...');
+          await fetchEvents(year, month);
+          console.log('✅ 後台數據刷新完成');
+        } catch (error) {
+          console.error('❌ 後台數據刷新失敗:', error);
+        }
+      }, 500); // 延長等待時間確保數據庫操作完成
 
       return true;
 
@@ -742,6 +846,19 @@ export const useEvents = () => {
   const shareEventToFamily = async (eventId: string, familyId: string): Promise<boolean> => {
     if (!user) {
       setError('用户未登录');
+      return false;
+    }
+
+    // 避免分享到虛擬的元空間
+    if (familyId === 'meta-space') {
+      setError('無法分享事件到元空間');
+      return false;
+    }
+
+    // 檢查是否為有效的 UUID 格式
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(familyId)) {
+      setError('無效的家庭 ID');
       return false;
     }
 

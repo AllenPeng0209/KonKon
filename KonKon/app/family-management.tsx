@@ -4,17 +4,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Clipboard,
-  RefreshControl,
-  ScrollView,
-  Share,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Clipboard,
+    RefreshControl,
+    ScrollView,
+    Share,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -189,6 +189,12 @@ export default function FamilyManagement() {
   }, [activeFamily, leaveFamily]);
 
   const handleDeleteFamily = useCallback(() => {
+    // 檢查是否為個人空間，個人空間不允許解散
+    if (activeFamily?.tag === 'personal') {
+      Alert.alert('提示', '個人空間無法解散');
+      return;
+    }
+
     Alert.alert(
       '确认解散',
       `确定要解散家庭"${activeFamily?.name}"吗？此操作无法撤销。`,
@@ -253,6 +259,8 @@ export default function FamilyManagement() {
   const isOwner = activeFamily?.owner_id === user?.id;
   // 檢查當前用戶是否是家庭成員（無論角色）
   const isFamilyMember = familyMembers.some(member => member.user_id === user?.id);
+  // 檢查是否為個人空間 - 個人空間不允許邀請其他人
+  const isPersonalSpace = activeFamily?.tag === 'personal';
 
   return (
     <SafeAreaView style={styles.container}>
@@ -369,8 +377,8 @@ export default function FamilyManagement() {
             <Ionicons name="chevron-forward" size={16} color="#C7C7CD" />
           </TouchableOpacity>
 
-          {/* 只要是家庭成員就能使用郵箱邀請 */}
-          {isFamilyMember && (
+          {/* 只要是家庭成員就能使用郵箱邀請，但個人空間不允許 */}
+          {isFamilyMember && !isPersonalSpace && (
             <TouchableOpacity
               style={styles.actionButton}
               onPress={() => setShowInviteForm(true)}
@@ -381,8 +389,8 @@ export default function FamilyManagement() {
             </TouchableOpacity>
           )}
 
-          {/* 只要是家庭成員就能分享和複製邀請碼 */}
-          {isFamilyMember && (
+          {/* 只要是家庭成員就能分享邀請碼，但個人空間不允許 */}
+          {isFamilyMember && !isPersonalSpace && (
             <TouchableOpacity
               style={styles.actionButton}
               onPress={handleShareInviteCode}
@@ -393,7 +401,8 @@ export default function FamilyManagement() {
             </TouchableOpacity>
           )}
 
-          {isFamilyMember && (
+          {/* 複製邀請碼功能，個人空間不允許 */}
+          {isFamilyMember && !isPersonalSpace && (
             <TouchableOpacity
               style={styles.actionButton}
               onPress={handleCopyInviteCode}
@@ -410,7 +419,7 @@ export default function FamilyManagement() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>危险操作</Text>
             
-            {!isOwner && (
+            {!isOwner && !isPersonalSpace && (
               <TouchableOpacity
                 style={[styles.actionButton, styles.dangerButton]}
                 onPress={handleLeaveFamily}
@@ -423,7 +432,7 @@ export default function FamilyManagement() {
               </TouchableOpacity>
             )}
 
-            {isOwner && (
+            {isOwner && !isPersonalSpace && (
               <TouchableOpacity
                 style={[styles.actionButton, styles.dangerButton]}
                 onPress={handleDeleteFamily}
@@ -434,6 +443,16 @@ export default function FamilyManagement() {
                 </Text>
                 <Ionicons name="chevron-forward" size={16} color="#C7C7CD" />
               </TouchableOpacity>
+            )}
+
+            {/* 個人空間的提示信息 */}
+            {isPersonalSpace && (
+              <View style={styles.personalSpaceNotice}>
+                <Ionicons name="information-circle" size={20} color="#8E8E93" />
+                <Text style={styles.personalSpaceNoticeText}>
+                  個人空間是您的私人工作區，無法解散或離開
+                </Text>
+              </View>
             )}
           </View>
         )}
@@ -612,12 +631,14 @@ export default function FamilyManagement() {
             <Text style={styles.modalTitle}>選擇家庭</Text>
             
             <ScrollView style={styles.familyListContainer}>
-              {userFamilies.map((family) => (
+              {userFamilies.map((family, index) => (
                 <TouchableOpacity
                   key={family.id}
                   style={[
                     styles.familyOption,
-                    activeFamily?.id === family.id && styles.familyOptionActive
+                    activeFamily?.id === family.id && styles.familyOptionActive,
+                    // 最後一個項目不顯示底部邊框
+                    index === userFamilies.length - 1 && styles.familyOptionLast
                   ]}
                   onPress={() => handleSelectFamily(family.id)}
                 >
@@ -900,6 +921,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5EA',
   },
+  familyOptionLast: {
+    borderBottomWidth: 0,
+  },
   familyOptionActive: {
     backgroundColor: '#F2F2F7',
     borderRadius: 8,
@@ -925,5 +949,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#8E8E93',
     marginTop: 4,
+  },
+  personalSpaceNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F2F2F7',
+    padding: 16,
+    borderRadius: 12,
+    marginHorizontal: 20,
+  },
+  personalSpaceNoticeText: {
+    fontSize: 14,
+    color: '#8E8E93',
+    marginLeft: 8,
+    flex: 1,
+    lineHeight: 18,
   },
 }); 

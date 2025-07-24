@@ -29,7 +29,7 @@ const MARGIN_BOTTOM = 8; // 項目間距
 // 空間標籤圖標映射
 const TAG_ICONS: { [key: string]: string } = {
   family: '🏠',
-  personal: '🔒', 
+  personal: '👤', // 修改個人空間圖標為人頭
   couple: '💖',
   work: '💼',
   friend: '👥',
@@ -41,7 +41,7 @@ const TAG_ICONS: { [key: string]: string } = {
   other: '👥'
 };
 
-const getTagIcon = (tag?: string): string => {
+const getTagIcon = (tag?: string | null): string => {
   return tag ? TAG_ICONS[tag] || '🏠' : '🏠';
 };
 
@@ -76,7 +76,7 @@ interface Family {
   created_at: string | null;
   updated_at: string | null;
   member_count?: number;
-  tag?: string;
+  tag?: string | null;
 }
 
 interface DraggableFamilyItemProps {
@@ -84,6 +84,7 @@ interface DraggableFamilyItemProps {
   index: number;
   isActive: boolean;
   isMetaSpace?: boolean; // 新增：標識是否為元空間
+  isPersonalSpace?: boolean; // 新增：標識是否為個人空間
   familyMembers: any[];
   onSwitchFamily: (familyId: string) => void;
   onDragEnd: (fromIndex: number, toIndex: number) => void;
@@ -97,6 +98,7 @@ const DraggableFamilyItem: React.FC<DraggableFamilyItemProps> = ({
   index,
   isActive,
   isMetaSpace = false, // 默認為 false
+  isPersonalSpace = false, // 新增：默認為 false
   familyMembers,
   onSwitchFamily,
   onDragEnd,
@@ -130,7 +132,7 @@ const DraggableFamilyItem: React.FC<DraggableFamilyItemProps> = ({
   }, [isActive, index, draggedIndex, resetDragState]);
 
   const animatedStyle = useAnimatedStyle(() => {
-    const isBeingDragged = draggedIndex.value === index && !isMetaSpace; // 元空間不參與拖拽
+    const isBeingDragged = draggedIndex.value === index && !isMetaSpace && !isPersonalSpace; // 元空間和個人空間不參與拖拽
     const currentScale = isBeingDragged ? withSpring(1.08) : scale.value;
     const currentOpacity = isBeingDragged ? 0.95 : opacity.value;
     
@@ -154,7 +156,7 @@ const DraggableFamilyItem: React.FC<DraggableFamilyItemProps> = ({
 
   // 簡化的手勢處理邏輯
   const onLongPress = useCallback(({ nativeEvent }: LongPressGestureHandlerGestureEvent) => {
-    if (isMetaSpace) return;
+    if (isMetaSpace || isPersonalSpace) return; // 元空間和個人空間都不能拖拽
     
     if (nativeEvent.state === State.ACTIVE) {
       console.log(`[DRAG] 長按激活 - index: ${index}`);
@@ -163,20 +165,20 @@ const DraggableFamilyItem: React.FC<DraggableFamilyItemProps> = ({
       isDragging.value = true;
       setIsCurrentlyDragging(true);
     }
-  }, [draggedIndex, index, isDragging, isMetaSpace]);
+  }, [draggedIndex, index, isDragging, isMetaSpace, isPersonalSpace]);
 
   // 連續的手勢事件處理（用於流暢動畫）
   const onPanGestureEvent = useCallback((event: any) => {
     'worklet';
     // 只有在拖拽模式激活時才更新位置
-    if (draggedIndex.value === index && !isMetaSpace) {
+    if (draggedIndex.value === index && !isMetaSpace && !isPersonalSpace) {
       translateY.value = event.translationY;
     }
-  }, [draggedIndex, index, translateY, isMetaSpace]);
+  }, [draggedIndex, index, translateY, isMetaSpace, isPersonalSpace]);
 
   // 手勢狀態變化處理（用於邏輯控制）
   const onPanGestureStateChange = useCallback(({ nativeEvent }: PanGestureHandlerGestureEvent) => {
-    if (isMetaSpace) return;
+    if (isMetaSpace || isPersonalSpace) return;
     
     if (nativeEvent.state === State.END && draggedIndex.value === index) {
       // 拖動結束 - 全部使用 runOnJS 包裝，在 JS 線程中處理
@@ -215,7 +217,7 @@ const DraggableFamilyItem: React.FC<DraggableFamilyItemProps> = ({
         resetDragState();
       })();
     }
-  }, [draggedIndex, index, onDragEnd, resetDragState, isMetaSpace, totalSpacesCount]);
+  }, [draggedIndex, index, onDragEnd, resetDragState, isMetaSpace, isPersonalSpace, totalSpacesCount]);
 
   const handlePress = useCallback(() => {
     // 直接切換，不要中間步驟
@@ -225,27 +227,28 @@ const DraggableFamilyItem: React.FC<DraggableFamilyItemProps> = ({
   }, [family.id, onSwitchFamily, isActive]);
 
   return (
-    <LongPressGestureHandler
-      ref={longPressRef}
-      onHandlerStateChange={onLongPress}
-      minDurationMs={500}
-      simultaneousHandlers={panRef}
-      enabled={!isMetaSpace} // 元空間不啟用長按
-    >
-      <Animated.View>
-        <PanGestureHandler
-          ref={panRef}
-          onGestureEvent={onPanGestureEvent}
-          onHandlerStateChange={onPanGestureStateChange}
-          simultaneousHandlers={longPressRef}
-          enabled={!isMetaSpace} // 元空間不啟用拖拽
+            <LongPressGestureHandler
+          ref={longPressRef}
+          onHandlerStateChange={onLongPress}
+          minDurationMs={500}
+          simultaneousHandlers={panRef}
+          enabled={!isMetaSpace && !isPersonalSpace} // 元空間和個人空間不啟用長按
         >
+          <Animated.View>
+            <PanGestureHandler
+              ref={panRef}
+              onGestureEvent={onPanGestureEvent}
+              onHandlerStateChange={onPanGestureStateChange}
+              simultaneousHandlers={longPressRef}
+              enabled={!isMetaSpace && !isPersonalSpace} // 元空間和個人空間不啟用拖拽
+            >
           <Animated.View style={[animatedStyle]}>
             <TouchableOpacity
               style={[
                 styles.familyItem,
                 isActive && styles.activeFamilyItem,
                 isMetaSpace && styles.metaSpaceItem, // 元空間特殊樣式
+                isPersonalSpace && styles.personalSpaceItem, // 個人空間特殊樣式
               ]}
               onPress={handlePress}
               activeOpacity={0.8}
@@ -253,12 +256,14 @@ const DraggableFamilyItem: React.FC<DraggableFamilyItemProps> = ({
               <View style={[
                 styles.familyIcon, 
                 isActive && styles.activeFamilyIcon,
-                isMetaSpace && styles.metaSpaceIcon
+                isMetaSpace && styles.metaSpaceIcon,
+                isPersonalSpace && styles.personalSpaceIcon
               ]}>
                 <Text style={[
                   styles.familyIconText, 
                   isActive && styles.activeFamilyIconText,
-                  isMetaSpace && styles.metaSpaceIconText
+                  isMetaSpace && styles.metaSpaceIconText,
+                  isPersonalSpace && styles.personalSpaceIconText
                 ]}>
                   {getTagIcon(family.tag) || family.name.charAt(0).toUpperCase()}
                 </Text>
@@ -267,7 +272,8 @@ const DraggableFamilyItem: React.FC<DraggableFamilyItemProps> = ({
                 <Text style={[
                   styles.familyName, 
                   isActive && styles.activeFamilyName,
-                  isMetaSpace && styles.metaSpaceName
+                  isMetaSpace && styles.metaSpaceName,
+                  isPersonalSpace && styles.personalSpaceName
                 ]}>
                   {family.name}
                 </Text>
@@ -409,6 +415,7 @@ const Drawer: React.FC<DrawerProps> = ({ onClose, translateX }) => {
             {/* 用戶的其他空間 */}
             {userFamilies.map((family, index) => {
               const isActive = activeFamily?.id === family.id;
+              const isPersonalSpace = family.tag === 'personal';
               return (
                 <DraggableFamilyItem
                   key={family.id}
@@ -416,6 +423,7 @@ const Drawer: React.FC<DrawerProps> = ({ onClose, translateX }) => {
                   index={index + 1} // 調整索引，因為元空間占用了第0位
                   isActive={isActive}
                   isMetaSpace={false}
+                  isPersonalSpace={isPersonalSpace}
                   familyMembers={familyMembers}
                   onSwitchFamily={handleSwitchFamily}
                   onDragEnd={handleDragEnd}
@@ -653,6 +661,25 @@ const getStyles = (colorScheme: 'light' | 'dark' | null | undefined) => {
       color: '#ffffff',
     },
     metaSpaceName: {
+      color: '#6366f1',
+      fontWeight: '700',
+    },
+    // 個人空間特殊樣式（與元空間相同）
+    personalSpaceItem: {
+      backgroundColor: colorScheme === 'dark' ? '#2a2a2a' : '#f8f9fa',
+      marginHorizontal: 16,
+      borderRadius: 12,
+      borderWidth: 2,
+      borderColor: colorScheme === 'dark' ? '#444' : '#e0e6ed',
+      borderStyle: 'dashed',
+    },
+    personalSpaceIcon: {
+      backgroundColor: '#6366f1',
+    },
+    personalSpaceIconText: {
+      color: '#ffffff',
+    },
+    personalSpaceName: {
       color: '#6366f1',
       fontWeight: '700',
     },

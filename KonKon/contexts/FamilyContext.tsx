@@ -27,7 +27,10 @@ interface Family {
   timezone: string | null;
   created_at: string | null;
   updated_at: string | null;
-  member_count?: number; // 添加成员数量字段
+  member_count: number; // 添加成员数量字段
+  enabled_features?: string[] | null;
+  settings?: any | null;
+  tag?: string | null;
 }
 
 interface FamilyMember {
@@ -182,31 +185,44 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
             })
           );
 
-          // 4. 按照保存的順序排列家庭列表
+          // 4. 特殊排序：個人空間（personal）排在最前面，其他按保存的順序排列
+          const personalSpaces = familiesWithMemberCount.filter(f => f.tag === 'personal');
+          const otherSpaces = familiesWithMemberCount.filter(f => f.tag !== 'personal');
+
+          // 5. 按照保存的順序排列其他空間
           const savedOrder = await getFamilyOrder();
-          const orderedFamilies = savedOrder.length > 0 
-            ? savedOrder
-                .map(id => familiesWithMemberCount.find(f => f.id === id))
-                .filter(Boolean)
-                .concat(
-                  familiesWithMemberCount.filter(f => !savedOrder.includes(f.id))
-                ) as Family[]
-            : familiesWithMemberCount;
+          let orderedOtherSpaces = otherSpaces;
+          
+          if (savedOrder.length > 0) {
+            orderedOtherSpaces = savedOrder
+              .map(id => otherSpaces.find(f => f.id === id))
+              .filter(Boolean)
+              .concat(
+                otherSpaces.filter(f => !savedOrder.includes(f.id))
+              ) as Family[];
+          }
 
-          setUserFamilies(orderedFamilies);
+          // 6. 最終排序：個人空間在前，其他空間在後
+          const finalOrderedFamilies = [...personalSpaces, ...orderedOtherSpaces];
 
-          // 5. Set the first family as active and fetch its members
+          setUserFamilies(finalOrderedFamilies);
+
+          // 7. Set the first family as active and fetch its members
+          // 優先選擇個人空間作為初始激活空間
           const currentActiveFamily = activeFamily 
-            ? orderedFamilies.find(f => f.id === activeFamily.id) 
+            ? finalOrderedFamilies.find(f => f.id === activeFamily.id) 
             : null;
 
           if (currentActiveFamily) {
             setActiveFamily(currentActiveFamily);
             await fetchFamilyMembers(currentActiveFamily.id);
-          } else if (orderedFamilies.length > 0) {
-            const newActiveFamily = orderedFamilies[0];
-            setActiveFamily(newActiveFamily);
-            await fetchFamilyMembers(newActiveFamily.id);
+          } else if (finalOrderedFamilies.length > 0) {
+            // 如果有個人空間，優先激活個人空間
+            const defaultActiveFamily = personalSpaces.length > 0 
+              ? personalSpaces[0] 
+              : finalOrderedFamilies[0];
+            setActiveFamily(defaultActiveFamily);
+            await fetchFamilyMembers(defaultActiveFamily.id);
           } else {
             setActiveFamily(null);
             setFamilyMembers([]);
@@ -445,6 +461,12 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
 
   const deleteFamily = async () => {
     if (!user || !activeFamily) return false;
+    
+    // 防止解散個人空間
+    if (activeFamily.tag === 'personal') {
+      setError('個人空間無法解散');
+      return false;
+    }
     
     try {
       setLoading(true);
