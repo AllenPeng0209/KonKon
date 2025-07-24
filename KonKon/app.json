@@ -15,6 +15,7 @@
       "zh-TW": "./lib/translations/zh-TW.json"
     },
     "ios": {
+      "usesAppleSignIn": true,
       "supportsTablet": true,
       "bundleIdentifier": "com.agenthub.konkon",
       "buildNumber": "15",
@@ -70,7 +71,8 @@
         }
       ],
       "expo-audio",
-      "expo-image-picker"
+      "expo-image-picker",
+      "expo-apple-authentication"
     ],
     "experiments": {
       "typedRoutes": true

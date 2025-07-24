@@ -288,12 +288,17 @@ export async function updateNotificationPreferences(
 async function sendPushNotification(notification: FamilyNotification): Promise<void> {
   try {
     // 获取接收者的推送token和偏好设置
-    const { data: preferences } = await supabase
+    const { data: preferences, error: preferencesError } = await supabase
       .from('notification_preferences')
       .select('push_enabled, push_token, quiet_hours_enabled, quiet_hours_start, quiet_hours_end')
       .eq('user_id', notification.recipient_id)
       .eq('family_id', notification.family_id)
       .single();
+
+    if (preferencesError) {
+      console.log('获取通知偏好失败，跳过推送通知:', preferencesError.message);
+      return;
+    }
 
     if (!preferences || !preferences.push_enabled || !preferences.push_token) {
       console.log('用户未启用推送通知或无推送token');
@@ -323,6 +328,10 @@ async function sendPushNotification(notification: FamilyNotification): Promise<v
       },
     };
 
+    // 添加超时控制，避免長時間等待
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超時
+
     const response = await fetch('https://exp.host/--/api/v2/push/send', {
       method: 'POST',
       headers: {
@@ -331,8 +340,10 @@ async function sendPushNotification(notification: FamilyNotification): Promise<v
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(pushMessage),
+      signal: controller.signal,
     });
 
+    clearTimeout(timeoutId);
     const result = await response.json();
     
     if (result.errors) {
@@ -351,7 +362,31 @@ async function sendPushNotification(notification: FamilyNotification): Promise<v
         .eq('id', notification.id);
     }
   } catch (error) {
-    console.error('发送推送通知时发生错误:', error);
+    // 優雅地處理網絡連接錯誤，不影響主要功能
+    if (error instanceof Error) {
+      if (error.name === 'AbortError') {
+        console.warn('推送通知請求超時，跳過此次推送');
+      } else if (error.message?.includes('Could not connect')) {
+        console.warn('無法連接到推送服務器，跳過此次推送');
+      } else {
+        console.error('发送推送通知时发生错误:', error.message);
+      }
+    } else {
+      console.error('发送推送通知时发生未知错误:', error);
+    }
+    
+    // 即使推送失敗，也標記通知已嘗試發送，避免重複嘗試
+    try {
+      await supabase
+        .from('family_notifications')
+        .update({
+          push_notification_sent: false, // 標記推送失敗
+          sent_at: new Date().toISOString()
+        })
+        .eq('id', notification.id);
+    } catch (updateError) {
+      console.error('更新通知狀態失敗:', updateError);
+    }
   }
 }
 
@@ -432,7 +467,7 @@ export async function subscribeToNotifications(
         filter: `family_id=eq.${familyId}`
       },
       (payload) => {
-        if (payload.old.recipient_id !== user.user?.id) {
+        if (payload.old.recipient_id !== user.id) {
           return;
         }
         onDelete(payload.old.id);

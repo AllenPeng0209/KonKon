@@ -117,28 +117,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       // Request Apple authentication
+      const nonce = Math.random().toString(36).substring(2, 15);
       const credential = await AppleAuthentication.signInAsync({
         requestedScopes: [
           AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
           AppleAuthentication.AppleAuthenticationScope.EMAIL,
         ],
+        state: nonce,
+        nonce: await Crypto.digestStringAsync(
+            Crypto.CryptoDigestAlgorithm.SHA256,
+            nonce
+        ),
       });
 
       console.log('[Auth] Apple credential received:', credential);
 
-      // Create a random nonce
-      const nonce = Math.random().toString(36).substring(2, 15);
-      const hashedNonce = await Crypto.digestStringAsync(
-        Crypto.CryptoDigestAlgorithm.SHA256,
-        nonce,
-        { encoding: Crypto.CryptoEncoding.BASE64 }
-      );
 
       // Sign in with Supabase
+      if (!credential.identityToken) {
+        throw new Error('No identity token received from Apple');
+      }
+      
       const { data, error } = await supabase.auth.signInWithIdToken({
         provider: 'apple',
-        token: credential.identityToken!,
-        nonce: hashedNonce,
+        token: credential.identityToken,
+        nonce: nonce,
       });
 
       if (error) {

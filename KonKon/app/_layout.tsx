@@ -36,6 +36,7 @@ function ProtectedLayout() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const [isDrawerVisible, setDrawerVisible] = useState(false);
+  const [isRouteTransitioning, setIsRouteTransitioning] = useState(false);
   const translateX = useSharedValue(-width);
 
   useEffect(() => {
@@ -46,27 +47,64 @@ function ProtectedLayout() {
     }
   }, [isDrawerVisible]);
 
+  // 监听路由变化，在转换期间禁用手势
+  useEffect(() => {
+    setIsRouteTransitioning(true);
+    const timer = setTimeout(() => {
+      setIsRouteTransitioning(false);
+    }, 500); // 500ms 后认为路由转换完成
+    
+    return () => clearTimeout(timer);
+  }, [segments]);
+
   const onHandlerStateChange = (event: any) => {
     const currentRoute = segments.join('/');
-    if (currentRoute.includes('avatar')) {
+    console.log('Current route:', currentRoute); // 添加调试日志
+    
+    // 如果正在路由转换中，不处理手势
+    if (isRouteTransitioning) {
+      console.log('Gesture disabled - route transitioning');
       return;
     }
+    
+    // 只在主页（tabs 路由）时才启用手势
+    const isOnHomePage = currentRoute === '' || currentRoute === '(tabs)' || currentRoute === '(tabs)/index';
+    
+    // 如果不在主页，或者在特定页面，则不处理手势
+    if (!isOnHomePage || 
+        currentRoute.includes('avatar') || 
+        currentRoute.includes('profile') ||
+        currentRoute.includes('settings') ||
+        currentRoute.includes('notifications') ||
+        currentRoute.includes('create-family') ||
+        currentRoute.includes('family-management') ||
+        currentRoute.includes('join-family')) {
+      console.log('Gesture disabled on route:', currentRoute);
+      return;
+    }
+    
     if (event.nativeEvent.oldState === State.ACTIVE) {
-      const { translationX, translationY, x } = event.nativeEvent;
+      const { translationX, translationY, x, velocityX } = event.nativeEvent;
       
       // 計算手勢開始位置：當前位置減去移動距離
       const startX = x - translationX;
       
-      // 只有從屏幕左側邊緣開始的滑動才觸發Drawer
-      // 限制在左側60px以內才能觸發
-      const isFromLeftEdge = startX <= 60;
+      // 擴大觸發區域，提高靈敏度 - 從60px增加到100px
+      const isFromLeftEdge = startX <= 100;
       
-      if (isFromLeftEdge && translationX > 100 && Math.abs(translationY) < 50) {
+      console.log('Gesture detected:', { startX, translationX, translationY, velocityX, isFromLeftEdge });
+      
+      // 更靈敏的觸發條件：
+      // 1. 滑動距離從100px降到40px
+      // 2. 垂直容忍度從50px增加到80px  
+      // 3. 或者滑動速度足夠快時，距離要求更低
+      const isValidSwipe = (translationX > 40 && Math.abs(translationY) < 80) || 
+                          (translationX > 20 && velocityX > 500); // 快速滑動時只需20px
+      
+      if (isFromLeftEdge && isValidSwipe) {
+        console.log('Opening drawer with enhanced sensitivity');
         setDrawerVisible(true);
-      } 
-      // else if (translationX < -100 && Math.abs(translationY) < 50) {
-      //   router.push('/avatar');
-      // }
+      }
     }
   };
 

@@ -3,17 +3,17 @@ import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
-    Alert,
-    Image,
-    Modal,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  Alert,
+  Image,
+  Modal,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import AvatarService from '../lib/avatarService';
@@ -162,7 +162,7 @@ export default function EditProfileScreen() {
         console.warn('Auth metadata 更新失敗:', authError);
       }
 
-      Alert.alert('成功', '您的個人資료已更新', [
+      Alert.alert('成功', '您的個人資料已更新', [
         { text: '好的', onPress: () => router.back() }
       ]);
 
