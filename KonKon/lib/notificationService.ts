@@ -185,6 +185,33 @@ export async function getUserNotifications(
 
 // 标记通知为已读
 export async function markNotificationAsRead(notificationId: string): Promise<void> {
+  // 檢查用戶認證
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  
+  if (authError || !user) {
+    console.error('用戶未認證:', authError);
+    throw new Error('用戶未認證，無法標記通知');
+  }
+
+  console.log(`用戶 ${user.id} 嘗試標記通知 ${notificationId} 為已讀`);
+
+  // 首先驗證這個通知是否屬於當前用戶
+  const { data: notification, error: fetchError } = await supabase
+    .from('family_notifications')
+    .select('recipient_id, is_read')
+    .eq('id', notificationId)
+    .eq('recipient_id', user.id)
+    .single();
+
+  if (fetchError) {
+    console.error('獲取通知失敗:', fetchError);
+    throw new Error(`獲取通知失敗: ${fetchError.message}`);
+  }
+
+  if (!notification) {
+    throw new Error('通知不存在或您沒有權限修改此通知');
+  }
+
   const { error } = await supabase
     .from('family_notifications')
     .update({ 
@@ -195,8 +222,57 @@ export async function markNotificationAsRead(notificationId: string): Promise<vo
 
   if (error) {
     console.error('标记通知已读失败:', error);
+    console.error('錯誤詳情:', JSON.stringify(error, null, 2));
     throw new Error(`标记通知已读失败: ${error.message}`);
   }
+
+  console.log(`通知 ${notificationId} 已成功標記為已讀`);
+}
+
+// 标记通知为未读
+export async function markNotificationAsUnread(notificationId: string): Promise<void> {
+  // 檢查用戶認證
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  
+  if (authError || !user) {
+    console.error('用戶未認證:', authError);
+    throw new Error('用戶未認證，無法標記通知');
+  }
+
+  console.log(`用戶 ${user.id} 嘗試標記通知 ${notificationId} 為未讀`);
+
+  // 首先驗證這個通知是否屬於當前用戶
+  const { data: notification, error: fetchError } = await supabase
+    .from('family_notifications')
+    .select('recipient_id, is_read')
+    .eq('id', notificationId)
+    .eq('recipient_id', user.id)
+    .single();
+
+  if (fetchError) {
+    console.error('獲取通知失敗:', fetchError);
+    throw new Error(`獲取通知失敗: ${fetchError.message}`);
+  }
+
+  if (!notification) {
+    throw new Error('通知不存在或您沒有權限修改此通知');
+  }
+
+  const { error } = await supabase
+    .from('family_notifications')
+    .update({ 
+      is_read: false,
+      read_at: null
+    })
+    .eq('id', notificationId);
+
+  if (error) {
+    console.error('标记通知未读失败:', error);
+    console.error('錯誤詳情:', JSON.stringify(error, null, 2));
+    throw new Error(`标记通知未读失败: ${error.message}`);
+  }
+
+  console.log(`通知 ${notificationId} 已成功標記為未讀`);
 }
 
 // 批量标记通知为已读
@@ -488,6 +564,7 @@ function isInQuietHours(startTime: string, endTime: string): boolean {
 export async function subscribeToNotifications(
   familyId: string,
   onNotification: (notification: NotificationWithSender) => void,
+  onUpdate: (notification: NotificationWithSender) => void,
   onDelete: (notificationId: string) => void
 ) {
   const { data: { user } } = await supabase.auth.getUser();
@@ -535,6 +612,40 @@ export async function subscribeToNotifications(
         };
 
         onNotification(notificationWithSender);
+      }
+    )
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'family_notifications',
+        filter: `family_id=eq.${familyId}`
+      },
+      async (payload) => {
+        // 只接收发给当前用户的通知
+        if (payload.new.recipient_id !== user.id) {
+          return;
+        }
+
+        // 获取发送者信息
+        const { data: senderInfo } = await supabase
+          .from('users')
+          .select('id, display_name, avatar_url, email')
+          .eq('id', payload.new.sender_id)
+          .single();
+
+        const notificationWithSender: NotificationWithSender = {
+          ...payload.new as FamilyNotification,
+          sender: senderInfo ? {
+            id: senderInfo.id,
+            display_name: senderInfo.display_name || undefined,
+            avatar_url: senderInfo.avatar_url || undefined,
+            email: senderInfo.email || undefined,
+          } : undefined,
+        };
+
+        onUpdate(notificationWithSender);
       }
     )
     .on(

@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import {
-    Alert,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
+import CalendarGridView from './CalendarGridView';
 import DailyRecordsView from './DailyRecordsView';
 import type { MealViewOption, MealViewProps, MealViewType } from './MealViewTypes';
 import NutritionChartView from './NutritionChartView';
@@ -15,6 +16,12 @@ import WeeklyOverviewView from './WeeklyOverviewView';
 
 // 可用的餐食視圖選項
 const mealViewOptions: MealViewOption[] = [
+  {
+    id: 'calendar_grid',
+    name: '日曆網格',
+    description: '日曆形式的餐食記錄',
+    emoji: '🗓️',
+  },
   {
     id: 'daily_records',
     name: '每日記錄',
@@ -32,13 +39,6 @@ const mealViewOptions: MealViewOption[] = [
     name: '營養圖表',
     description: '營養數據分析和目標追蹤',
     emoji: '📊',
-  },
-  {
-    id: 'calendar_grid',
-    name: '日曆網格',
-    description: '日曆形式的餐食記錄',
-    emoji: '🗓️',
-    premium: true,
   },
   {
     id: 'timeline',
@@ -137,6 +137,8 @@ export default function MealViewSelector({
         return <WeeklyOverviewView {...props} />;
       case 'nutrition_chart':
         return <NutritionChartView {...props} />;
+      case 'calendar_grid':
+        return <CalendarGridView {...props} />;
       default:
         // 對於其他視圖，顯示開發中
         return (
@@ -153,20 +155,15 @@ export default function MealViewSelector({
 
   return (
     <View style={styles.container}>
-      {/* 視圖切換按鈕 */}
+      {/* 當前視圖內容 - 長按切換視圖 */}
       <TouchableOpacity
-        style={styles.viewToggleButton}
-        onPress={() => setShowViewSelector(true)}
+        style={styles.viewContent}
+        onLongPress={() => setShowViewSelector(true)}
+        activeOpacity={1}
+        delayLongPress={800}
       >
-        <Text style={styles.viewToggleEmoji}>{currentViewOption?.emoji}</Text>
-        <Text style={styles.viewToggleText}>{currentViewOption?.name}</Text>
-        <Text style={styles.viewToggleArrow}>▼</Text>
-      </TouchableOpacity>
-
-      {/* 當前視圖內容 */}
-      <View style={styles.viewContent}>
         {renderCurrentView()}
-      </View>
+      </TouchableOpacity>
 
       {/* 視圖選擇器Modal */}
       <Modal
@@ -244,35 +241,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  viewToggleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginHorizontal: 16,
-    marginBottom: 8,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  viewToggleEmoji: {
-    fontSize: 20,
-    marginRight: 8,
-  },
-  viewToggleText: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2c3e50',
-  },
-  viewToggleArrow: {
-    fontSize: 12,
-    color: '#6b7280',
-  },
+
   viewContent: {
     flex: 1,
   },

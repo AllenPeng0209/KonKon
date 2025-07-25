@@ -35,10 +35,13 @@ import {
   ParsedCalendarResult,
   ParsedTodoResult,
   processImageToCalendar,
+  processImageToMeal,
   processImageToTodo,
   processTextToCalendar,
+  processTextToMeal,
   processTextToTodo,
   processVoiceToCalendar,
+  processVoiceToMeal,
   processVoiceToTodo
 } from '@/lib/bailian_omni_calendar';
 import CalendarService from '@/lib/calendarService';
@@ -49,7 +52,7 @@ import { ParsedAlbumResult, voiceAlbumService } from '@/lib/voiceAlbumService';
 import { Ionicons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -75,6 +78,12 @@ export default function HomeScreen() {
   const { featureSettings, resetAllSettings } = useFeatureSettings();
   const { openDrawer } = useDrawer();
   const router = useRouter();
+  
+  // 處理來自通知的導航參數
+  const params = useLocalSearchParams();
+  const eventIdFromNotification = params.eventId as string;
+  const fromNotification = params.from as string;
+
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [showFamilyMenu, setShowFamilyMenu] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState('calendar'); // 默认值为 'calendar'
@@ -130,35 +139,18 @@ export default function HomeScreen() {
   const [currentChoreMonth, setCurrentChoreMonth] = useState(new Date().toISOString().slice(0, 7));
 
   // 购物管理状态
-  const [shoppingItems, setShoppingItems] = useState<ShoppingItem[]>([
-    { id: '1', name: '牛乳', category: 'dairy', quantity: 2, unit: '本', estimatedPrice: 250, priority: 'high', completed: false, addedBy: 'user1', addedDate: new Date() },
-    { id: '2', name: '卵', category: 'dairy', quantity: 1, unit: 'パック', estimatedPrice: 220, priority: 'high', completed: false, addedBy: 'user1', addedDate: new Date() },
-    { id: '3', name: '食パン', category: 'pantry', quantity: 1, unit: '斤', estimatedPrice: 180, priority: 'medium', completed: true, addedBy: 'user2', addedDate: new Date(), completedDate: new Date(), actualPrice: 175 },
-    { id: '4', name: 'キャベツ', category: 'produce', quantity: 1, unit: '玉', estimatedPrice: 150, priority: 'medium', completed: false, addedBy: 'user1', addedDate: new Date() },
-    { id: '5', name: '鶏もも肉', category: 'meat', quantity: 300, unit: 'g', estimatedPrice: 400, priority: 'low', completed: false, addedBy: 'user2', addedDate: new Date(), assignedTo: 'user2' },
-    { id: '6', name: 'トイレットペーパー', category: 'household', quantity: 1, unit: 'パック', estimatedPrice: 450, priority: 'high', completed: true, addedBy: 'user1', addedDate: new Date(), completedDate: new Date(), actualPrice: 430, assignedTo: 'user1' },
-    { id: '7', name: 'シャンプー詰替', category: 'household', quantity: 1, unit: '袋', estimatedPrice: 500, priority: 'low', completed: false, addedBy: 'user1', addedDate: new Date(), },
-  ]);
+  const [shoppingItems, setShoppingItems] = useState<ShoppingItem[]>([]);
 
-  const [shoppingStores, setShoppingStores] = useState<Store[]>([
-    { id: 's1', name: 'ライフ スーパー', location: '近所', categories: ['produce', 'meat', 'dairy', 'pantry', 'frozen', 'snacks', 'household'], currentDeals: [
-        { id: 'd1', storeName: 'ライフ スーパー', itemName: '卵', originalPrice: 250, discountPrice: 220, discountPercent: 12, validUntil: new Date(), category: 'dairy' },
-        { id: 'd2', storeName: 'ライフ スーパー', itemName: '鶏もも肉', originalPrice: 450, discountPrice: 400, discountPercent: 11, validUntil: new Date(), category: 'meat' }
-    ], averagePrices: {}, distance: 0.5, isFrequentlyUsed: true },
-    { id: 's2', name: 'セブンイレブン', location: '駅前', categories: ['dairy', 'snacks'], currentDeals: [], averagePrices: {}, distance: 1.2, isFrequentlyUsed: false }
-  ]);
+  const [shoppingStores, setShoppingStores] = useState<Store[]>([]);
 
-  const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([
-      { id: 'user1', name: 'ママ', avatar: '👩', shoppingPreference: ['produce', 'dairy'], assignedItems: ['6'] },
-      { id: 'user2', name: 'パパ', avatar: '👨', shoppingPreference: ['meat', 'snacks'], assignedItems: ['5'] },
-  ]);
+  const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
 
   const [shoppingBudget, setShoppingBudget] = useState<ShoppingBudget>({
-    monthly: 50000,
-    weekly: 12000,
-    spent: 605,
-    remaining: 49395,
-    categories: { household: 430, pantry: 175 },
+    monthly: 0,
+    weekly: 0,
+    spent: 0,
+    remaining: 0,
+    categories: {},
   });
 
   const handleItemToggle = (itemId: string) => {
@@ -247,95 +239,28 @@ export default function HomeScreen() {
     return options;
   })();
 
-  // 生成模擬餐食記錄數據
-  const generateMockMealRecords = (): MealRecord[] => {
-    const today = new Date();
-    const records: MealRecord[] = [];
-    
-    // 生成過去7天的數據
-    for (let i = 0; i < 7; i++) {
-      const date = new Date(today);
-      date.setDate(today.getDate() - i);
-      const dateString = date.toISOString().split('T')[0];
-      
-      // 每天的餐食記錄
-      const dayMeals = [
-        {
-          id: `${dateString}-breakfast`,
-          date: dateString,
-          mealType: 'breakfast' as const,
-          title: ['日式玉子燒定食', '牛奶燕麥粥', '三明治套餐'][Math.floor(Math.random() * 3)],
-          calories: 280 + Math.floor(Math.random() * 100),
-          tags: ['營養均衡', '快手'],
-          time: '08:00',
-          emoji: '🌅',
-          nutrition: {
-            protein: 15 + Math.floor(Math.random() * 10),
-            carbs: 35 + Math.floor(Math.random() * 15),
-            fat: 8 + Math.floor(Math.random() * 8),
-          }
-        },
-        {
-          id: `${dateString}-lunch`,
-          date: dateString,
-          mealType: 'lunch' as const,
-          title: ['親子便當', '簡易炒飯', '健康沙拉'][Math.floor(Math.random() * 3)],
-          calories: 450 + Math.floor(Math.random() * 150),
-          tags: ['便當友善', '15分鐘'],
-          time: '12:30',
-          emoji: '☀️',
-          nutrition: {
-            protein: 25 + Math.floor(Math.random() * 15),
-            carbs: 55 + Math.floor(Math.random() * 25),
-            fat: 12 + Math.floor(Math.random() * 10),
-          }
-        },
-        {
-          id: `${dateString}-dinner`,
-          date: dateString,
-          mealType: 'dinner' as const,
-          title: ['家常炒飯', '蒸蛋湯麵', '番茄義大利麵'][Math.floor(Math.random() * 3)],
-          calories: 480 + Math.floor(Math.random() * 120),
-          tags: ['剩飯活用', '經濟實惠'],
-          time: '18:30',
-          emoji: '🌆',
-          nutrition: {
-            protein: 20 + Math.floor(Math.random() * 15),
-            carbs: 60 + Math.floor(Math.random() * 20),
-            fat: 15 + Math.floor(Math.random() * 12),
-          }
-        }
-      ];
-      
-      // 隨機添加點心
-      if (Math.random() > 0.3) {
-        dayMeals.push({
-          id: `${dateString}-snack`,
-          date: dateString,
-                      mealType: 'breakfast' as const,
-          title: ['手作布丁', '水果拼盤', '優格杯'][Math.floor(Math.random() * 3)],
-          calories: 120 + Math.floor(Math.random() * 80),
-          tags: ['低糖', '健康'],
-          time: '15:00',
-          emoji: '🍰',
-          nutrition: {
-            protein: 5 + Math.floor(Math.random() * 8),
-            carbs: 15 + Math.floor(Math.random() * 15),
-            fat: 3 + Math.floor(Math.random() * 6),
-          }
-        });
-      }
-      
-      records.push(...dayMeals);
-    }
-    
-    return records;
-  };
-
   useEffect(() => {
-    // 初始化模擬餐食數據
-    setMealRecords(generateMockMealRecords());
+    // 初始化空的餐食數據
+    setMealRecords([]);
   }, []);
+
+  // 處理來自通知的導航參數
+  useEffect(() => {
+    if (eventIdFromNotification && fromNotification === 'notification') {
+      console.log(`[首頁] 接收到來自通知的事件ID: ${eventIdFromNotification}`);
+      
+      // 確保顯示日曆視圖
+      setSelectedFilter('calendar');
+      
+      // 可以在這裡添加更多邏輯，比如：
+      // 1. 滾動到特定日期
+      // 2. 高亮顯示特定事件
+      // 3. 自動打開事件詳情
+      
+      // 清理 URL 參數，避免重複觸發
+      router.replace('/(tabs)');
+    }
+  }, [eventIdFromNotification, fromNotification, router]);
 
   // 处理过滤菜单，使用 value
   const handleFilterSelect = (filterValue: string) => {
@@ -440,6 +365,22 @@ export default function HomeScreen() {
                 {
                   text: '創建待辦',
                   onPress: () => handleVoiceToTodo(base64Data),
+                },
+              ]
+            );
+          } else if (selectedFilter === 'familyRecipes') {
+            Alert.alert(
+              '語音處理',
+              '是否將語音轉換為餐食記錄？',
+              [
+                {
+                  text: t('home.cancel'),
+                  onPress: () => clearRecording(),
+                  style: 'cancel',
+                },
+                {
+                  text: '記錄餐食',
+                  onPress: () => handleVoiceToMeal(base64Data),
                 },
               ]
             );
@@ -574,6 +515,20 @@ export default function HomeScreen() {
           setIsProcessingImage(false);
           setLoadingText('');
         }
+      } else if (selectedFilter === 'familyRecipes' && asset.base64) {
+        // 餐食模式：使用OCR識別照片中的餐食信息
+        setIsProcessingImage(true);
+        setLoadingText('正在識別圖片中的餐食信息...');
+        try {
+          const result = await processImageToMeal(asset.base64);
+          await handleMealResult(result);
+        } catch (error) {
+          console.error('圖片處理失敗:', error);
+          Alert.alert(t('home.error'), '圖片識別失敗，請重試');
+        } finally {
+          setIsProcessingImage(false);
+          setLoadingText('');
+        }
       } else if (asset.base64) {
         // 其他模式：使用OCR識別日程內容
         setIsProcessingImage(true);
@@ -621,6 +576,20 @@ export default function HomeScreen() {
         try {
           const result = await processImageToTodo(asset.base64);
           await handleTodoResult(result);
+        } catch (error) {
+          console.error('圖片處理失敗:', error);
+          Alert.alert(t('home.error'), '圖片識別失敗，請重試');
+        } finally {
+          setIsProcessingImage(false);
+          setLoadingText('');
+        }
+      } else if (selectedFilter === 'familyRecipes' && asset.base64) {
+        // 餐食模式：使用OCR識別圖片中的餐食信息
+        setIsProcessingImage(true);
+        setLoadingText('正在識別圖片中的餐食信息...');
+        try {
+          const result = await processImageToMeal(asset.base64);
+          await handleMealResult(result);
         } catch (error) {
           console.error('圖片處理失敗:', error);
           Alert.alert(t('home.error'), '圖片識別失敗，請重試');
@@ -679,6 +648,23 @@ export default function HomeScreen() {
     }
   };
 
+  // 新增：处理语音转餐食
+  const handleVoiceToMeal = async (base64Data: string) => {
+    setLoadingText('正在識別語音並記錄餐食...');
+    setIsProcessingImage(true);
+    try {
+      const result = await processVoiceToMeal(base64Data);
+      await handleMealResult(result);
+    } catch (error) {
+      console.error('语音转餐食失败:', error);
+      Alert.alert(t('home.error'), '語音轉餐食記錄失敗，請重試');
+    } finally {
+      setIsProcessingImage(false);
+      setLoadingText('');
+      clearRecording();
+    }
+  };
+
   // 处理文字输入转日程的结果（兼容原有逻辑）
   const handleTextResult = async (result: string) => {
     console.log('接收到文本输入:', result);
@@ -690,6 +676,10 @@ export default function HomeScreen() {
       if (selectedFilter === 'todos') {
         console.log('判断为待办意图');
         await handleCreateTodoFromText(result);
+      } else if (selectedFilter === 'familyRecipes') {
+        console.log('判断为餐食意图');
+        const mealResult = await processTextToMeal(result);
+        await handleMealResult(mealResult);
       } else if (result.match(/记账|消费|收入|花了|赚了|买单|付款/)) {
         console.log('判断为记账意图');
         // const expenseResult = await processTextToExpense(result); // 移除记账相关功能
@@ -751,6 +741,68 @@ export default function HomeScreen() {
         '未能從圖片中識別出待辦事項。\n\n請確保圖片中包含明確的任務描述。',
         [
           { text: '重新選擇', onPress: () => handleAlbumPress() },
+          { text: '手動添加', onPress: () => handleManualAdd() },
+          { text: '取消', style: 'cancel' }
+        ]
+      );
+    }
+  };
+
+  // 新增：處理餐食記錄結果
+  const handleMealResult = async (result: any) => {
+    if (!user) {
+      Alert.alert('錯誤', '請先登錄');
+      return;
+    }
+
+    if (result.meals && result.meals.length > 0) {
+      try {
+        // 更新餐食記錄狀態
+        const newMealRecords = result.meals.map((meal: any) => ({
+          id: `${meal.date}-${meal.mealType}-${Date.now()}`,
+          date: meal.date,
+          mealType: meal.mealType,
+          title: meal.title,
+          calories: meal.calories,
+          tags: meal.tags || [],
+          time: meal.time,
+          emoji: (() => {
+            switch (meal.mealType) {
+              case 'breakfast': return '🌅';
+              case 'lunch': return '☀️';
+              case 'dinner': return '🌆';
+              case 'snack': return '🍰';
+              default: return '🍽️';
+            }
+          })(),
+          nutrition: meal.nutrition || {
+            protein: 0,
+            carbs: 0,
+            fat: 0,
+          }
+        }));
+
+        // 添加到現有記錄中
+        setMealRecords(prev => [...newMealRecords, ...prev]);
+
+        if (newMealRecords.length === 1) {
+          setSuccessTitle('餐食記錄成功');
+          setSuccessMessage(`已成功記錄餐食：${newMealRecords[0].title} (${newMealRecords[0].calories}卡)`);
+        } else {
+          setSuccessTitle('餐食記錄成功');
+          setSuccessMessage(`已成功記錄 ${newMealRecords.length} 個餐食`);
+        }
+        setShowSuccessModal(true);
+      } catch (error) {
+        console.error('创建餐食记录失败:', error);
+        Alert.alert('錯誤', '創建餐食記錄失敗，請重試');
+      }
+    } else {
+      Alert.alert(
+        '解析結果',
+        '未能從輸入中識別出餐食信息。\n\n請確保包含明確的餐食描述。',
+        [
+          { text: '重新輸入', onPress: () => {} },
           { text: '手動添加', onPress: () => handleManualAdd() },
           { text: '取消', style: 'cancel' }
         ]
@@ -1720,10 +1772,11 @@ export default function HomeScreen() {
               currentView={(() => {
                 const selectedStyle = featureSettings.familyRecipes?.settings?.selectedStyle;
                 switch (selectedStyle) {
+                  case '日曆網格': return 'calendar_grid';
                   case '每日記錄': return 'daily_records';
                   case '週間概覽': return 'weekly_overview';
                   case '營養圖表': return 'nutrition_chart';
-                  default: return 'daily_records';
+                  default: return 'calendar_grid';
                 }
               })()}
             />
@@ -1823,11 +1876,11 @@ export default function HomeScreen() {
               <Text style={{ 
                 fontSize: 36, 
                 fontWeight: '700', 
-                color: '#34C759',
+                color: '#8E8E93',
                 textAlign: 'center',
                 marginBottom: 16,
               }}>
-                ¥3,800
+                ¥0
               </Text>
               
               {/* 收支對比 */}
@@ -1840,20 +1893,20 @@ export default function HomeScreen() {
               }}>
                 <View style={{ alignItems: 'center' }}>
                   <Text style={{ fontSize: 12, color: '#8E8E93', marginBottom: 4 }}>收入</Text>
-                  <Text style={{ fontSize: 18, fontWeight: '600', color: '#34C759' }}>
-                    ¥5,800
+                  <Text style={{ fontSize: 18, fontWeight: '600', color: '#8E8E93' }}>
+                    ¥0
                   </Text>
                 </View>
                 <View style={{ alignItems: 'center' }}>
                   <Text style={{ fontSize: 12, color: '#8E8E93', marginBottom: 4 }}>支出</Text>
-                  <Text style={{ fontSize: 18, fontWeight: '600', color: '#FF3B30' }}>
-                    ¥2,000
+                  <Text style={{ fontSize: 18, fontWeight: '600', color: '#8E8E93' }}>
+                    ¥0
                   </Text>
                 </View>
                 <View style={{ alignItems: 'center' }}>
                   <Text style={{ fontSize: 12, color: '#8E8E93', marginBottom: 4 }}>交易</Text>
-                  <Text style={{ fontSize: 18, fontWeight: '600', color: '#1D1D1F' }}>
-                    3 筆
+                  <Text style={{ fontSize: 18, fontWeight: '600', color: '#8E8E93' }}>
+                    0 筆
                   </Text>
                 </View>
               </View>
@@ -1887,102 +1940,31 @@ export default function HomeScreen() {
                 </TouchableOpacity>
               </View>
               
-              {/* 薪水收入 */}
-              <TouchableOpacity style={{
-                flexDirection: 'row',
+              {/* 空狀態提示 */}
+              <View style={{
                 alignItems: 'center',
-                paddingVertical: 16,
-                paddingHorizontal: 4,
-                borderBottomWidth: 1,
-                borderBottomColor: '#F8F9FA',
-              }} activeOpacity={0.7}>
-                <View style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 24,
-                  backgroundColor: '#E8F5E9',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginRight: 16,
+                paddingVertical: 40,
+                paddingHorizontal: 20,
+              }}>
+                <Text style={{ fontSize: 48, marginBottom: 16 }}>💰</Text>
+                <Text style={{ 
+                  fontSize: 16, 
+                  fontWeight: '600', 
+                  color: '#8E8E93',
+                  textAlign: 'center',
+                  marginBottom: 8
                 }}>
-                  <Text style={{ fontSize: 22 }}>💰</Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 17, fontWeight: '600', color: '#1D1D1F', marginBottom: 2 }}>
-                    薪水
-                  </Text>
-                  <Text style={{ fontSize: 13, color: '#8E8E93' }}>
-                    今天 · 主要帳戶
-                  </Text>
-                </View>
-                <Text style={{ fontSize: 18, fontWeight: '700', color: '#34C759' }}>
-                  +¥5,800
+                  還沒有記錄
                 </Text>
-              </TouchableOpacity>
-
-              {/* 午餐支出 */}
-              <TouchableOpacity style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                paddingVertical: 16,
-                paddingHorizontal: 4,
-                borderBottomWidth: 1,
-                borderBottomColor: '#F8F9FA',
-              }} activeOpacity={0.7}>
-                <View style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 24,
-                  backgroundColor: '#FFEBEE',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginRight: 16,
+                <Text style={{ 
+                  fontSize: 14, 
+                  color: '#8E8E93',
+                  textAlign: 'center',
+                  lineHeight: 20
                 }}>
-                  <Text style={{ fontSize: 22 }}>🍱</Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 17, fontWeight: '600', color: '#1D1D1F', marginBottom: 2 }}>
-                    午餐
-                  </Text>
-                  <Text style={{ fontSize: 13, color: '#8E8E93' }}>
-                    今天 · 現金
-                  </Text>
-                </View>
-                <Text style={{ fontSize: 18, fontWeight: '700', color: '#FF3B30' }}>
-                  -¥1,200
+                  開始記錄您的收支，建立財務習慣
                 </Text>
-              </TouchableOpacity>
-
-              {/* 交通支出 */}
-              <TouchableOpacity style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                paddingVertical: 16,
-                paddingHorizontal: 4,
-              }} activeOpacity={0.7}>
-                <View style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 24,
-                  backgroundColor: '#FFF3E0',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginRight: 16,
-                }}>
-                  <Text style={{ fontSize: 22 }}>🚇</Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 17, fontWeight: '600', color: '#1D1D1F', marginBottom: 2 }}>
-                    地鐵車票
-                  </Text>
-                  <Text style={{ fontSize: 13, color: '#8E8E93' }}>
-                    昨天 · IC卡
-                  </Text>
-                </View>
-                <Text style={{ fontSize: 18, fontWeight: '700', color: '#FF3B30' }}>
-                  -¥800
-                </Text>
-              </TouchableOpacity>
+              </View>
             </View>
 
             {/* 快速新增按鈕 */}

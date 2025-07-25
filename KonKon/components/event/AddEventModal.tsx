@@ -67,7 +67,7 @@ function AttendeeSelectionModal({
       if (prev.includes(userId)) {
         // 如果是当前用户，不允许取消选择
         if (userId === user?.id) {
-          Alert.alert('提示', '不能取消选择自己作为参与人');
+          Alert.alert(t('addEventModal.hint'), t('addEventModal.cannotDeleteSelf'));
           return prev;
         }
         return prev.filter(id => id !== userId);
@@ -95,11 +95,11 @@ function AttendeeSelectionModal({
         <View style={styles.attendeeModal}>
           <View style={styles.attendeeModalHeader}>
             <TouchableOpacity onPress={onClose}>
-              <Text style={styles.cancelButton}>取消</Text>
+              <Text style={styles.cancelButton}>{t('addEventModal.cancel')}</Text>
             </TouchableOpacity>
-            <Text style={styles.attendeeModalTitle}>选择参与人</Text>
+            <Text style={styles.attendeeModalTitle}>{t('addEventModal.selectAttendees')}</Text>
             <TouchableOpacity onPress={handleConfirm}>
-              <Text style={styles.confirmButton}>确定</Text>
+              <Text style={styles.confirmButton}>{t('addEventModal.confirm')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -125,7 +125,7 @@ function AttendeeSelectionModal({
                   <View style={styles.attendeeInfo}>
                     <Text style={styles.attendeeModalName}>{item.name}</Text>
                     {item.isCurrentUser && (
-                      <Text style={styles.attendeeLabel}>我</Text>
+                      <Text style={styles.attendeeLabel}>{t('addEventModal.me')}</Text>
                     )}
                   </View>
                 </View>
@@ -218,7 +218,7 @@ export default function AddEventModal({
     if (user) {
       users.push({
         id: user.id,
-        name: user.user_metadata?.display_name || user.email || '我',
+        name: user.user_metadata?.display_name || user.email || t('addEventModal.me'),
         email: user.email,
         avatar_url: user.user_metadata?.avatar_url,
         isCurrentUser: true,
@@ -230,7 +230,7 @@ export default function AddEventModal({
       if (member.user_id !== user?.id) {
         users.push({
           id: member.user_id,
-          name: member.user?.display_name || member.user?.email || '家庭成员',
+          name: member.user?.display_name || member.user?.email || t('addEventModal.familyMember'),
           email: member.user?.email,
           avatar_url: member.user?.avatar_url,
           isCurrentUser: false,
@@ -309,7 +309,7 @@ export default function AddEventModal({
               setSelectedFamilies([]);
             }
           } catch (error) {
-            console.error('獲取事件分享信息失敗 - 異常:', error);
+            console.error('Failed to get event sharing info - exception:', error);
             setSelectedFamilies([]);
           }
         };
@@ -380,7 +380,7 @@ export default function AddEventModal({
                 setRepeatOption('never');
               }
             } catch (error) {
-              console.error('获取父事件重复规则失败:', error);
+              console.error('Failed to get parent event recurrence rule:', error);
               setRepeatOption('never');
             }
           };
@@ -429,7 +429,7 @@ export default function AddEventModal({
         return 'yearly';
       }
     } catch (error) {
-      console.error('解析重复规则失败:', error);
+      console.error('Failed to parse recurrence rule:', error);
     }
     
     return 'never';
@@ -467,7 +467,7 @@ export default function AddEventModal({
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('權限必要', '需要相冊權限來選擇照片');
+        Alert.alert(t('addEventModal.permissionRequired'), t('addEventModal.photoLibraryPermissionMessage'));
         return;
       }
 
@@ -485,7 +485,7 @@ export default function AddEventModal({
       }
     } catch (error) {
       console.error('Error selecting images:', error);
-      Alert.alert('錯誤', '選擇照片失敗');
+      Alert.alert(t('addEventModal.error'), t('addEventModal.photoSelectError'));
     }
   };
 
@@ -494,7 +494,7 @@ export default function AddEventModal({
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('權限必要', '需要相機權限來拍照');
+        Alert.alert(t('addEventModal.permissionRequired'), t('addEventModal.cameraPermissionMessage'));
         return;
       }
 
@@ -510,7 +510,7 @@ export default function AddEventModal({
       }
     } catch (error) {
       console.error('Error taking photo:', error);
-      Alert.alert('錯誤', '拍照失敗');
+      Alert.alert(t('addEventModal.error'), t('addEventModal.photoTakeError'));
     }
   };
 
@@ -524,11 +524,11 @@ export default function AddEventModal({
     if (selectedImages.length === 0) return [];
 
     if (!user?.id) {
-      throw new Error('用戶未登錄，無法上傳照片');
+      throw new Error(t('errors.userNotLoggedInUpload'));
     }
 
     if (!activeFamily?.id) {
-      throw new Error('請先選擇或加入一個家庭');
+      throw new Error(t('errors.familyRequired'));
     }
 
     setIsUploadingImages(true);
@@ -561,7 +561,7 @@ export default function AddEventModal({
         }
 
         if (!data?.path) {
-          throw new Error('上傳成功但未返回文件路徑');
+          throw new Error(t('errors.uploadFailedNoPath'));
         }
 
         const { data: { publicUrl } } = supabase.storage
@@ -581,7 +581,7 @@ export default function AddEventModal({
 
   const handleSave = async () => {
     if (!title.trim()) {
-      Alert.alert('提示', '请输入事件标题');
+      Alert.alert(t('addEventModal.hint'), t('addEventModal.titleRequired'));
       return;
     }
 
@@ -617,7 +617,7 @@ export default function AddEventModal({
       }
 
       // 获取当前用户名称
-      const currentUserName = user?.user_metadata?.display_name || user?.email || '用户';
+      const currentUserName = user?.user_metadata?.display_name || user?.email || t('common.unknownUser');
       
       if (editingEvent && onUpdate) {
         // 检查是否是重复事件的实例
@@ -683,7 +683,7 @@ export default function AddEventModal({
         });
       }
     } catch (error) {
-      Alert.alert('错误', '保存失败');
+      Alert.alert(t('addEventModal.error'), t('addEventModal.saveFailed'));
     } finally {
       setLoading(false);
     }
@@ -739,9 +739,9 @@ export default function AddEventModal({
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
         {
-          options: [...repeatOptions.map(r => r.label), '取消'],
+          options: [...repeatOptions.map(r => r.label), t('addEventModal.cancel')],
           cancelButtonIndex: repeatOptions.length,
-          title: '重复频率',
+          title: t('addEventModal.repeatFrequency'),
         },
         (buttonIndex) => {
           if (buttonIndex < repeatOptions.length) {
@@ -751,14 +751,14 @@ export default function AddEventModal({
       );
     } else {
       Alert.alert(
-        '重复频率',
-        '选择重复选项',
+        t('addEventModal.repeatFrequency'),
+        t('addEventModal.repeatFrequency'),
         [
           ...repeatOptions.map(option => ({
             text: option.label,
             onPress: () => setRepeatOption(option.value),
           })),
-          { text: t('common.cancel'), style: 'cancel' },
+          { text: t('addEventModal.cancel'), style: 'cancel' },
         ]
       );
     }
@@ -782,7 +782,7 @@ export default function AddEventModal({
   };
 
   const getRepeatLabel = (value: string): string => {
-    return repeatOptions.find(option => option.value === value)?.label || '从不';
+    return repeatOptions.find(option => option.value === value)?.label || t('event.repeat.never');
   };
 
   // 處理刪除事件
@@ -790,15 +790,15 @@ export default function AddEventModal({
     if (!editingEvent || !onDelete) return;
 
     Alert.alert(
-      '確認刪除',
-      `確定要刪除事件"${title}"嗎？此操作無法撤銷。`,
+      t('addEventModal.confirmDelete'),
+      t('addEventModal.confirmDeleteMessage', { title }),
       [
         {
-          text: '取消',
+          text: t('addEventModal.cancel'),
           style: 'cancel',
         },
         {
-          text: '刪除',
+          text: t('addEventModal.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -823,9 +823,9 @@ export default function AddEventModal({
               onClose();
               resetForm();
               
-              Alert.alert('刪除成功', '事件已被刪除');
+              Alert.alert(t('addEventModal.deleteSuccess'), t('addEventModal.eventDeleted'));
             } catch (error) {
-              Alert.alert('刪除失敗', '無法刪除事件，請稍後再試');
+              Alert.alert(t('addEventModal.deleteFailed'), t('addEventModal.deleteFailed'));
             } finally {
               setLoading(false);
             }
@@ -856,14 +856,14 @@ export default function AddEventModal({
             </TouchableOpacity>
             
             <Text style={styles.modalTitle}>
-              {editingEvent ? '编辑事件' : '新建事件'}
+              {editingEvent ? t('addEventModal.editEvent') : t('addEventModal.createEvent')}
             </Text>
 
             <ScrollView style={styles.formContainer} showsVerticalScrollIndicator={false}>
               {/* 标题输入 */}
                    <TextInput
                 style={styles.input}
-                placeholder="事件标题"
+                placeholder={t('addEventModal.titlePlaceholder')}
                 value={title}
                 onChangeText={setTitle}
                 autoFocus={!editingEvent}
@@ -877,7 +877,7 @@ export default function AddEventModal({
               >
                 <View style={styles.attendeeSelectorLeft}>
                   <Ionicons name="people" size={20} color="#007AFF" />
-                  <Text style={styles.attendeeSelectorLabel}>参与人</Text>
+                  <Text style={styles.attendeeSelectorLabel}>{t('addEventModal.attendees')}</Text>
                 </View>
                 <View style={styles.attendeeSelectorRight}>
                   <View style={styles.attendeeSelectorList}>
@@ -915,7 +915,7 @@ export default function AddEventModal({
                 >
                   <View style={styles.dateTimeLeft}>
                     <Ionicons name="calendar" size={20} color="#007AFF" />
-                    <Text style={styles.dateTimeLabel}>日期</Text>
+                    <Text style={styles.dateTimeLabel}>{t('addEventModal.date')}</Text>
                   </View>
                   <Text style={styles.dateTimeValue}>{formatDate(date)}</Text>
                 </TouchableOpacity>
@@ -941,7 +941,7 @@ export default function AddEventModal({
                 >
                   <View style={styles.dateTimeLeft}>
                     <Ionicons name="time" size={20} color="#007AFF" />
-                    <Text style={styles.dateTimeLabel}>全天</Text>
+                    <Text style={styles.dateTimeLabel}>{t('addEventModal.allDay')}</Text>
                   </View>
                   <View style={[styles.switch, allDay && styles.switchActive]}>
                     <View style={[styles.switchThumb, allDay && styles.switchThumbActive]} />
@@ -961,7 +961,7 @@ export default function AddEventModal({
                     >
                       <View style={styles.dateTimeLeft}>
                         <Ionicons name="play" size={20} color="#007AFF" />
-                        <Text style={styles.dateTimeLabel}>开始</Text>
+                        <Text style={styles.dateTimeLabel}>{t('addEventModal.start')}</Text>
                       </View>
                       <Text style={styles.dateTimeValue}>{formatTime(startTime)}</Text>
                     </TouchableOpacity>
@@ -990,7 +990,7 @@ export default function AddEventModal({
                     >
                       <View style={styles.dateTimeLeft}>
                         <Ionicons name="stop" size={20} color="#007AFF" />
-                        <Text style={styles.dateTimeLabel}>结束</Text>
+                        <Text style={styles.dateTimeLabel}>{t('addEventModal.end')}</Text>
                       </View>
                       <Text style={styles.dateTimeValue}>{formatTime(endTime)}</Text>
                     </TouchableOpacity>
@@ -1018,7 +1018,7 @@ export default function AddEventModal({
                 >
                   <View style={styles.dateTimeLeft}>
                     <Ionicons name="repeat" size={20} color="#007AFF" />
-                    <Text style={styles.dateTimeLabel}>重复</Text>
+                    <Text style={styles.dateTimeLabel}>{t('addEventModal.repeat')}</Text>
                   </View>
                   <View style={styles.optionRight}>
                     <Text style={styles.dateTimeValue}>{getRepeatLabel(repeatOption)}</Text>
@@ -1041,15 +1041,15 @@ export default function AddEventModal({
                     >
                       <View style={styles.dateTimeLeft}>
                         <Ionicons name="people" size={20} color="#007AFF" />
-                        <Text style={styles.dateTimeLabel}>分享到</Text>
+                        <Text style={styles.dateTimeLabel}>{t('addEventModal.shareTo')}</Text>
                       </View>
                       <View style={styles.optionRight}>
                         <Text style={styles.dateTimeValue}>
                           {selectedFamilies.length === 0 
-                            ? '私人事件' 
+                            ? t('addEventModal.privateEvent') 
                             : selectedFamilies.length === 1
-                              ? shareableFamilies.find(f => f.id === selectedFamilies[0])?.name || '1 個家庭'
-                              : `${selectedFamilies.length} 個家庭`
+                              ? shareableFamilies.find(f => f.id === selectedFamilies[0])?.name || t('addEventModal.familiesCount', { count: 1 })
+                              : t('addEventModal.familiesCount', { count: selectedFamilies.length })
                           }
                         </Text>
                         <Ionicons name="chevron-down" size={16} color="#C7C7CD" style={{ marginLeft: 4 }} />
@@ -1061,11 +1061,11 @@ export default function AddEventModal({
                       <View style={styles.inlinePicker}>
                         {editingEvent && selectedFamilies.length > 0 && (
                           <Text style={[styles.sectionDescription, { color: '#007AFF', marginBottom: 8 }]}>
-                            📝 當前事件已分享給 {selectedFamilies.length} 個家庭
+                            {t('addEventModal.eventSharedWithFamilies', { count: selectedFamilies.length })}
                           </Text>
                         )}
                         <Text style={styles.sectionDescription}>
-                          選擇家庭後，該家庭的所有成員都能看到這個事件
+                          {t('addEventModal.selectFamilyNote')}
                         </Text>
                         <View style={styles.familyContainer}>
                           {/* 私人事件按鈕 */}
@@ -1090,7 +1090,7 @@ export default function AddEventModal({
                               styles.familyButtonText,
                               selectedFamilies.length === 0 && styles.familyButtonTextSelected
                             ]}>
-                              私人事件
+                              {t('addEventModal.privateEvent')}
                             </Text>
                             {selectedFamilies.length === 0 && (
                               <Ionicons name="checkmark" size={16} color="white" style={{ marginLeft: 5 }} />
@@ -1143,10 +1143,10 @@ export default function AddEventModal({
                 >
                   <View style={styles.dateTimeLeft}>
                     <Ionicons name="camera" size={20} color="#007AFF" />
-                    <Text style={styles.dateTimeLabel}>附件</Text>
+                    <Text style={styles.dateTimeLabel}>{t('addEventModal.attachments')}</Text>
                   </View>
                   <Text style={styles.dateTimeValue}>
-                    {selectedImages.length === 0 ? '無附件' : `${selectedImages.length} 張照片`}
+                    {selectedImages.length === 0 ? t('addEventModal.noAttachments') : t('addEventModal.photosCount', { count: selectedImages.length })}
                   </Text>
                 </TouchableOpacity>
 
@@ -1178,7 +1178,7 @@ export default function AddEventModal({
                           onPress={handleTakePhoto}
                         >
                           <Ionicons name="camera" size={20} color="#007AFF" />
-                          <Text style={styles.addPhotoButtonText}>拍照</Text>
+                          <Text style={styles.addPhotoButtonText}>{t('addEventModal.takePhoto')}</Text>
                         </TouchableOpacity>
                         
                         <TouchableOpacity 
@@ -1186,7 +1186,7 @@ export default function AddEventModal({
                           onPress={handleSelectImages}
                         >
                           <Ionicons name="image" size={20} color="#007AFF" />
-                          <Text style={styles.addPhotoButtonText}>選擇照片</Text>
+                          <Text style={styles.addPhotoButtonText}>{t('addEventModal.selectPhoto')}</Text>
                         </TouchableOpacity>
                       </View>
                     )}
@@ -1194,12 +1194,12 @@ export default function AddEventModal({
                     {isUploadingImages && (
                       <View style={styles.uploadingIndicator}>
                         <ActivityIndicator size="small" color="#007AFF" />
-                        <Text style={styles.uploadingText}>正在上傳照片...</Text>
+                        <Text style={styles.uploadingText}>{t('addEventModal.uploadingPhotos')}</Text>
                       </View>
                     )}
 
                     <Text style={styles.sectionDescription}>
-                      最多可以添加 5 張照片
+                      {t('addEventModal.maxPhotosNote')}
                     </Text>
                   </View>
                 )}
@@ -1207,7 +1207,7 @@ export default function AddEventModal({
 
               {/* 颜色选择 */}
               <View style={styles.colorSection}>
-                <Text style={styles.sectionTitle}>颜色标签</Text>
+                <Text style={styles.sectionTitle}>{t('addEventModal.colorLabel')}</Text>
                 <View style={styles.colorGrid}>
                   {colors.map((color, index) => (
                     <TouchableOpacity
@@ -1230,7 +1230,7 @@ export default function AddEventModal({
               {/* 描述输入 */}
               <TextInput
                 style={[styles.input, styles.descriptionInput]}
-                placeholder="备注"
+                placeholder={t('addEventModal.descriptionPlaceholder')}
                 value={description}
                 onChangeText={setDescription}
                 multiline
@@ -1258,7 +1258,7 @@ export default function AddEventModal({
                   onPress={handleDelete}
                   disabled={loading}
                 >
-                  <Text style={styles.deleteButtonText}>刪除</Text>
+                  <Text style={styles.deleteButtonText}>{t('addEventModal.delete')}</Text>
                 </TouchableOpacity>
               ) : (
                 <View style={styles.placeholder} />
@@ -1271,7 +1271,7 @@ export default function AddEventModal({
                 disabled={loading}
               >
                 <Text style={styles.saveButtonText}>
-                  {loading ? '保存中...' : '保存'}
+                  {loading ? t('addEventModal.saving') : t('addEventModal.save')}
                 </Text>
               </TouchableOpacity>
             </View>

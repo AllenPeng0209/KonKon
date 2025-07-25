@@ -116,12 +116,15 @@ export default function MealManagementScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>🌟 今日推薦</Text>
         <View style={styles.todayRecommendation}>
-          <View style={styles.mealCard}>
-            <Text style={styles.mealEmoji}>🍱</Text>
-            <Text style={styles.mealTitle}>親子便當</Text>
-            <Text style={styles.mealSubtitle}>15分鐘 · 營養均衡</Text>
-                       <Text style={styles.difficultyStars}>⭐⭐☆</Text>
-          </View>
+          <TouchableOpacity 
+            style={styles.mealCard}
+            onPress={() => setShowAIGenerator(true)}
+          >
+            <Text style={styles.mealEmoji}>🤖</Text>
+            <Text style={styles.mealTitle}>AI智能推薦</Text>
+            <Text style={styles.mealSubtitle}>點擊獲取個人化餐食建議</Text>
+            <Text style={styles.difficultyStars}>✨✨✨</Text>
+          </TouchableOpacity>
         </View>
       </View>
 

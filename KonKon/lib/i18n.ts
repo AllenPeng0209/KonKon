@@ -530,7 +530,7 @@ type TranslationKeys =
   | 'featureSettings.settings.healthReports'
   ;
 
-export const t = (key: TranslationKeys, options?: any) => i18n.t(key, options);
+export const t = (key: string, options?: any) => i18n.t(key, options);
 
 export const setLocale = (locale: string) => {
   i18n.locale = locale;

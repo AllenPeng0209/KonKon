@@ -330,6 +330,40 @@ export interface ParsedTodoResult {
   userInput?: string;
 }
 
+// 新增：餐食記錄結果接口
+export interface ParsedMealResult {
+  meals: MealRecord[];
+  summary: string;
+  confidence: number;
+  userInput?: string;
+}
+
+// 新增：餐食記錄接口
+export interface MealRecord {
+  title: string;
+  mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack';
+  calories: number;
+  time: string; // HH:MM 格式
+  date: string; // YYYY-MM-DD 格式
+  description?: string;
+  nutrition?: {
+    protein: number;
+    carbs: number;
+    fat: number;
+  };
+  tags?: string[];
+  confidence: number;
+}
+
+// 新增：待辦事項接口
+export interface Todo {
+  title: string;
+  description?: string;
+  priority: 'low' | 'medium' | 'high';
+  dueDate?: string; // YYYY-MM-DD 格式
+  confidence: number;
+}
+
 // 新增：文字轉待辦事項處理
 export async function processTextToTodo(
   text: string,
@@ -459,6 +493,96 @@ export async function processVoiceToTodo(
     return await processTextToTodo(transcribedText, onProgress);
   } catch (error) {
     console.error('语音转待办失败:', error);
+    throw error;
+  }
+}
+
+// 新增：文字轉餐食記錄處理
+export async function processTextToMeal(
+  text: string,
+  onProgress?: (chunk: string) => void
+): Promise<ParsedMealResult> {
+  try {
+    const config = await getOmniConfig();
+    
+    const requestBody = {
+      model: config.model,
+      input: {
+        messages: [{
+          role: "system",
+          content: (() => {
+            const now = new Date();
+            const today = now.toISOString().split('T')[0];
+            const currentTime = now.toTimeString().slice(0, 5);
+            
+            return `你是一個智能餐食記錄助手。請分析用戶的文本輸入，提取其中的餐食信息，並返回JSON格式的結構化數據。
+
+返回格式：
+{
+  "meals": [
+    {
+      "title": "牛奶燕麥粥",
+      "mealType": "breakfast",
+      "calories": 320,
+      "time": "08:00",
+      "date": "YYYY-MM-DD",
+      "description": "加了香蕉和蜂蜜",
+      "nutrition": {
+        "protein": 12,
+        "carbs": 45,
+        "fat": 8
+      },
+      "tags": ["健康", "快手"],
+      "confidence": 0.95
+    }
+  ],
+  "summary": "解析摘要",
+  "confidence": 0.9
+}
+
+注意：
+1. 'mealType' 必須是 'breakfast', 'lunch', 'dinner', 或 'snack' 之一
+2. 'time' 格式必須是 HH:MM (24小時制)
+3. 'date' 格式必須是 YYYY-MM-DD。如果用戶沒有明確說明日期，使用今天的日期: ${today}
+4. 'calories' 必須是一個數字，表示卡路里
+5. 'nutrition' 中的 protein, carbs, fat 都是以克為單位的數字
+6. 'tags' 是描述餐食特點的標籤數組
+7. 根據用戶描述的內容和當前時間 ${currentTime} 智能推斷餐食類型
+8. 如果文本中包含多個餐食記錄，請在 "meals" 數組中返回所有項目
+9. 如果無法解析出任何餐食信息，返回一個空的 "meals" 數組`;
+          })()
+        }, {
+          role: "user",
+          content: text
+        }]
+      },
+      parameters: {
+        result_format: "json_object"
+      }
+    };
+    
+    const responseText = await fetchFromBailian(requestBody, onProgress);
+    return parseMealResult(responseText, text);
+    
+  } catch (error) {
+    console.error('文字轉餐食失敗:', error);
+    throw error;
+  }
+}
+
+// 新增：語音轉餐食記錄處理
+export async function processVoiceToMeal(
+  audioBase64: string,
+  onProgress?: (chunk: string) => void
+): Promise<ParsedMealResult> {
+  try {
+    const transcribedText = await speechToText(audioBase64, onProgress);
+    if (!transcribedText || transcribedText.trim() === '') {
+      throw new Error('语音识别结果为空');
+    }
+    return await processTextToMeal(transcribedText, onProgress);
+  } catch (error) {
+    console.error('语音转餐食失败:', error);
     throw error;
   }
 }
@@ -925,6 +1049,118 @@ export async function processImageToCalendar(
   }
 }
 
+// 新增：圖片轉餐食記錄處理（OCR + AI解析）
+export async function processImageToMeal(
+  base64Image: string
+): Promise<ParsedMealResult> {
+  try {
+    const config = await getOmniConfig();
+
+    const requestBody = {
+      model: "qwen-vl-max",
+      input: {
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                image: `data:image/jpeg;base64,${base64Image}`
+              },
+              {
+                text: (() => {
+                  const now = new Date();
+                  const today = now.toISOString().split('T')[0];
+                  const currentTime = now.toTimeString().slice(0, 5);
+                  
+                  return `你是一個智能餐食記錄助手。請分析圖片內容，提取所有可能的餐食信息，並返回JSON格式的結構化數據。
+
+返回格式：
+{
+  "meals": [
+    {
+      "title": "餐食名稱",
+      "mealType": "breakfast",
+      "calories": 320,
+      "time": "08:00",
+      "date": "YYYY-MM-DD",
+      "description": "詳細描述",
+      "nutrition": {
+        "protein": 12,
+        "carbs": 45,
+        "fat": 8
+      },
+      "tags": ["健康", "快手"],
+      "confidence": 0.95
+    }
+  ],
+  "summary": "解析摘要",
+  "confidence": 0.9
+}
+
+分析重點：
+1. 識別圖片中的食物種類和名稱
+2. 根據食物外觀估算卡路里含量
+3. 分析營養成分（蛋白質、碳水化合物、脂肪）
+4. 根據食物類型和當前時間 ${currentTime} 推斷餐食類型
+5. 如果是菜單或食譜，提取所有餐食項目
+6. 如果是餐廳收據，提取購買的餐食信息
+7. 如果是食品包裝，讀取營養標籤信息
+
+注意：
+1. 'mealType' 必須是 'breakfast', 'lunch', 'dinner', 或 'snack' 之一
+2. 'time' 格式必須是 HH:MM (24小時制)，根據當前時間 ${currentTime} 和餐食類型合理推斷
+3. 'date' 格式必須是 YYYY-MM-DD，默認使用今天的日期: ${today}
+4. 'calories' 根據食物份量和種類合理估算
+5. 'nutrition' 中的 protein, carbs, fat 都是以克為單位的數字
+6. 'tags' 描述餐食特點，如：健康、高蛋白、素食、辛辣等
+7. 如果圖片中有多個餐食項目，請在 "meals" 數組中返回所有項目
+8. 如果無法識別任何餐食信息，返回一個空的 "meals" 數組
+9. 必須返回有效的JSON格式，不要包含其他解釋文字`;
+                })()
+              }
+            ]
+          }
+        ]
+      },
+      parameters: {
+        "max_tokens": 2000,
+        "temperature": 0.1,
+        "top_p": 0.8
+      }
+    };
+    
+    // 使用多模态API endpoint
+    const response = await fetch(`${config.baseURL}/api/v1/services/aigc/multimodal-generation/generation`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${config.apiKey}`,
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Bailian API Error:', response.status, errorText);
+      throw new Error(`API 請求失敗: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    console.log("Bailian Response:", JSON.stringify(data, null, 2));
+
+    const responseText = data.output?.choices?.[0]?.message?.content?.[0]?.text || '';
+    if (!responseText) {
+       throw new Error('從圖片解析餐食失敗: AI未返回有效內容。');
+    }
+    
+    return parseMealResult(responseText, '圖片識別');
+
+  } catch (error) {
+    console.error('圖片處理失敗:', error);
+    throw new Error(`圖片處理失敗: ${error instanceof Error ? error.message : '未知錯誤'}`);
+  }
+}
+
 
 function normalizeEventKeys(event: any): any {
     const mapping: { [key: string]: string } = {
@@ -1145,6 +1381,50 @@ function parseExpenseResult(
     console.error('解析记账结果失败:', error);
     console.log('原始响应:', content);
     throw new Error('无法解析AI模型的响应');
+  }
+}
+
+// 新增：解析餐食记录结果
+function parseMealResult(
+  content: string,
+  userInput: string
+): ParsedMealResult {
+  try {
+    const parsedData = JSON.parse(content);
+    const meals: MealRecord[] = (parsedData.meals || []).map((m: any) => {
+      return {
+        title: m.title || '未知餐食',
+        mealType: m.mealType || 'snack',
+        calories: m.calories || 0,
+        time: m.time || new Date().toTimeString().slice(0, 5),
+        date: m.date || new Date().toISOString().split('T')[0],
+        description: m.description,
+        nutrition: m.nutrition ? {
+          protein: m.nutrition.protein || 0,
+          carbs: m.nutrition.carbs || 0,
+          fat: m.nutrition.fat || 0,
+        } : undefined,
+        tags: m.tags || [],
+        confidence: m.confidence || 0.8,
+      };
+    });
+    
+    meals.forEach(meal => {
+      if (typeof meal.confidence !== 'number' || meal.confidence < 0 || meal.confidence > 1) {
+        meal.confidence = 0.8;
+      }
+    });
+
+    return {
+      meals,
+      summary: parsedData.summary || '成功解析餐食記錄',
+      confidence: parsedData.confidence || 0.8,
+      userInput,
+    };
+  } catch (error) {
+    console.error('解析餐食結果失敗:', error);
+    console.log('原始響應:', content);
+    throw new Error('無法解析AI模型的響應');
   }
 }
 

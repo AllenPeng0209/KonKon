@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  SafeAreaView,
-  Dimensions,
-} from 'react-native';
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import {
+    Dimensions,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 
 const { width } = Dimensions.get('window');
 
@@ -33,46 +33,15 @@ interface FinanceStats {
 export default function ModernFinanceHome() {
   const router = useRouter();
 
-  // 模擬數據
+  // 空的初始數據
   const [stats] = useState<FinanceStats>({
-    monthlyBalance: 3800,
-    income: 5800,
-    expense: 2000,
-    transactionCount: 3,
+    monthlyBalance: 0,
+    income: 0,
+    expense: 0,
+    transactionCount: 0,
   });
 
-  const [recentTransactions] = useState<Transaction[]>([
-    {
-      id: '1',
-      title: '薪水',
-      amount: 5800,
-      type: 'income',
-      category: '薪資',
-      date: '今天',
-      icon: '💰',
-      account: '主要帳戶',
-    },
-    {
-      id: '2',
-      title: '午餐',
-      amount: 1200,
-      type: 'expense',
-      category: '餐飲',
-      date: '今天',
-      icon: '🍱',
-      account: '現金',
-    },
-    {
-      id: '3',
-      title: '地鐵車票',
-      amount: 800,
-      type: 'expense',
-      category: '交通',
-      date: '昨天',
-      icon: '🚇',
-      account: 'IC卡',
-    },
-  ]);
+  const [recentTransactions] = useState<Transaction[]>([]);
 
   const formatAmount = (amount: number, type: 'income' | 'expense' = 'expense') => {
     const prefix = type === 'income' ? '+' : '-';
@@ -133,32 +102,42 @@ export default function ModernFinanceHome() {
             </TouchableOpacity>
           </View>
           
-          {recentTransactions.map((transaction, index) => (
-            <TouchableOpacity 
-              key={transaction.id} 
-              style={[
-                styles.transactionItem,
-                index === recentTransactions.length - 1 && styles.lastTransactionItem
-              ]}
-              activeOpacity={0.7}
-            >
-              <View style={styles.transactionIcon}>
-                <Text style={styles.transactionEmoji}>{transaction.icon}</Text>
-              </View>
-              <View style={styles.transactionContent}>
-                <Text style={styles.transactionTitle}>{transaction.title}</Text>
-                <Text style={styles.transactionMeta}>
-                  {transaction.date} · {transaction.account}
+          {recentTransactions.length > 0 ? (
+            recentTransactions.map((transaction, index) => (
+              <TouchableOpacity 
+                key={transaction.id} 
+                style={[
+                  styles.transactionItem,
+                  index === recentTransactions.length - 1 && styles.lastTransactionItem
+                ]}
+                activeOpacity={0.7}
+              >
+                <View style={styles.transactionIcon}>
+                  <Text style={styles.transactionEmoji}>{transaction.icon}</Text>
+                </View>
+                <View style={styles.transactionContent}>
+                  <Text style={styles.transactionTitle}>{transaction.title}</Text>
+                  <Text style={styles.transactionMeta}>
+                    {transaction.date} · {transaction.account}
+                  </Text>
+                </View>
+                <Text style={[
+                  styles.transactionAmount,
+                  { color: getAmountColor(transaction.type) }
+                ]}>
+                  {formatAmount(transaction.amount, transaction.type)}
                 </Text>
-              </View>
-              <Text style={[
-                styles.transactionAmount,
-                { color: getAmountColor(transaction.type) }
-              ]}>
-                {formatAmount(transaction.amount, transaction.type)}
+              </TouchableOpacity>
+            ))
+          ) : (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateIcon}>💰</Text>
+              <Text style={styles.emptyStateTitle}>還沒有記錄</Text>
+              <Text style={styles.emptyStateSubtitle}>
+                開始記錄您的收支，建立財務習慣
               </Text>
-            </TouchableOpacity>
-          ))}
+            </View>
+          )}
         </View>
 
         {/* 快速新增按鈕 */}
@@ -339,5 +318,27 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+  emptyStateIcon: {
+    fontSize: 48,
+    marginBottom: 16,
+  },
+  emptyStateTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#8E8E93',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  emptyStateSubtitle: {
+    fontSize: 14,
+    color: '#8E8E93',
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });

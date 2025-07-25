@@ -22,6 +22,7 @@ import Animated, {
 import { Colors } from '../../constants/Colors';
 import { useAuth } from '../../contexts/AuthContext';
 import { useFamily } from '../../contexts/FamilyContext';
+import NotificationBell from './NotificationBell';
 
 const { width } = Dimensions.get('window');
 const ITEM_HEIGHT = 68; // 空間項目高度
@@ -381,17 +382,24 @@ const Drawer: React.FC<DrawerProps> = ({ onClose, translateX }) => {
     <>
       <Animated.View style={[styles.container, animatedStyle]}>
         <SafeAreaView style={styles.safeArea}>
-          <TouchableOpacity style={styles.profileSection} onPress={navigateToProfile}>
-            <Image
-              source={{ uri: getAvatarUrl() }}
-              style={styles.avatar}
-            />
-            <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>{user?.user_metadata?.display_name || user?.email}</Text>
-              <Text style={styles.profileStatus}>{t('drawer.viewProfile')}</Text>
+          {/* 頂部區域 - 包含用戶資料和通知鈴鐺 */}
+          <View style={styles.topSection}>
+            <TouchableOpacity style={styles.profileSection} onPress={navigateToProfile}>
+              <Image
+                source={{ uri: getAvatarUrl() }}
+                style={styles.avatar}
+              />
+              <View style={styles.profileInfo}>
+                <Text style={styles.profileName}>{user?.user_metadata?.display_name || user?.email}</Text>
+                <Text style={styles.profileStatus}>{t('drawer.viewProfile')}</Text>
+              </View>
+            </TouchableOpacity>
+
+            {/* 通知鈴鐺 */}
+            <View style={styles.notificationContainer}>
+              <NotificationBell colorScheme={colorScheme} />
             </View>
-            <Ionicons name="chevron-forward" size={20} color={styles.profileStatus.color} />
-          </TouchableOpacity>
+          </View>
 
           <View style={styles.separator} />
 
@@ -497,11 +505,20 @@ const getStyles = (colorScheme: 'light' | 'dark' | null | undefined) => {
     safeArea: {
       flex: 1,
     },
+    topSection: {
+      position: 'relative',
+    },
     profileSection: {
       flexDirection: 'row',
       alignItems: 'center',
       paddingHorizontal: 16,
       paddingVertical: 20,
+      paddingRight: 60, // 為通知鈴鐺留出空間
+    },
+    notificationContainer: {
+      position: 'absolute',
+      top: 20,
+      right: 16,
     },
     avatar: {
       width: 50,

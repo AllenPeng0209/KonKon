@@ -3,14 +3,15 @@ import { useCallback, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
-    FlatList,
     Image,
     RefreshControl,
+    SectionList,
     StyleSheet,
     Text,
     TouchableOpacity,
-    View,
+    View
 } from 'react-native';
+import { getNotificationEventTitle } from '../../lib/notificationNavigation';
 import { NotificationWithSender } from '../../lib/notificationService';
 
 interface NotificationListProps {
@@ -22,6 +23,7 @@ interface NotificationListProps {
   onRefresh: () => void;
   onLoadMore: () => void;
   onMarkAsRead: (notificationId: string) => void;
+  onMarkAsUnread: (notificationId: string) => void;
   onMarkAllAsRead: () => void;
   onNotificationPress?: (notification: NotificationWithSender) => void;
 }
@@ -35,6 +37,7 @@ export default function NotificationList({
   onRefresh,
   onLoadMore,
   onMarkAsRead,
+  onMarkAsUnread,
   onMarkAllAsRead,
   onNotificationPress,
 }: NotificationListProps) {
@@ -119,6 +122,28 @@ export default function NotificationList({
     });
   };
 
+  // 將通知分組為已讀和未讀
+  const unreadNotifications = notifications.filter(n => !n.is_read);
+  const readNotifications = notifications.filter(n => n.is_read);
+
+  const sections = [];
+  
+  if (unreadNotifications.length > 0) {
+    sections.push({
+      title: '未讀通知',
+      data: unreadNotifications,
+      isUnread: true,
+    });
+  }
+  
+  if (readNotifications.length > 0) {
+    sections.push({
+      title: '已讀通知',
+      data: readNotifications,
+      isUnread: false,
+    });
+  }
+
   const renderNotification = ({ item: notification }: { item: NotificationWithSender }) => (
     <TouchableOpacity
       style={[
@@ -128,6 +153,8 @@ export default function NotificationList({
       onPress={() => {
         if (!notification.is_read) {
           onMarkAsRead(notification.id);
+        } else {
+          onMarkAsUnread(notification.id);
         }
         onNotificationPress?.(notification);
       }}
@@ -162,6 +189,12 @@ export default function NotificationList({
             
             <Text style={styles.notificationMessage} numberOfLines={2}>
               {notification.message}
+              {/* 如果是事件通知，顯示事件標題 */}
+              {getNotificationEventTitle(notification) && (
+                <Text style={styles.eventTitle}>
+                  {' '}「{getNotificationEventTitle(notification)}」
+                </Text>
+              )}
             </Text>
             
             <View style={styles.notificationMeta}>
@@ -190,7 +223,13 @@ export default function NotificationList({
         
         <TouchableOpacity
           style={styles.markReadButton}
-          onPress={() => onMarkAsRead(notification.id)}
+          onPress={() => {
+            if (notification.is_read) {
+              onMarkAsUnread(notification.id);
+            } else {
+              onMarkAsRead(notification.id);
+            }
+          }}
         >
           <Ionicons
             name={notification.is_read ? "checkmark-circle" : "ellipse-outline"}
@@ -202,24 +241,23 @@ export default function NotificationList({
     </TouchableOpacity>
   );
 
+  const renderSectionHeader = ({ section }: { section: any }) => (
+    <View style={styles.sectionHeader}>
+      <Text style={styles.sectionTitle}>{section.title}</Text>
+      {section.isUnread && unreadCount > 0 && (
+        <TouchableOpacity
+          style={styles.markAllButton}
+          onPress={handleMarkAllAsRead}
+        >
+          <Text style={styles.markAllButtonText}>全部已读</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+
   const renderHeader = () => {
-    if (notifications.length === 0) return null;
-    
-    return (
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>
-          通知 {unreadCount > 0 && `(${unreadCount} 条未读)`}
-        </Text>
-        {unreadCount > 0 && (
-          <TouchableOpacity
-            style={styles.markAllButton}
-            onPress={handleMarkAllAsRead}
-          >
-            <Text style={styles.markAllButtonText}>全部已读</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-    );
+    // 移除頭部，因為標題現在在外部固定頭部
+    return null;
   };
 
   const renderFooter = () => {
@@ -254,9 +292,10 @@ export default function NotificationList({
 
   return (
     <View style={styles.container}>
-      <FlatList
-        data={notifications}
+      <SectionList
+        sections={sections}
         renderItem={renderNotification}
+        renderSectionHeader={renderSectionHeader}
         keyExtractor={(item) => item.id}
         ListHeaderComponent={renderHeader}
         ListFooterComponent={renderFooter}
@@ -268,6 +307,7 @@ export default function NotificationList({
         onEndReachedThreshold={0.1}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={notifications.length === 0 ? styles.emptyContent : undefined}
+        stickySectionHeadersEnabled={false}
       />
     </View>
   );
@@ -278,20 +318,20 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8f9fa',
   },
-  header: {
+  sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: 'white',
+    backgroundColor: '#f1f3f5',
     borderBottomWidth: 1,
     borderBottomColor: '#e9ecef',
   },
-  headerTitle: {
-    fontSize: 18,
+  sectionTitle: {
+    fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: '#495057',
   },
   markAllButton: {
     paddingHorizontal: 12,
@@ -433,11 +473,16 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginBottom: 8,
   },
-  emptyMessage: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    paddingHorizontal: 40,
-    lineHeight: 20,
-  },
-}); 
+      emptyMessage: {
+      fontSize: 14,
+      color: '#666',
+      textAlign: 'center',
+      paddingHorizontal: 40,
+      lineHeight: 20,
+    },
+    eventTitle: {
+      fontSize: 14,
+      color: '#007AFF',
+      fontWeight: '500',
+    },
+  }); 
