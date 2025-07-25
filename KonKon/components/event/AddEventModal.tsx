@@ -27,7 +27,6 @@ import { useRecurringEvents } from '../../hooks/useRecurringEvents';
 import { t } from '../../lib/i18n';
 import { notifyEventCreated, notifyEventUpdated } from '../../lib/notificationService';
 import { supabase } from '../../lib/supabase';
-import EventComments from './EventComments';
 
 interface User {
   id: string;
@@ -1237,16 +1236,6 @@ export default function AddEventModal({
                 textAlignVertical="top"
               />
 
-              {/* 留言板 - 只在編輯模式下顯示 */}
-              {editingEvent && (
-                <View style={styles.commentsSection}>
-                  <EventComments 
-                    eventId={editingEvent.id} 
-                    visible={true}
-                  />
-                </View>
-              )}
-
             </ScrollView>
 
             {/* 按鈕區域 - 水平佈局 */}
@@ -1806,8 +1795,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginLeft: 5,
   },
-  commentsSection: {
-    marginTop: 15,
-    width: '100%',
+  attendeeCounter: {
+    color: '#007AFF',
+    fontSize: 14,
+    marginLeft: 5,
   },
 });

@@ -58,7 +58,7 @@ const TodoItem: React.FC<TodoItemProps> = ({ todo, onToggleComplete, onDelete, o
     } else if (daysDiff < 0) {
       return t('todos.overdue');
     } else {
-      return date.toLocaleDateString('zh-TW', { month: 'short', day: 'numeric' });
+      return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
     }
   };
 
@@ -135,7 +135,7 @@ const TodoItem: React.FC<TodoItemProps> = ({ todo, onToggleComplete, onDelete, o
           
           {todo.assigned_user && (
             <Text style={styles.assigneeText}>
-              {todo.assigned_user.display_name || '未知用戶'}
+              {todo.assigned_user.display_name || t('todos.unknownUser')}
             </Text>
           )}
         </View>
@@ -239,11 +239,11 @@ const AddTodoModal: React.FC<AddTodoModalProps> = ({ visible, onClose, onSave, e
           <View style={styles.inputCard}>
             <View style={styles.inputHeader}>
               <Ionicons name="document-text" size={20} color="#007AFF" />
-              <Text style={styles.inputLabel}>Todo項目のタイトル</Text>
+              <Text style={styles.inputLabel}>{t('todos.todoTitle')}</Text>
             </View>
             <TextInput
               style={styles.titleInput}
-              placeholder="タスクのタイトルを入力してください"
+              placeholder={t('todos.taskTitlePlaceholder')}
               value={title}
               onChangeText={setTitle}
               multiline
@@ -255,11 +255,11 @@ const AddTodoModal: React.FC<AddTodoModalProps> = ({ visible, onClose, onSave, e
           <View style={styles.inputCard}>
             <View style={styles.inputHeader}>
               <Ionicons name="chatbubble-ellipses" size={20} color="#34C759" />
-              <Text style={styles.inputLabel}>説明 (任意)</Text>
+              <Text style={styles.inputLabel}>{t('todos.description')}</Text>
             </View>
             <TextInput
               style={styles.descriptionInput}
-              placeholder="詳細な説明を入力してください（オプション）"
+              placeholder={t('todos.detailDescriptionPlaceholder')}
               value={description}
               onChangeText={setDescription}
               multiline
@@ -271,7 +271,7 @@ const AddTodoModal: React.FC<AddTodoModalProps> = ({ visible, onClose, onSave, e
           <View style={styles.inputCard}>
             <View style={styles.inputHeader}>
               <Ionicons name="flag" size={20} color="#FF9500" />
-              <Text style={styles.inputLabel}>優先度</Text>
+              <Text style={styles.inputLabel}>{t('todos.priority')}</Text>
             </View>
             <View style={styles.priorityButtons}>
               {(['high', 'medium', 'low'] as const).map((p) => (
@@ -296,9 +296,9 @@ const AddTodoModal: React.FC<AddTodoModalProps> = ({ visible, onClose, onSave, e
                     styles.priorityButtonText,
                     priority === p && styles.selectedPriorityButtonText
                   ]}>
-                    {p === 'high' ? '高' : 
-                     p === 'medium' ? '中' : 
-                     '低'}
+                    {p === 'high' ? t('todos.high') : 
+                     p === 'medium' ? t('todos.medium') : 
+                     t('todos.low')}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -309,7 +309,7 @@ const AddTodoModal: React.FC<AddTodoModalProps> = ({ visible, onClose, onSave, e
           <View style={styles.inputCard}>
             <View style={styles.inputHeader}>
               <Ionicons name="calendar" size={20} color="#8E8E93" />
-              <Text style={styles.inputLabel}>期限日 (任意)</Text>
+              <Text style={styles.inputLabel}>{t('todos.dueDateOptional')}</Text>
             </View>
             <View style={styles.dateInputContainer}>
               <Ionicons name="time" size={16} color="#8E8E93" style={styles.dateIcon} />
@@ -389,7 +389,7 @@ export default function TodoView() {
         if (activeFamily.id === 'meta-space') {
           Alert.alert(
             t('todos.error'), 
-            '無法在元空間直接創建待辦事項。請選擇特定的家庭空間。'
+            t('todos.cannotCreateInMetaSpace')
           );
           return;
         }
@@ -397,7 +397,7 @@ export default function TodoView() {
         if (activeFamily.tag === 'personal') {
           Alert.alert(
             t('todos.error'), 
-            '無法在個人空間創建待辦事項。請選擇特定的家庭空間。'
+            t('todos.cannotCreateInPersonalSpace')
           );
           return;
         }
@@ -411,7 +411,7 @@ export default function TodoView() {
         if (!isValidUUID(activeFamily.id)) {
           Alert.alert(
             t('todos.error'), 
-            '當前空間不支持創建待辦事項。請選擇有效的家庭空間。'
+            t('todos.invalidSpace')
           );
           return;
         }
@@ -522,7 +522,7 @@ export default function TodoView() {
         
         Alert.alert(
           t('todos.error'), 
-          '更新順序失敗，已恢復原始順序'
+          t('todos.updateOrderFailed')
         );
       } finally {
         setIsSorting(false);
@@ -563,14 +563,14 @@ export default function TodoView() {
     }
     
     if (activeFamily.tag === 'personal') {
-      return '個人空間中沒有待辦事項\n在這裡創建的待辦事項只有您能看到';
+      return t('todos.personalSpaceEmpty');
     }
     
     if (activeFamily.id === 'meta-space') {
-      return '元空間顯示所有空間的待辦事項\n目前沒有任何待辦事項';
+      return t('todos.metaSpaceEmpty');
     }
     
-    return `${activeFamily.name} 中沒有待辦事項\n在這裡創建的待辦事項將與家庭成員共享`;
+    return t('todos.familySpaceEmpty', { familyName: activeFamily.name });
   };
 
   if (!activeFamily) {
@@ -686,7 +686,7 @@ export default function TodoView() {
       {isSorting && (
         <View style={styles.sortingIndicator}>
           <ActivityIndicator size="small" color="#007AFF" />
-          <Text style={styles.sortingText}>正在保存順序...</Text>
+          <Text style={styles.sortingText}>{t('todos.savingOrder')}</Text>
         </View>
       )}
 

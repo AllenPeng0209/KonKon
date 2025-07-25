@@ -16,6 +16,7 @@ import { TodoView } from '@/components/todo';
 import SmartButton from '@/components/ui/SmartButton';
 import todoService from '@/lib/todoService';
 
+import EventPreviewModal from '@/components/event/EventPreviewModal';
 import FamilyHealthDashboard from '@/components/health/FamilyHealthDashboard';
 import ShoppingViewSelector, {
   FamilyMember,
@@ -93,6 +94,8 @@ export default function HomeScreen() {
   const [showVoiceToCalendar, setShowVoiceToCalendar] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [editingEvent, setEditingEvent] = useState<any>(null);
+  const [showEventPreview, setShowEventPreview] = useState(false);
+  const [previewingEvent, setPreviewingEvent] = useState<any>(null);
   const [hasCalendarPermission, setHasCalendarPermission] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date().toISOString().slice(0, 7));
   const [isProcessingImage, setIsProcessingImage] = useState(false);
@@ -1444,6 +1447,27 @@ export default function HomeScreen() {
     setShowAddEventModal(true);
   };
 
+  // 处理打开预览事件
+  const handlePreviewEvent = (event: any) => {
+    setPreviewingEvent(event);
+    setShowEventPreview(true);
+  };
+
+  // 处理从预览到编辑的转换
+  const handleEditFromPreview = () => {
+    if (previewingEvent) {
+      setShowEventPreview(false);
+      setEditingEvent(previewingEvent);
+      setShowAddEventModal(true);
+    }
+  };
+
+  // 处理关闭预览事件
+  const handleCloseEventPreview = () => {
+    setPreviewingEvent(null);
+    setShowEventPreview(false);
+  };
+
   // 处理关闭编辑事件
   const handleCloseEditEvent = () => {
     setEditingEvent(null);
@@ -2025,7 +2049,7 @@ export default function HomeScreen() {
                 };
                 handleDatePress(dateData);
               }}
-              onEventPress={handleEditEvent}
+              onEventPress={handlePreviewEvent}
               onMonthChange={(month: string) => {
                 const dateData = {
                   year: parseInt(month.split('-')[0]),
@@ -2095,7 +2119,7 @@ export default function HomeScreen() {
                         <TouchableOpacity 
                           key={event.id} 
                           style={styles.eventItem}
-                          onPress={() => handleEditEvent(event)}
+                          onPress={() => handlePreviewEvent(event)}
                           activeOpacity={0.8}
                         >
                           <View style={[styles.eventColor, { backgroundColor: event.color || '#007AFF' }]} />
@@ -2242,13 +2266,13 @@ export default function HomeScreen() {
         editingEvent={editingEvent}
       />
 
-      {/* <AddExpenseModal // 移除记账相关功能
-        isVisible={showAddExpenseModal}
-        onClose={() => setShowAddExpenseModal(false)}
-        onSave={handleSaveExpense}
-        editingExpense={editingExpense}
-        selectedDate={selectedDate}
-      /> */}
+      {/* 事件預覽模态框 */}
+      <EventPreviewModal
+        visible={showEventPreview}
+        onClose={handleCloseEventPreview}
+        onEdit={handleEditFromPreview}
+        event={previewingEvent}
+      />
       
       {/* 新增：添加回忆模态框 */}
       <AddMemoryModal
