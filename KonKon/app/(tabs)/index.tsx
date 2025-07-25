@@ -77,7 +77,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [showFamilyMenu, setShowFamilyMenu] = useState(false);
-  const [selectedFilter, setSelectedFilter] = useState('all'); // 默认值为 'all'
+  const [selectedFilter, setSelectedFilter] = useState('calendar'); // 默认值为 'calendar'
   const [showAddEventModal, setShowAddEventModal] = useState(false);
   // 已移除：记账相关状态
   const [showEventListModal, setShowEventListModal] = useState(false);
@@ -210,9 +210,7 @@ export default function HomeScreen() {
 
   // 动态生成过滤选项，基于启用的功能
   const filterOptions = (() => {
-    const options = [
-      { label: t('home.all'), value: 'all', icon: '📊', color: '#8E8E93', bgColor: '#F2F2F7' },
-    ];
+    const options = [];
 
     // 始终保持日历功能
     options.push({ label: t('home.calendar'), value: 'calendar', icon: '🔔', color: '#FF9500', bgColor: '#FFF3E0' });
@@ -1543,26 +1541,28 @@ export default function HomeScreen() {
           >
             <Ionicons name="menu" size={24} color="#000" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.recordFilterButton} onPress={toggleFilterMenu}>
-            <Text style={styles.recordFilterText}>{filterOptions.find(opt => opt.value === selectedFilter)?.label}</Text>
-            <Text style={styles.recordFilterIcon}>▼</Text>
-          </TouchableOpacity>
         </View>
         <View style={styles.headerCenter}>
-          <TouchableOpacity 
-            style={styles.familyButton}
-            onPress={() => setShowFamilyMenu(!showFamilyMenu)}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.familyName} numberOfLines={1}>
-              {activeFamily 
-                ? (activeFamily.tag === 'personal' ? t('space.personalSpace') : 
-                   activeFamily.id === 'meta-space' ? t('drawer.metaSpace') : 
-                   activeFamily.name)
-                : '選擇家庭'}
-            </Text>
-            <Text style={styles.familyDropdownIcon}>▼</Text>
-          </TouchableOpacity>
+          <View style={styles.centerButtonGroup}>
+            <TouchableOpacity 
+              style={styles.familyButton}
+              onPress={() => setShowFamilyMenu(!showFamilyMenu)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.familyName} numberOfLines={1}>
+                {activeFamily 
+                  ? (activeFamily.tag === 'personal' ? t('space.personalSpace') : 
+                     activeFamily.id === 'meta-space' ? t('drawer.metaSpace') : 
+                     activeFamily.name)
+                  : '選擇家庭'}
+              </Text>
+              <Text style={styles.familyDropdownIcon}>▼</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.recordFilterButton} onPress={toggleFilterMenu}>
+              <Text style={styles.recordFilterText}>{filterOptions.find(opt => opt.value === selectedFilter)?.label}</Text>
+              <Text style={styles.recordFilterIcon}>▼</Text>
+            </TouchableOpacity>
+          </View>
         </View>
         <View style={styles.headerRight}>
           <TouchableOpacity 
@@ -2096,7 +2096,7 @@ export default function HomeScreen() {
                 const dayEvents = getProcessedEventsByDate(displayDate);
                 
                 // 根据 selectedFilter 过滤事件
-                const filteredEvents = selectedFilter === 'all'
+                const filteredEvents = selectedFilter === 'calendar'
                   ? dayEvents
                   : dayEvents.filter(event => event.type === selectedFilter);
 
@@ -2562,16 +2562,20 @@ const styles = StyleSheet.create({
   recordFilterButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 4,
-    paddingVertical: 4,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    minWidth: 80,
+    maxWidth: 120,
+    height: 36,
   },
   recordFilterText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
-    borderBottomWidth: 2,
-    borderBottomColor: '#007AFF',
-    paddingBottom: 4,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1D1D1F',
+    textAlign: 'center',
     marginRight: 8,
   },
   recordFilterIcon: {
@@ -2586,6 +2590,12 @@ const styles = StyleSheet.create({
     bottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  centerButtonGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
   },
   headerRight: {
     flexDirection: 'row',
@@ -2655,7 +2665,8 @@ const styles = StyleSheet.create({
   filterMenu: {
     position: 'absolute',
     top: 55,
-    left: 16,
+    left: '50%',
+    transform: [{ translateX: -100 }],
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 8,
