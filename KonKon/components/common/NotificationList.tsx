@@ -151,11 +151,11 @@ export default function NotificationList({
         !notification.is_read && styles.unreadNotification,
       ]}
       onPress={() => {
+        // 如果是未讀通知，點擊時標記為已讀（但不切換已讀的通知狀態）
         if (!notification.is_read) {
           onMarkAsRead(notification.id);
-        } else {
-          onMarkAsUnread(notification.id);
         }
+        // 導航到相應頁面
         onNotificationPress?.(notification);
       }}
     >
@@ -223,7 +223,9 @@ export default function NotificationList({
         
         <TouchableOpacity
           style={styles.markReadButton}
-          onPress={() => {
+          onPress={(e) => {
+            // 阻止事件冒泡，避免觸發父級的 onPress
+            e.stopPropagation();
             if (notification.is_read) {
               onMarkAsUnread(notification.id);
             } else {

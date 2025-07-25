@@ -1,21 +1,28 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { useState } from 'react';
 import {
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import NotificationList from '../components/common/NotificationList';
+import EventPreviewModal from '../components/event/EventPreviewModal';
 import { useAuth } from '../contexts/AuthContext';
 import { useFamily } from '../contexts/FamilyContext';
 import { useNotifications } from '../hooks/useNotifications';
+import { handleNotificationNavigation } from '../lib/notificationNavigation';
 import { NotificationWithSender } from '../lib/notificationService';
+import { supabase } from '../lib/supabase';
 
 export default function NotificationsScreen() {
   const { user } = useAuth();
   const { activeFamily } = useFamily();
+  const [showEventPreview, setShowEventPreview] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [loadingEvent, setLoadingEvent] = useState(false);
 
   // 如果用户未登录，显示登录提示
   if (!user) {
@@ -41,21 +48,86 @@ export default function NotificationsScreen() {
     isLoadingMore,
     hasMore,
     markAsRead,
+    markAsUnread,
     markAllAsRead,
     refresh,
     loadMoreNotifications,
   } = useNotifications();
 
-  const handleNotificationPress = (notification: NotificationWithSender) => {
-    // 根据通知类型导航到相应页面
-    if (notification.related_type === 'event' && notification.related_id) {
-      // 导航到日历页面，并可选择性地高亮显示特定事件
-      router.push('/(tabs)/' as any);
+  // 獲取事件數據
+  const fetchEventData = async (eventId: string) => {
+    setLoadingEvent(true);
+    try {
+      const { data: event, error } = await supabase
+        .from('events')
+        .select(`
+          *,
+          creator:users(id, display_name, avatar_url)
+        `)
+        .eq('id', eventId)
+        .single();
+
+      if (error) {
+        console.error('獲取事件數據失敗:', error);
+        return null;
+      }
+
+      return event;
+    } catch (error) {
+      console.error('獲取事件數據失敗:', error);
+      return null;
+    } finally {
+      setLoadingEvent(false);
+    }
+  };
+
+  const handleNotificationPress = async (notification: NotificationWithSender) => {
+    console.log('[通知頁面] 處理通知點擊:', notification.title);
+    
+    // 檢查是否為事件相關通知
+    if (
+      (notification.type === 'event_created' || 
+       notification.type === 'event_updated' || 
+       notification.type === 'event_reminder') &&
+      notification.related_id
+    ) {
+      // 獲取事件數據並顯示預覽模態框
+      const eventData = await fetchEventData(notification.related_id);
+      if (eventData) {
+        setSelectedEvent(eventData);
+        setShowEventPreview(true);
+      } else {
+        // 如果獲取事件失敗，回退到原來的導航邏輯
+        try {
+          handleNotificationNavigation(notification);
+        } catch (error) {
+          console.error('[通知頁面] 導航失敗:', error);
+          router.push('/(tabs)');
+        }
+      }
+    } else {
+      // 非事件通知，使用原來的導航邏輯
+      try {
+        handleNotificationNavigation(notification);
+      } catch (error) {
+        console.error('[通知頁面] 導航失敗:', error);
+        router.push('/(tabs)');
+      }
     }
   };
 
   const handleSettingsPress = () => {
     router.push('/notification-settings');
+  };
+
+  const handleEditEvent = () => {
+    // 關閉預覽模態框，然後導航到事件編輯頁面
+    setShowEventPreview(false);
+    if (selectedEvent) {
+      // 這裡可以導航到編輯頁面或打開編輯模態框
+      // 暫時先導航到日曆頁面
+      router.push('/(tabs)');
+    }
   };
 
   if (!user || !activeFamily) {
@@ -96,8 +168,16 @@ export default function NotificationsScreen() {
         onRefresh={refresh}
         onLoadMore={loadMoreNotifications}
         onMarkAsRead={markAsRead}
+        onMarkAsUnread={markAsUnread}
         onMarkAllAsRead={markAllAsRead}
         onNotificationPress={handleNotificationPress}
+      />
+      
+      <EventPreviewModal
+        visible={showEventPreview}
+        onClose={() => setShowEventPreview(false)}
+        onEdit={handleEditEvent}
+        event={selectedEvent}
       />
     </SafeAreaView>
   );
