@@ -1,8 +1,6 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { Tables } from '@/lib/database.types';
 import { supabase } from '@/lib/supabase';
-import { videoGenerationService } from '@/lib/videoGenerationService';
-import { ResizeMode, Video } from 'expo-av';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useEffect, useState } from 'react';
 import {
@@ -14,11 +12,10 @@ import {
   Modal,
   Platform,
   SafeAreaView,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 
 type SimpleAlbum = Tables<'family_albums'> & {
@@ -44,12 +41,6 @@ const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({ album, isVisible, onC
   const [loading, setLoading] = useState(true);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   
-  // Video generation states
-  const [generatedVideoUrl, setGeneratedVideoUrl] = useState<string | null>(null);
-  const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
-  const [selectedMusic, setSelectedMusic] = useState<string>('upbeat');
-  const [showMusicSelector, setShowMusicSelector] = useState(false);
-  
   // Delete states
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -62,19 +53,8 @@ const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({ album, isVisible, onC
   useEffect(() => {
     if (isVisible && album) {
       fetchAlbumPhotos();
-      // Check if there's already a generated video for this album
-      checkExistingVideo();
     }
   }, [isVisible, album]);
-
-  // Music options
-  const musicOptions = [
-    { id: 'upbeat', name: '歡快輕鬆', icon: '🎵' },
-    { id: 'emotional', name: '溫馨感人', icon: '💖' },
-    { id: 'peaceful', name: '寧靜祥和', icon: '🌸' },
-    { id: 'adventure', name: '冒險刺激', icon: '🚀' },
-    { id: 'nostalgic', name: '懷舊經典', icon: '📻' },
-  ];
 
   const fetchAlbumPhotos = async () => {
     if (!album) return;
@@ -97,95 +77,6 @@ const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({ album, isVisible, onC
       console.error('Error fetching album photos:', error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const checkExistingVideo = async () => {
-    // Check if there's a generated video stored for this album
-    // For now, we'll disable this functionality until metadata field is added to database
-    // if (album.metadata && typeof album.metadata === 'object') {
-    //   const metadata = album.metadata as any;
-    //   if (metadata.generated_video_url) {
-    //     setGeneratedVideoUrl(metadata.generated_video_url);
-    //   }
-    // }
-    console.log('Video generation feature temporarily disabled - metadata field needed');
-  };
-
-  const generateVideo = async () => {
-    if (displayPhotos.length === 0) {
-      Alert.alert('無法生成視頻', '此相簿沒有照片');
-      return;
-    }
-
-    setIsGeneratingVideo(true);
-    
-    try {
-      console.log('開始使用AI生成視頻...');
-      
-      // 將 AlbumPhoto 轉換為 ImagePickerAsset 格式
-      const photoAssets = displayPhotos.map((photo, index) => ({
-        uri: photo.image_url,
-        width: 1080,
-        height: 1080,
-        fileName: `photo_${index}.jpg`,
-        type: 'image' as const,
-        mimeType: 'image/jpeg',
-      }));
-
-      // 準備視頻生成選項
-      const videoOptions = {
-        photos: photoAssets,
-        musicStyle: selectedMusic as 'upbeat' | 'emotional' | 'peaceful' | 'adventure' | 'nostalgic',
-        albumId: album.id,
-        albumName: album.name,
-        theme: album.theme || '日常生活'
-      };
-
-      console.log('調用視頻生成服務...');
-      const result = await videoGenerationService.generateSlideShowVideo(videoOptions);
-      
-      if (result.success && result.videoUrl) {
-        setGeneratedVideoUrl(result.videoUrl);
-        
-        // 更新相簿元數據（如果數據庫支持）
-        try {
-          const updateData = {
-            // 只更新已存在的字段
-            updated_at: new Date().toISOString()
-          };
-          
-          await supabase
-            .from('family_albums')
-            .update(updateData)
-            .eq('id', album.id);
-            
-          console.log('相簿更新成功');
-        } catch (updateError) {
-          console.warn('更新相簿元數據失敗（非關鍵錯誤）:', updateError);
-        }
-        
-        Alert.alert(
-          '視頻生成成功', 
-          `您的相簿視頻已準備就緒！\n時長：${Math.round(result.duration || 30)}秒`,
-          [{ text: '太棒了！', style: 'default' }]
-        );
-      } else {
-        throw new Error(result.error || '視頻生成失敗');
-      }
-      
-    } catch (error: any) {
-      console.error('視頻生成錯誤:', error);
-      Alert.alert(
-        '生成失敗', 
-        error.message || '視頻生成過程中出現錯誤，請稍後重試',
-        [
-          { text: '稍後重試', style: 'cancel' },
-          { text: '重新嘗試', onPress: generateVideo }
-        ]
-      );
-    } finally {
-      setIsGeneratingVideo(false);
     }
   };
 
@@ -479,69 +370,6 @@ const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({ album, isVisible, onC
           </Text>
         </View>
 
-        {/* Video Generation & Player Section */}
-        <View style={styles.videoSection}>
-          <Text style={styles.videoSectionTitle}>🎬 相簿視頻</Text>
-          
-          {generatedVideoUrl ? (
-            // Show generated video
-            <View style={styles.videoContainer}>
-              <Video
-                source={{ uri: generatedVideoUrl }}
-                style={styles.video}
-                useNativeControls
-                resizeMode={ResizeMode.CONTAIN}
-                shouldPlay={false}
-              />
-              <TouchableOpacity 
-                style={styles.regenerateButton}
-                onPress={() => setShowMusicSelector(true)}
-                disabled={isGeneratingVideo}
-              >
-                <Text style={styles.regenerateButtonText}>🎵 重新生成</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            // Show generation UI
-            <View style={styles.generateContainer}>
-              {isGeneratingVideo ? (
-                <View style={styles.generatingContainer}>
-                  <ActivityIndicator size="large" color="#007AFF" />
-                  <Text style={styles.generatingText}>正在生成精彩視頻...</Text>
-                  <Text style={styles.generatingSubtext}>
-                    AI 正在將您的照片與 {musicOptions.find(m => m.id === selectedMusic)?.name} 音樂結合
-                  </Text>
-                </View>
-              ) : (
-                <View style={styles.generatePrompt}>
-                  <Text style={styles.generateIcon}>🎥</Text>
-                  <Text style={styles.generateTitle}>生成相簿視頻</Text>
-                  <Text style={styles.generateDescription}>
-                    將您的照片自動組合成精美視頻，配上優美音樂
-                  </Text>
-                  
-                  <TouchableOpacity 
-                    style={styles.musicSelector}
-                    onPress={() => setShowMusicSelector(true)}
-                  >
-                    <Text style={styles.musicSelectorText}>
-                      {musicOptions.find(m => m.id === selectedMusic)?.icon} {musicOptions.find(m => m.id === selectedMusic)?.name}
-                    </Text>
-                    <Text style={styles.musicSelectorArrow}>›</Text>
-                  </TouchableOpacity>
-                  
-                  <TouchableOpacity 
-                    style={styles.generateButton}
-                    onPress={generateVideo}
-                  >
-                    <Text style={styles.generateButtonText}>✨ 開始生成</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </View>
-          )}
-        </View>
-
         {/* Photos Grid */}
         {loading ? (
           <View style={styles.loadingContainer}>
@@ -588,71 +416,6 @@ const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({ album, isVisible, onC
           </Modal>
         )}
 
-        {/* Music Selection Modal */}
-        <Modal
-          visible={showMusicSelector}
-          animationType="slide"
-          onRequestClose={() => setShowMusicSelector(false)}
-          transparent
-        >
-          <View style={styles.musicModalOverlay}>
-            <View style={styles.musicModalContainer}>
-              <View style={styles.musicModalHeader}>
-                <Text style={styles.musicModalTitle}>選擇音樂風格</Text>
-                <TouchableOpacity 
-                  style={styles.musicModalClose}
-                  onPress={() => setShowMusicSelector(false)}
-                >
-                  <Text style={styles.musicModalCloseText}>×</Text>
-                </TouchableOpacity>
-              </View>
-              
-              <ScrollView style={styles.musicOptionsList}>
-                {musicOptions.map((option) => (
-                  <TouchableOpacity
-                    key={option.id}
-                    style={[
-                      styles.musicOption,
-                      selectedMusic === option.id && styles.musicOptionSelected
-                    ]}
-                    onPress={() => {
-                      setSelectedMusic(option.id);
-                      setShowMusicSelector(false);
-                      if (generatedVideoUrl) {
-                        // If video already exists, regenerate with new music
-                        generateVideo();
-                      }
-                    }}
-                  >
-                    <Text style={styles.musicOptionIcon}>{option.icon}</Text>
-                    <Text style={[
-                      styles.musicOptionText,
-                      selectedMusic === option.id && styles.musicOptionTextSelected
-                    ]}>
-                      {option.name}
-                    </Text>
-                    {selectedMusic === option.id && (
-                      <Text style={styles.musicOptionCheck}>✓</Text>
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-              
-              {!generatedVideoUrl && (
-                <TouchableOpacity 
-                  style={styles.musicModalGenerateButton}
-                  onPress={() => {
-                    setShowMusicSelector(false);
-                    generateVideo();
-                  }}
-                >
-                  <Text style={styles.musicModalGenerateText}>✨ 使用此風格生成視頻</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-        </Modal>
-
         {/* Delete Confirmation Modal */}
         <Modal
           visible={showDeleteConfirm}
@@ -667,7 +430,7 @@ const AlbumDetailView: React.FC<AlbumDetailViewProps> = ({ album, isVisible, onC
                 確定要刪除「{album.name}」相簿嗎？
               </Text>
               <Text style={styles.deleteModalWarning}>
-                此操作無法復原，所有照片和視頻都將被永久刪除。
+                此操作無法復原，所有照片都將被永久刪除。
               </Text>
               
               <View style={styles.deleteModalButtons}>
@@ -887,212 +650,6 @@ const styles = StyleSheet.create({
   fullScreenImage: {
     width: '100%',
     height: '100%',
-  },
-  
-  // Video Section Styles
-  videoSection: {
-    backgroundColor: '#ffffff',
-    paddingHorizontal: 16,
-    paddingVertical: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e1e8ed',
-  },
-  videoSectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 16,
-  },
-  videoContainer: {
-    alignItems: 'center',
-  },
-  video: {
-    width: '100%',
-    height: 200,
-    borderRadius: 12,
-    backgroundColor: '#000',
-  },
-  regenerateButton: {
-    marginTop: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: '#f0f8ff',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#007AFF',
-  },
-  regenerateButtonText: {
-    fontSize: 14,
-    color: '#007AFF',
-    fontWeight: '500',
-  },
-  generateContainer: {
-    alignItems: 'center',
-  },
-  generatingContainer: {
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  generatingText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  generatingSubtext: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  generatePrompt: {
-    alignItems: 'center',
-    paddingVertical: 20,
-  },
-  generateIcon: {
-    fontSize: 48,
-    marginBottom: 16,
-  },
-  generateTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-  },
-  generateDescription: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 20,
-    paddingHorizontal: 20,
-  },
-  musicSelector: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#f8f9fa',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e1e8ed',
-    marginBottom: 20,
-    minWidth: 200,
-  },
-  musicSelectorText: {
-    fontSize: 16,
-    color: '#333',
-    fontWeight: '500',
-  },
-  musicSelectorArrow: {
-    fontSize: 18,
-    color: '#666',
-    marginLeft: 8,
-  },
-  generateButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 32,
-    paddingVertical: 12,
-    borderRadius: 24,
-    shadowColor: '#007AFF',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  generateButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#ffffff',
-  },
-  
-  // Music Modal Styles
-  musicModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  musicModalContainer: {
-    backgroundColor: '#ffffff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '70%',
-  },
-  musicModalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e1e8ed',
-  },
-  musicModalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-  },
-  musicModalClose: {
-    width: 32,
-    height: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  musicModalCloseText: {
-    fontSize: 24,
-    color: '#666',
-  },
-  musicOptionsList: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  musicOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    marginBottom: 8,
-    borderRadius: 12,
-    backgroundColor: '#f8f9fa',
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  musicOptionSelected: {
-    backgroundColor: '#f0f8ff',
-    borderColor: '#007AFF',
-  },
-  musicOptionIcon: {
-    fontSize: 24,
-    marginRight: 12,
-  },
-  musicOptionText: {
-    flex: 1,
-    fontSize: 16,
-    color: '#333',
-    fontWeight: '500',
-  },
-  musicOptionTextSelected: {
-    color: '#007AFF',
-    fontWeight: '600',
-  },
-  musicOptionCheck: {
-    fontSize: 18,
-    color: '#007AFF',
-    fontWeight: '600',
-  },
-  musicModalGenerateButton: {
-    margin: 20,
-    backgroundColor: '#007AFF',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  musicModalGenerateText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#ffffff',
   },
   
   // Delete Modal Styles
