@@ -1,17 +1,18 @@
 import { useRouter } from 'expo-router';
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import {
-  KeyboardAvoidingView,
-  Platform,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    KeyboardAvoidingView,
+    Platform,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../contexts/AuthContext';
+import { useFamily } from '../../contexts/FamilyContext';
 
 // 聊天组件
 import { AnimatedLogo } from '../../components/chat/AnimatedLogo';
@@ -31,9 +32,14 @@ import { useFamilyChat } from '../../hooks/useFamilyChat';
 
 export default function ExploreScreen() {
   const { user, loading } = useAuth();
+  const { activeFamily } = useFamily();
   const router = useRouter();
   const { top } = useSafeAreaInsets();
   const scrollViewRef = useRef<ScrollView>(null);
+  
+  // 添加滾動防抖
+  const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isLoadingMoreRef = useRef<boolean>(false);
   
   // 只使用家庭群聊功能
   const {
@@ -71,18 +77,40 @@ export default function ExploreScreen() {
     await sendFamilyMessage(message);
   };
 
-  // 處理滾動事件，檢測是否需要加載更多消息
-  const handleScroll = (event: any) => {
+  // 處理滾動事件，檢測是否需要加載更多消息 - 添加防抖機制
+  const handleScroll = useCallback((event: any) => {
     const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
     
     // 檢測是否滑動到頂部附近
     const isNearTop = contentOffset.y <= 50;
     
-    if (isNearTop && hasMoreMessages && !isLoadingMore && !isLoadingHistory) {
-      console.log('[ExploreScreen] 用戶滑動到頂部，加載更多消息');
-      loadMoreMessages();
+    // 防止重複觸發
+    if (isNearTop && hasMoreMessages && !isLoadingMore && !isLoadingHistory && !isLoadingMoreRef.current) {
+      // 清除之前的計時器
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+      
+      // 使用防抖機制
+      scrollTimeoutRef.current = setTimeout(() => {
+        console.log('[ExploreScreen] 用戶滑動到頂部，加載更多消息');
+        isLoadingMoreRef.current = true;
+        
+        loadMoreMessages().finally(() => {
+          isLoadingMoreRef.current = false;
+        });
+      }, 300); // 300ms 防抖
     }
-  };
+  }, [hasMoreMessages, isLoadingMore, isLoadingHistory, loadMoreMessages]);
+
+  // 清理計時器
+  useEffect(() => {
+    return () => {
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // 判断是否需要显示时间戳
   const shouldShowTimestamp = (currentMessage: any, previousMessage: any, index: number) => {
@@ -136,7 +164,9 @@ export default function ExploreScreen() {
           
           <View style={styles.headerCenter}>
             <Text style={styles.groupTitle}>
-              {familyName === '元空間' ? '元空間' : `${familyName}（${memberCount}人）`}
+              {activeFamily?.id === 'meta-space' ? t('drawer.metaSpace') : 
+               activeFamily?.tag === 'personal' ? t('space.personalSpace') : 
+               familyName}
             </Text>
             {isLoadingHistory && (
               <Text style={styles.loadingHint}>正在加载聊天记录...</Text>
@@ -173,7 +203,7 @@ export default function ExploreScreen() {
                 <AnimatedLogo />
                 {hasFamilyChat && (
                   <Text style={styles.emptyText}>
-                    欢迎来到{familyName}群聊！
+                    {t('explore.welcomeToChat', { familyName })}
                   </Text>
                 )}
               </View>

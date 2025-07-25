@@ -1,13 +1,6 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { Calendar, DateData } from 'react-native-calendars';
-import { LongPressGestureHandler, State } from 'react-native-gesture-handler';
 import { CalendarViewProps } from './CalendarViewTypes';
-
-interface GridMonthViewProps extends CalendarViewProps {
-  onStyleChange?: (styleId: string) => void;
-}
 
 export default function GridMonthView({
   events,
@@ -16,82 +9,7 @@ export default function GridMonthView({
   onDatePress,
   onEventPress,
   onMonthChange,
-  onStyleChange,
-}: GridMonthViewProps) {
-  const [currentStyle, setCurrentStyle] = useState('grid-month');
-
-  // 處理長按手勢
-  const handleLongPress = (event: any) => {
-    if (event.nativeEvent.state === State.ACTIVE) {
-      console.log('Long press detected on calendar - showing style options');
-      
-      // 顯示樣式選擇對話框
-      Alert.alert(
-        '📅 選擇日曆樣式',
-        '選擇您喜歡的日曆顯示方式：',
-        [
-          { 
-            text: '📅 網格月視圖', 
-            onPress: () => handleStyleSelect('grid-month', '網格月視圖') 
-          },
-          { 
-            text: '📊 週間網格', 
-            onPress: () => handleStyleSelect('weekly-grid', '週間網格') 
-          },
-          { 
-            text: '🎴 卡片月視圖', 
-            onPress: () => handleStyleSelect('card-month', '卡片月視圖') 
-          },
-          { 
-            text: '⏰ 時間軸視圖', 
-            onPress: () => handleStyleSelect('timeline', '時間軸視圖') 
-          },
-          { 
-            text: '📋 議程列表', 
-            onPress: () => handleStyleSelect('agenda-list', '議程列表') 
-          },
-          { 
-            text: '🌻 家庭花園', 
-            onPress: () => handleStyleSelect('family-garden', '家庭花園') 
-          },
-          { text: '❌ 取消', style: 'cancel' },
-        ],
-        { cancelable: true }
-      );
-    }
-  };
-
-  // 處理樣式選擇
-  const handleStyleSelect = async (styleId: string, styleName: string) => {
-    try {
-      console.log('Style selected:', styleId, styleName);
-      setCurrentStyle(styleId);
-      
-      // 保存到AsyncStorage（與CalendarViewSelector一致）
-      await AsyncStorage.setItem('calendar_style', styleId);
-      
-      // 通知父組件樣式變化
-      if (onStyleChange) {
-        onStyleChange(styleId);
-      }
-      
-      // 顯示確認消息
-      Alert.alert(
-        '✅ 樣式已更改', 
-        `已切換到「${styleName}」\n\n重新載入應用後生效`,
-        [
-          {
-            text: '確定',
-            style: 'default'
-          }
-        ]
-      );
-    } catch (error) {
-      console.error('Error saving calendar style:', error);
-      Alert.alert('❌ 儲存失敗', '無法保存樣式設定，請重試');
-    }
-  };
-
+}: CalendarViewProps) {
   // 获取本地日期字符串（避免时区问题）
   const getLocalDateString = (date: Date) => {
     const year = date.getFullYear();
@@ -155,55 +73,48 @@ export default function GridMonthView({
 
   return (
     <View style={styles.container}>
-      <LongPressGestureHandler
-        onHandlerStateChange={handleLongPress}
-        minDurationMs={800}
-      >
-        <View style={styles.calendarContainer}>
-          <Calendar
-            current={currentMonth}
-            markedDates={getCalendarMarkedDates()}
-            onDayPress={handleDatePress}
-            onMonthChange={handleMonthChange}
-            enableSwipeMonths={true}
-            hideArrows={false}
-            theme={{
-              backgroundColor: '#ffffff',
-              calendarBackground: '#ffffff',
-              textSectionTitleColor: '#2c3e50',
-              selectedDayBackgroundColor: '#3b82f6',
-              selectedDayTextColor: '#ffffff',
-              todayTextColor: '#3b82f6',
-              dayTextColor: '#2c3e50',
-              textDisabledColor: '#d1d5db',
-              dotColor: '#ff6b6b',
-              selectedDotColor: '#ffffff',
-              arrowColor: '#3b82f6',
-              disabledArrowColor: '#d1d5db',
-              monthTextColor: '#1f2937',
-              indicatorColor: '#3b82f6',
-              textDayFontFamily: 'System',
-              textMonthFontFamily: 'System',
-              textDayHeaderFontFamily: 'System',
-              textDayFontWeight: '600',
-              textMonthFontWeight: '700',
-              textDayHeaderFontWeight: '600',
-              textDayFontSize: 16,
-              textMonthFontSize: 18,
-              textDayHeaderFontSize: 14,
-            }}
-            style={styles.calendar}
-            hideExtraDays={true}
-            firstDay={1}
-            showWeekNumbers={false}
-            disableMonthChange={false}
-            hideDayNames={false}
-            showSixWeeks={false}
-            disabledByDefault={false}
-            markingType={'dot'}
-          />
-        </View>
-      </LongPressGestureHandler>
+      <Calendar
+        current={currentMonth}
+        markedDates={getCalendarMarkedDates()}
+        onDayPress={handleDatePress}
+        onMonthChange={handleMonthChange}
+        enableSwipeMonths={true}
+        hideArrows={false}
+        theme={{
+          backgroundColor: '#ffffff',
+          calendarBackground: '#ffffff',
+          textSectionTitleColor: '#2c3e50',
+          selectedDayBackgroundColor: '#3b82f6',
+          selectedDayTextColor: '#ffffff',
+          todayTextColor: '#3b82f6',
+          dayTextColor: '#2c3e50',
+          textDisabledColor: '#d1d5db',
+          dotColor: '#ff6b6b',
+          selectedDotColor: '#ffffff',
+          arrowColor: '#3b82f6',
+          disabledArrowColor: '#d1d5db',
+          monthTextColor: '#1f2937',
+          indicatorColor: '#3b82f6',
+          textDayFontFamily: 'System',
+          textMonthFontFamily: 'System',
+          textDayHeaderFontFamily: 'System',
+          textDayFontWeight: '600',
+          textMonthFontWeight: '700',
+          textDayHeaderFontWeight: '600',
+          textDayFontSize: 16,
+          textMonthFontSize: 18,
+          textDayHeaderFontSize: 14,
+        }}
+        style={styles.calendar}
+        hideExtraDays={true}
+        firstDay={1}
+        showWeekNumbers={false}
+        disableMonthChange={false}
+        hideDayNames={false}
+        showSixWeeks={false}
+        disabledByDefault={false}
+        markingType={'dot'}
+      />
     </View>
   );
 }

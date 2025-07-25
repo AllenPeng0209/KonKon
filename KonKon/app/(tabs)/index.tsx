@@ -721,14 +721,17 @@ export default function HomeScreen() {
         // 批量創建待辦事項
         const createdTodos = [];
         for (const todo of result.todos) {
-          const createdTodo = await todoService.createTodo({
+          const createParams = {
             familyId: activeFamily.id,
             title: todo.title,
             description: todo.description,
             priority: todo.priority,
             dueDate: todo.dueDate,
             assignedTo: user.id,
-          });
+            // 根據當前空間決定分享邏輯（與日曆事件保持一致）
+            shareToFamilies: (activeFamily.tag !== 'personal' && activeFamily.id !== 'meta-space') ? [activeFamily.id] : undefined,
+          };
+          const createdTodo = await todoService.createTodo(createParams);
           createdTodos.push(createdTodo);
         }
 
@@ -772,14 +775,17 @@ export default function HomeScreen() {
         // 批量創建待辦事項
         const createdTodos = [];
         for (const todo of todoResult.todos) {
-          const createdTodo = await todoService.createTodo({
+          const createParams = {
             familyId: activeFamily.id,
             title: todo.title,
             description: todo.description,
             priority: todo.priority,
             dueDate: todo.dueDate,
             assignedTo: user.id,
-          });
+            // 根據當前空間決定分享邏輯（與日曆事件保持一致）
+            shareToFamilies: (activeFamily.tag !== 'personal' && activeFamily.id !== 'meta-space') ? [activeFamily.id] : undefined,
+          };
+          const createdTodo = await todoService.createTodo(createParams);
           createdTodos.push(createdTodo);
         }
 
@@ -828,14 +834,17 @@ export default function HomeScreen() {
           dueDate = toLocalDateString(dayAfterTomorrow);
         }
 
-        await todoService.createTodo({
+        const createParams = {
           familyId: activeFamily.id,
           title,
           description,
           priority,
           dueDate,
           assignedTo: user.id,
-        });
+          // 根據當前空間決定分享邏輯（與日曆事件保持一致）
+          shareToFamilies: (activeFamily.tag !== 'personal' && activeFamily.id !== 'meta-space') ? [activeFamily.id] : undefined,
+        };
+        await todoService.createTodo(createParams);
 
         setSuccessTitle('待辦創建成功');
         setSuccessMessage(`已成功創建待辦事項：${title}`);
@@ -1084,8 +1093,8 @@ export default function HomeScreen() {
         startTime: new Date(event.startTime),
         endTime: event.endTime ? new Date(event.endTime) : undefined,
         location: event.location,
-        // 🚀 新增：默认共享给当前激活的家庭群组
-        shareToFamilies: activeFamily?.id ? [activeFamily.id] : undefined,
+        // 🚀 修復：個人空間的事件不應該被分享，保持為私人事件
+        shareToFamilies: (activeFamily?.id && activeFamily.tag !== 'personal') ? [activeFamily.id] : undefined,
         // 🚀 新增：默认添加当前用户作为参与者
         attendees: user?.id ? [user.id] : undefined,
       };
@@ -1093,8 +1102,8 @@ export default function HomeScreen() {
       const createdId = await createEvent(eventData);
 
       if (createdId) {
-        // 🚀 发送事件创建通知给家庭成员
-        if (activeFamily?.id && user?.id) {
+        // 🚀 发送事件创建通知给家庭成员（個人空間不發送通知）
+        if (activeFamily?.id && activeFamily.tag !== 'personal' && user?.id) {
           try {
             const currentUserName = user?.user_metadata?.display_name || user?.email || '用户';
             const { notifyEventCreated } = await import('../../lib/notificationService');
@@ -1137,8 +1146,8 @@ export default function HomeScreen() {
           startTime: new Date(event.startTime),
           endTime: event.endTime ? new Date(event.endTime) : undefined,
           location: event.location,
-          // 🚀 新增：默认共享给当前激活的家庭群组
-          shareToFamilies: activeFamily?.id ? [activeFamily.id] : undefined,
+          // 🚀 修復：個人空間的事件不應該被分享，保持為私人事件
+          shareToFamilies: (activeFamily?.id && activeFamily.tag !== 'personal') ? [activeFamily.id] : undefined,
           // 🚀 新增：默认添加当前用户作为参与者
           attendees: user?.id ? [user.id] : undefined,
         };
@@ -1146,8 +1155,8 @@ export default function HomeScreen() {
         if (createdId) {
           successCount++;
           
-          // 🚀 发送事件创建通知给家庭成员
-          if (activeFamily?.id && user?.id) {
+          // 🚀 发送事件创建通知给家庭成员（個人空間不發送通知）
+          if (activeFamily?.id && activeFamily.tag !== 'personal' && user?.id) {
             try {
               const { notifyEventCreated } = await import('../../lib/notificationService');
               await notifyEventCreated(
@@ -1546,7 +1555,11 @@ export default function HomeScreen() {
             activeOpacity={0.8}
           >
             <Text style={styles.familyName} numberOfLines={1}>
-              {activeFamily ? activeFamily.name : '選擇家庭'}
+              {activeFamily 
+                ? (activeFamily.tag === 'personal' ? t('space.personalSpace') : 
+                   activeFamily.id === 'meta-space' ? t('drawer.metaSpace') : 
+                   activeFamily.name)
+                : '選擇家庭'}
             </Text>
             <Text style={styles.familyDropdownIcon}>▼</Text>
           </TouchableOpacity>
@@ -1604,7 +1617,7 @@ export default function HomeScreen() {
                 styles.metaSpaceMenuItem,
                 activeFamily?.id === 'meta-space' && styles.familyMenuItemActive
               ]}
-              onPress={() => handleFamilySelect({ id: 'meta-space', name: '元空間' })}
+                              onPress={() => handleFamilySelect({ id: 'meta-space', name: t('drawer.metaSpace') })}
             >
               <View style={[styles.familyMenuIcon, styles.metaSpaceIcon]}>
                 <Text style={styles.familyMenuIconText}>🌌</Text>
@@ -1614,7 +1627,7 @@ export default function HomeScreen() {
                 styles.metaSpaceText,
                 activeFamily?.id === 'meta-space' && styles.familyMenuTextActive
               ]}>
-                元空間
+                                  {t('drawer.metaSpace')}
               </Text>
               {activeFamily?.id === 'meta-space' && (
                 <Text style={styles.familyMenuCheck}>✓</Text>
@@ -1639,7 +1652,7 @@ export default function HomeScreen() {
                   styles.metaSpaceText,
                   activeFamily?.tag === 'personal' && styles.familyMenuTextActive
                 ]}>
-                  個人空間
+                  {t('space.personalSpace')}
                 </Text>
                 {activeFamily?.tag === 'personal' && (
                   <Text style={styles.familyMenuCheck}>✓</Text>
@@ -2209,9 +2222,9 @@ export default function HomeScreen() {
         text={voiceState.isRecording ? 
           t('home.isRecording', { duration: Math.floor(voiceState.duration / 1000) }) : 
           (selectedFilter === 'familyAlbum' ? 
-            '🎤 長按說話, 智能選擇功能' : 
+            t('voice.longPressSmartSelect') : 
             selectedFilter === 'todos' ?
-              '🎤 按說話, 快速創建' :
+              t('voice.pressSpeakQuickCreate') :
               t('home.longPressToTalk')
           )
         }
@@ -2535,6 +2548,7 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
     backgroundColor: '#fff',
     position: 'relative',
+    height: 56, // 明確設置header高度
   },
   headerLeft: {
     flexDirection: 'row',
@@ -2568,6 +2582,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
+    top: 0,
+    bottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -2587,6 +2603,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     minWidth: 80,
     maxWidth: 150,
+    height: 36, // 與exploreButton保持一致的高度
   },
   familyName: {
     fontSize: 16,

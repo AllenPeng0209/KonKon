@@ -1,5 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
+import { Alert, View } from 'react-native';
+import { LongPressGestureHandler, State } from 'react-native-gesture-handler';
+import { t } from '../../lib/i18n';
 import AgendaListView from './AgendaListView';
 import { CalendarEvent, CalendarStyleId, CalendarViewProps } from './CalendarViewTypes';
 import CardMonthView from './CardMonthView';
@@ -106,6 +109,72 @@ export default function CalendarViewSelector({
       }
     } catch (error) {
       console.error('Error loading calendar style:', error);
+    }
+  };
+
+  // 處理長按手勢
+  const handleLongPress = (event: any) => {
+    if (event.nativeEvent.state === State.ACTIVE) {
+      console.log('Long press detected on calendar - showing style options');
+      
+      // 使用多語言翻譯的樣式選擇對話框
+      Alert.alert(
+        `📅 ${t('calendarStyleSelector.title')}`,
+        t('calendarStyleSelector.subtitle'),
+        [
+          { 
+            text: `📅 ${t('calendarStyleSelector.styles.gridMonth')}`, 
+            onPress: () => handleStyleSelect('grid-month', t('calendarStyleSelector.styles.gridMonth')) 
+          },
+          { 
+            text: `📊 ${t('calendarStyleSelector.styles.weeklyGrid')}`, 
+            onPress: () => handleStyleSelect('weekly-grid', t('calendarStyleSelector.styles.weeklyGrid')) 
+          },
+          { 
+            text: `🎴 ${t('calendarStyleSelector.styles.cardMonth')}`, 
+            onPress: () => handleStyleSelect('card-month', t('calendarStyleSelector.styles.cardMonth')) 
+          },
+          { 
+            text: `📋 ${t('calendarStyleSelector.styles.agendaList')}`, 
+            onPress: () => handleStyleSelect('agenda-list', t('calendarStyleSelector.styles.agendaList')) 
+          },
+          { 
+            text: `⏰ ${t('calendarStyleSelector.styles.timeline')}`, 
+            onPress: () => handleStyleSelect('timeline', t('calendarStyleSelector.styles.timeline')) 
+          },
+          { text: `❌ ${t('calendarStyleSelector.cancel')}`, style: 'cancel' },
+        ],
+        { cancelable: true }
+      );
+    }
+  };
+
+  // 處理樣式選擇
+  const handleStyleSelect = async (styleId: CalendarStyleId, styleName: string) => {
+    try {
+      console.log('Style selected:', styleId, styleName);
+      setCurrentStyle(styleId);
+      
+      // 保存到AsyncStorage
+      await AsyncStorage.setItem('calendar_style', styleId);
+      
+      // 顯示確認消息
+      Alert.alert(
+        `✅ ${t('calendarStyleSelector.changeSuccess')}`, 
+        t('calendarStyleSelector.changeSuccessMessage', { styleName }),
+        [
+          {
+            text: t('home.ok'),
+            style: 'default'
+          }
+        ]
+      );
+    } catch (error) {
+      console.error('Error saving calendar style:', error);
+      Alert.alert(
+        `❌ ${t('calendarStyleSelector.saveFailed')}`, 
+        t('calendarStyleSelector.saveFailedMessage')
+      );
     }
   };
 
@@ -363,5 +432,14 @@ export default function CalendarViewSelector({
     }
   };
 
-  return renderCalendarView();
+  return (
+    <LongPressGestureHandler
+      onHandlerStateChange={handleLongPress}
+      minDurationMs={800}
+    >
+      <View style={{ flex: 1 }}>
+        {renderCalendarView()}
+      </View>
+    </LongPressGestureHandler>
+  );
 } 

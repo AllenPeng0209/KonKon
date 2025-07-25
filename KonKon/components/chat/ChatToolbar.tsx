@@ -3,20 +3,20 @@ import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { useCallback, useRef, useState } from 'react';
 import {
-  NativeSyntheticEvent,
-  StyleSheet,
-  TextInput,
-  TextInputSubmitEditingEventData,
-  TouchableOpacity,
-  useColorScheme,
-  View,
+    NativeSyntheticEvent,
+    StyleSheet,
+    TextInput,
+    TextInputSubmitEditingEventData,
+    TouchableOpacity,
+    useColorScheme,
+    View,
 } from 'react-native';
 import Animated, {
-  interpolateColor,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withTiming
+    interpolateColor,
+    useAnimatedStyle,
+    useSharedValue,
+    withSpring,
+    withTiming
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -31,9 +31,14 @@ interface ChatToolbarProps {
 export function ChatToolbar({ onSendMessage, disabled = false }: ChatToolbarProps) {
   const [inputValue, setInputValue] = useState('');
   const [isFocused, setIsFocused] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const textInput = useRef<TextInput>(null);
   const theme = useColorScheme();
   const insets = useSafeAreaInsets();
+  
+  // 防重複發送
+  const lastSentTimeRef = useRef<number>(0);
+  const lastSentMessageRef = useRef<string>('');
   
   // 動畫值
   const focusAnimation = useSharedValue(0);
@@ -71,11 +76,25 @@ export function ChatToolbar({ onSendMessage, disabled = false }: ChatToolbarProp
   const currentColors = colors[theme ?? 'light'];
 
   const onSubmitMessage = useCallback(
-    (value: string) => {
-      if (value.trim() === '') {
+    async (value: string) => {
+      const trimmedValue = value.trim();
+      if (trimmedValue === '' || isSending) {
         textInput.current?.blur();
         return;
       }
+
+      // 防止重複發送相同內容（1秒內）
+      const now = Date.now();
+      if (lastSentMessageRef.current === trimmedValue && 
+          now - lastSentTimeRef.current < 1000) {
+        console.log('[ChatToolbar] 防止重複發送相同消息:', trimmedValue);
+        return;
+      }
+
+      // 記錄發送時間和內容
+      lastSentMessageRef.current = trimmedValue;
+      lastSentTimeRef.current = now;
+      setIsSending(true);
 
       if (Haptics.impactAsync) {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -87,14 +106,24 @@ export function ChatToolbar({ onSendMessage, disabled = false }: ChatToolbarProp
         sendButtonRotation.value = 0;
       }, 600);
 
+      // 清空輸入框
+      setInputValue('');
       setTimeout(() => {
         textInput.current?.clear();
       });
 
-      onSendMessage(value);
-      setInputValue('');
+      try {
+        await onSendMessage(trimmedValue);
+      } catch (error) {
+        console.error('[ChatToolbar] 發送消息失敗:', error);
+      } finally {
+        // 設置一個最小延遲，確保不會立即重複發送
+        setTimeout(() => {
+          setIsSending(false);
+        }, 500);
+      }
     },
-    [textInput, onSendMessage, sendButtonRotation]
+    [textInput, onSendMessage, sendButtonRotation, isSending]
   );
 
   const onSubmitEditing = useCallback(
@@ -114,11 +143,11 @@ export function ChatToolbar({ onSendMessage, disabled = false }: ChatToolbarProp
     focusAnimation.value = withSpring(0, { damping: 20 });
   }, [focusAnimation]);
 
-  const onSendPress = useCallback(() => {
+  const onSendPress = useCallback(async () => {
     sendButtonScale.value = withSpring(0.9, { damping: 15 }, () => {
       sendButtonScale.value = withSpring(1, { damping: 15 });
     });
-    onSubmitMessage(inputValue);
+    await onSubmitMessage(inputValue);
   }, [inputValue, onSubmitMessage, sendButtonScale]);
 
   // 動畫樣式
@@ -144,7 +173,7 @@ export function ChatToolbar({ onSendMessage, disabled = false }: ChatToolbarProp
   });
 
   const sendButtonAnimatedStyle = useAnimatedStyle(() => {
-    const canSend = inputValue.length > 0 && !disabled;
+    const canSend = inputValue.length > 0 && !disabled && !isSending;
     return {
       transform: [
         { scale: sendButtonScale.value },
@@ -210,7 +239,7 @@ export function ChatToolbar({ onSendMessage, disabled = false }: ChatToolbarProp
             />
 
             <AnimatedTouchableOpacity
-              disabled={!inputValue.length || disabled}
+              disabled={!inputValue.length || disabled || isSending}
               onPress={onSendPress}
               style={[styles.sendButton, sendButtonAnimatedStyle]}
             >

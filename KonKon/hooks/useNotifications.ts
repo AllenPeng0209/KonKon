@@ -13,6 +13,11 @@ import {
 } from '../lib/notificationService';
 import { registerForPushNotificationsAsync } from '../lib/notifications';
 
+// 檢查是否為有效的家庭ID（排除特殊的 meta-space）
+const isValidFamilyId = (familyId?: string): boolean => {
+  return !!(familyId && familyId !== 'meta-space');
+};
+
 export function useNotifications() {
   const { user } = useAuth();
   const { activeFamily } = useFamily();
@@ -26,7 +31,13 @@ export function useNotifications() {
 
   // 加载通知列表
   const loadNotifications = useCallback(async (refresh = false) => {
-    if (!user || !activeFamily) return;
+    if (!user || !activeFamily || !isValidFamilyId(activeFamily.id)) {
+      if (refresh) {
+        setNotifications([]);
+        setIsLoading(false);
+      }
+      return;
+    }
 
     try {
       if (refresh) {
@@ -37,7 +48,11 @@ export function useNotifications() {
       const newNotifications = await getUserNotifications(user.id, 20, 0, false);
       
       if (refresh) {
-        setNotifications(newNotifications);
+        // 即使是刷新，也要確保新數據本身沒有重複
+        const uniqueNotifications = newNotifications.filter((notification, index, array) => 
+          array.findIndex(n => n.id === notification.id) === index
+        );
+        setNotifications(uniqueNotifications);
       } else {
         setNotifications(prev => {
           const existingIds = new Set(prev.map(n => n.id));
@@ -56,14 +71,18 @@ export function useNotifications() {
 
   // 加载更多通知
   const loadMoreNotifications = useCallback(async () => {
-    if (!hasMore || isLoadingMore || !user || !activeFamily) return;
+    if (!hasMore || isLoadingMore || !user || !activeFamily || !isValidFamilyId(activeFamily.id)) return;
 
     try {
       setIsLoadingMore(true);
       const moreNotifications = await getUserNotifications(user.id, 20, notifications.length, false);
       
       if (moreNotifications.length > 0) {
-        setNotifications(prev => [...prev, ...moreNotifications]);
+        setNotifications(prev => {
+          const existingIds = new Set(prev.map(n => n.id));
+          const uniqueNew = moreNotifications.filter(n => !existingIds.has(n.id));
+          return [...prev, ...uniqueNew];
+        });
       }
       
       setHasMore(moreNotifications.length === 20);
@@ -76,13 +95,17 @@ export function useNotifications() {
 
   // 加载未读通知数量
   const loadUnreadCount = useCallback(async () => {
-    if (!user || !activeFamily) return;
+    if (!user || !activeFamily || !isValidFamilyId(activeFamily.id)) {
+      setUnreadCount(0);
+      return;
+    }
 
     try {
       const count = await getUnreadNotificationCount(activeFamily.id);
       setUnreadCount(count);
     } catch (error) {
       console.error('获取未读通知数量失败:', error);
+      setUnreadCount(0);
     }
   }, [user, activeFamily]);
 
@@ -107,7 +130,7 @@ export function useNotifications() {
 
   // 标记所有通知为已读
   const markAllAsRead = useCallback(async () => {
-    if (!activeFamily) return;
+    if (!activeFamily || !isValidFamilyId(activeFamily.id)) return;
 
     try {
       await markAllNotificationsAsRead(activeFamily.id);
@@ -128,19 +151,48 @@ export function useNotifications() {
 
   // 加载通知偏好设置
   const loadPreferences = useCallback(async () => {
-    if (!user || !activeFamily) return;
+    if (!user || !activeFamily || !isValidFamilyId(activeFamily.id)) {
+      setNotificationPreferences(null);
+      return;
+    }
 
     try {
       const preferences = await getNotificationPreferences(activeFamily.id);
-      setNotificationPreferences(preferences);
+      
+      // 如果沒有找到通知偏好設置，自動創建默認設置
+      if (!preferences) {
+        try {
+          // 用戶沒有通知偏好設置，創建默認設置
+          await updateNotificationPreferences({
+            push_enabled: true,
+            event_created_enabled: true,
+            event_updated_enabled: true,
+            event_deleted_enabled: true,
+            event_reminder_enabled: true,
+            family_invite_enabled: true,
+            quiet_hours_enabled: false,
+          }, activeFamily.id);
+          
+          // 重新載入偏好設置
+          const newPrefs = await getNotificationPreferences(activeFamily.id);
+          setNotificationPreferences(newPrefs);
+                      // 默認通知偏好設置創建成功
+        } catch (createError) {
+          console.error('❌ 創建默認通知偏好失敗:', createError);
+          setNotificationPreferences(null);
+        }
+      } else {
+        setNotificationPreferences(preferences);
+      }
     } catch (error) {
       console.error('获取通知偏好失败:', error);
+      setNotificationPreferences(null);
     }
   }, [user, activeFamily]);
 
   // 更新通知偏好设置
   const updatePreferences = useCallback(async (newPreferences: any) => {
-    if (!activeFamily) return;
+    if (!activeFamily || !isValidFamilyId(activeFamily.id)) return;
 
     try {
       const updated = await updateNotificationPreferences(newPreferences, activeFamily.id);
@@ -164,16 +216,22 @@ export function useNotifications() {
 
   // 初始化
   useEffect(() => {
-    if (activeFamily) {
+    if (activeFamily && isValidFamilyId(activeFamily.id)) {
       loadNotifications(true);
       loadUnreadCount();
       loadPreferences();
+    } else {
+      // 清空通知相關狀態，當切換到 meta-space 時
+      setNotifications([]);
+      setUnreadCount(0);
+      setNotificationPreferences(null);
+      setIsLoading(false);
     }
   }, [activeFamily]);
 
   // 实时订阅通知
   useEffect(() => {
-    if (!activeFamily) return;
+    if (!activeFamily || !isValidFamilyId(activeFamily.id)) return;
 
     let subscription: any = null;
 
@@ -182,8 +240,24 @@ export function useNotifications() {
         subscription = await subscribeToNotifications(
           activeFamily.id,
           (newNotification) => {
-            setNotifications(prev => [newNotification, ...prev]);
-            setUnreadCount(prev => prev + 1);
+            let shouldIncrementCount = false;
+            setNotifications(prev => {
+              // 檢查通知是否已經存在，避免重複
+              const existingIndex = prev.findIndex(n => n.id === newNotification.id);
+              if (existingIndex !== -1) {
+                // 如果已存在，更新該通知
+                const updated = [...prev];
+                updated[existingIndex] = newNotification;
+                return updated;
+              }
+              // 如果不存在，添加到開頭
+              shouldIncrementCount = true;
+              return [newNotification, ...prev];
+            });
+            // 只有當通知是新添加的時候才增加未讀計數
+            if (shouldIncrementCount && !newNotification.is_read) {
+              setUnreadCount(prev => prev + 1);
+            }
           },
           (deletedNotificationId) => {
             setNotifications(prev => 

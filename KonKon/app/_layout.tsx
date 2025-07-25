@@ -59,11 +59,9 @@ function ProtectedLayout() {
 
   const onHandlerStateChange = (event: any) => {
     const currentRoute = segments.join('/');
-    console.log('Current route:', currentRoute); // 添加调试日志
     
     // 如果正在路由转换中，不处理手势
     if (isRouteTransitioning) {
-      console.log('Gesture disabled - route transitioning');
       return;
     }
     

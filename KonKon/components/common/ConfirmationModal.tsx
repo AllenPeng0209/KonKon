@@ -1,6 +1,7 @@
 import React from 'react';
 import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { CalendarEvent } from '../../lib/bailian_omni_calendar';
+import { t } from '../../lib/i18n';
 
 interface ConfirmationModalProps {
   isVisible: boolean;
@@ -43,14 +44,14 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
       <View style={styles.overlay}>
         <View style={styles.container}>
           <View style={styles.header}>
-            <Text style={styles.title}>幫你安排好啦！</Text>
+            <Text style={styles.title}>{t('home.aiConfirmationTitle')}</Text>
           </View>
           <ScrollView style={styles.contentContainer} contentContainerStyle={styles.content}>
             {userInput && (
               <View style={styles.dialogueBox}>
-                <Text style={styles.userMessage}>“{userInput}”</Text>
+                <Text style={styles.userMessage}>"{userInput}"</Text>
                 <Text style={styles.aiMessage}>
-                  🦝 {summary || '確認創建這個日程嗎？'}
+                  🦝 {summary || t('home.aiConfirmQuestion')}
                 </Text>
               </View>
             )}
@@ -61,20 +62,20 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                 <View key={index} style={[styles.infoCard, index > 0 && { marginTop: 15 }]}>
                   <View style={styles.infoRow}>
                     <Text style={styles.infoIcon}>📅</Text>
-                    <Text style={styles.infoLabel}>日程:</Text>
+                    <Text style={styles.infoLabel}>{t('home.aiEventLabel')}</Text>
                     <Text style={styles.infoValue}>{event.title}</Text>
                   </View>
 
                   <View style={styles.infoRow}>
                     <Text style={styles.infoIcon}>⏰</Text>
-                    <Text style={styles.infoLabel}>時間:</Text>
+                    <Text style={styles.infoLabel}>{t('home.aiTimeLabel')}</Text>
                     <Text style={styles.infoValue}>{timeRange}</Text>
                   </View>
 
                   {event.location && (
                     <View style={styles.infoRow}>
                       <Text style={styles.infoIcon}>📍</Text>
-                      <Text style={styles.infoLabel}>地點:</Text>
+                      <Text style={styles.infoLabel}>{t('home.aiLocationLabel')}</Text>
                       <Text style={styles.infoValue}>{event.location}</Text>
                     </View>
                   )}
@@ -82,19 +83,19 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
               );
             })}
             
-            <Text style={styles.confirmQuestion}>確認創建這個日程嗎？</Text>
+            <Text style={styles.confirmQuestion}>{t('home.aiConfirmQuestion')}</Text>
           </ScrollView>
           <View style={styles.footer}>
             <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={onCancel}>
-              <Text style={styles.buttonText}>取消</Text>
+              <Text style={styles.buttonText}>{t('home.cancel')}</Text>
             </TouchableOpacity>
             {onEdit && (
               <TouchableOpacity style={[styles.button, styles.editButton]} onPress={onEdit}>
-                <Text style={[styles.buttonText, styles.editButtonText]}>修改</Text>
+                <Text style={[styles.buttonText, styles.editButtonText]}>{t('home.edit')}</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity style={[styles.button, styles.confirmButton]} onPress={onConfirm}>
-              <Text style={[styles.buttonText, styles.confirmButtonText]}>創建</Text>
+              <Text style={[styles.buttonText, styles.confirmButtonText]}>{t('home.create')}</Text>
             </TouchableOpacity>
           </View>
         </View>

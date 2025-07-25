@@ -1,30 +1,22 @@
-import { useAuth } from '@/contexts/AuthContext';
-import { useFamily } from '@/contexts/FamilyContext';
-import todoService, { TodoWithUser } from '@/lib/todoService';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useState } from 'react';
-import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    Modal,
-    RefreshControl,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
-} from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Modal, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import DraggableFlatList, { RenderItemParams } from 'react-native-draggable-flatlist';
+import { useAuth } from '../../contexts/AuthContext';
+import { useFamily } from '../../contexts/FamilyContext';
+import { t } from '../../lib/i18n';
+import todoService, { CreateTodoParams, TodoWithUser } from '../../lib/todoService';
 
 interface TodoItemProps {
   todo: TodoWithUser;
   onToggleComplete: (todoId: string, completed: boolean) => void;
   onDelete: (todoId: string) => void;
   onEdit: (todo: TodoWithUser) => void;
+  drag: () => void;
+  isActive: boolean;
 }
 
-const TodoItem: React.FC<TodoItemProps> = ({ todo, onToggleComplete, onDelete, onEdit }) => {
+const TodoItem: React.FC<TodoItemProps> = ({ todo, onToggleComplete, onDelete, onEdit, drag, isActive }) => {
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'high': return '#FF5722';
@@ -60,11 +52,11 @@ const TodoItem: React.FC<TodoItemProps> = ({ todo, onToggleComplete, onDelete, o
     const daysDiff = Math.round(timeDiff / (24 * 60 * 60 * 1000));
     
     if (daysDiff === 0) {
-      return '今天';
+      return t('todos.today');
     } else if (daysDiff === 1) {
-      return '明天';
+      return t('todos.tomorrow');
     } else if (daysDiff < 0) {
-      return '已逾期';
+      return t('todos.overdue');
     } else {
       return date.toLocaleDateString('zh-TW', { month: 'short', day: 'numeric' });
     }
@@ -77,15 +69,19 @@ const TodoItem: React.FC<TodoItemProps> = ({ todo, onToggleComplete, onDelete, o
   })();
 
   return (
-    <View style={[styles.todoItem, todo.status === 'completed' && styles.completedItem]}>
+    <View style={[
+      styles.todoCard, 
+      todo.status === 'completed' && styles.completedCard,
+      isActive && styles.draggingCard
+    ]}>
       <TouchableOpacity 
-        onPress={() => onToggleComplete(todo.id, todo.status !== 'completed')}
         style={styles.checkboxContainer}
+        onPress={() => onToggleComplete(todo.id, todo.status !== 'completed')}
       >
-        <Ionicons 
-          name={getStatusIcon()} 
-          size={24} 
-          color={getStatusColor()} 
+        <Ionicons
+          name={getStatusIcon()}
+          size={24}
+          color={getStatusColor()}
         />
       </TouchableOpacity>
       
@@ -101,23 +97,23 @@ const TodoItem: React.FC<TodoItemProps> = ({ todo, onToggleComplete, onDelete, o
             {todo.title}
           </Text>
           <View style={styles.todoActions}>
-            <TouchableOpacity onPress={() => onEdit(todo)} style={styles.actionButton}>
-              <Ionicons name="pencil" size={16} color="#007AFF" />
+            <TouchableOpacity 
+              style={styles.actionButton}
+              onPress={() => onEdit(todo)}
+            >
+              <Ionicons name="pencil" size={16} color="#8E8E93" />
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => onDelete(todo.id)} style={styles.actionButton}>
+            <TouchableOpacity 
+              style={styles.actionButton}
+              onPress={() => onDelete(todo.id)}
+            >
               <Ionicons name="trash" size={16} color="#FF3B30" />
             </TouchableOpacity>
           </View>
         </View>
         
         {todo.description && (
-          <Text 
-            style={[
-              styles.todoDescription,
-              todo.status === 'completed' && styles.completedText
-            ]}
-            numberOfLines={2}
-          >
+          <Text style={styles.todoDescription} numberOfLines={2}>
             {todo.description}
           </Text>
         )}
@@ -125,26 +121,34 @@ const TodoItem: React.FC<TodoItemProps> = ({ todo, onToggleComplete, onDelete, o
         <View style={styles.todoMeta}>
           <View style={[styles.priorityBadge, { backgroundColor: getPriorityColor(todo.priority) }]}>
             <Text style={styles.priorityText}>
-              {todo.priority === 'high' ? '高' : todo.priority === 'medium' ? '中' : '低'}
+              {todo.priority === 'high' ? t('todos.high') : 
+               todo.priority === 'medium' ? t('todos.medium') : 
+               t('todos.low')}
             </Text>
           </View>
           
           {todo.due_date && (
-            <Text style={[
-              styles.dueDateText,
-              isOverdue && styles.overdueText
-            ]}>
+            <Text style={[styles.dueDateText, isOverdue && styles.overdueText]}>
               {formatDate(todo.due_date)}
             </Text>
           )}
           
           {todo.assigned_user && (
             <Text style={styles.assigneeText}>
-              👤 {todo.assigned_user.display_name}
+              {todo.assigned_user.display_name || '未知用戶'}
             </Text>
           )}
         </View>
       </View>
+
+      {/* 拖拽手柄 */}
+      <TouchableOpacity 
+        style={styles.dragHandle}
+        onPressIn={drag}
+        delayPressIn={0}
+      >
+        <Ionicons name="reorder-three" size={20} color="#C7C7CC" />
+      </TouchableOpacity>
     </View>
   );
 };
@@ -152,136 +156,218 @@ const TodoItem: React.FC<TodoItemProps> = ({ todo, onToggleComplete, onDelete, o
 interface AddTodoModalProps {
   visible: boolean;
   onClose: () => void;
-  onAdd: (title: string, description?: string, priority?: string, dueDate?: string) => void;
-  editTodo?: TodoWithUser;
+  onSave: (title: string, description?: string, priority?: string, dueDate?: string) => void;
+  editingTodo?: TodoWithUser;
 }
 
-const AddTodoModal: React.FC<AddTodoModalProps> = ({ visible, onClose, onAdd, editTodo }) => {
+const AddTodoModal: React.FC<AddTodoModalProps> = ({ visible, onClose, onSave, editingTodo }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium');
   const [dueDate, setDueDate] = useState('');
 
   useEffect(() => {
-    if (editTodo) {
-      setTitle(editTodo.title);
-      setDescription(editTodo.description || '');
-      setPriority(editTodo.priority as 'low' | 'medium' | 'high');
-      setDueDate(editTodo.due_date || '');
+    if (editingTodo) {
+      setTitle(editingTodo.title);
+      setDescription(editingTodo.description || '');
+      setPriority(editingTodo.priority as 'low' | 'medium' | 'high');
+      setDueDate(editingTodo.due_date || '');
     } else {
       setTitle('');
       setDescription('');
       setPriority('medium');
       setDueDate('');
     }
-  }, [editTodo, visible]);
+  }, [editingTodo, visible]);
 
-  const handleSubmit = () => {
+  const handleSave = () => {
     if (!title.trim()) {
-      Alert.alert('錯誤', '請輸入待辦事項標題');
+      Alert.alert(t('todos.error'), t('todos.pleaseEnterTodoTitle'));
       return;
     }
     
-    onAdd(title.trim(), description.trim() || undefined, priority, dueDate || undefined);
+    onSave(title.trim(), description.trim() || undefined, priority, dueDate || undefined);
     onClose();
+  };
+
+  const getPriorityIcon = (p: string) => {
+    switch (p) {
+      case 'high': return 'flash';
+      case 'medium': return 'radio-button-on';
+      case 'low': return 'remove-circle-outline';
+      default: return 'radio-button-on';
+    }
+  };
+
+  const getPriorityColor = (p: string) => {
+    switch (p) {
+      case 'high': return '#FF5722';
+      case 'medium': return '#FF9500';
+      case 'low': return '#34C759';
+      default: return '#007AFF';
+    }
   };
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
-      <SafeAreaView style={styles.modalContainer}>
+      <View style={styles.modalContainer}>
+        {/* 美化的頭部 */}
         <View style={styles.modalHeader}>
-          <TouchableOpacity onPress={onClose}>
-            <Text style={styles.cancelButton}>取消</Text>
+          <TouchableOpacity onPress={onClose} style={styles.headerButton}>
+            <Ionicons name="close" size={24} color="#8E8E93" />
           </TouchableOpacity>
-          <Text style={styles.modalTitle}>
-            {editTodo ? '編輯待辦' : '新增待辦'}
-          </Text>
-          <TouchableOpacity onPress={handleSubmit}>
-            <Text style={styles.saveButton}>儲存</Text>
+          
+          <View style={styles.headerTitleContainer}>
+            <Ionicons 
+              name={editingTodo ? "pencil" : "add-circle"} 
+              size={20} 
+              color="#007AFF" 
+              style={styles.headerIcon}
+            />
+            <Text style={styles.modalTitle}>
+              {editingTodo ? t('todos.editTodo') : t('todos.addTodo')}
+            </Text>
+          </View>
+          
+          <TouchableOpacity onPress={handleSave} style={styles.saveButton}>
+            <Text style={styles.saveButtonText}>{t('todos.save')}</Text>
           </TouchableOpacity>
         </View>
         
-        <View style={styles.modalContent}>
-          <TextInput
-            style={styles.titleInput}
-            placeholder="待辦事項標題"
-            value={title}
-            onChangeText={setTitle}
-            multiline
-            maxLength={100}
-          />
+        <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+          {/* 標題輸入卡片 */}
+          <View style={styles.inputCard}>
+            <View style={styles.inputHeader}>
+              <Ionicons name="document-text" size={20} color="#007AFF" />
+              <Text style={styles.inputLabel}>Todo項目のタイトル</Text>
+            </View>
+            <TextInput
+              style={styles.titleInput}
+              placeholder="タスクのタイトルを入力してください"
+              value={title}
+              onChangeText={setTitle}
+              multiline
+              placeholderTextColor="#C7C7CC"
+            />
+          </View>
+
+          {/* 描述輸入卡片 */}
+          <View style={styles.inputCard}>
+            <View style={styles.inputHeader}>
+              <Ionicons name="chatbubble-ellipses" size={20} color="#34C759" />
+              <Text style={styles.inputLabel}>説明 (任意)</Text>
+            </View>
+            <TextInput
+              style={styles.descriptionInput}
+              placeholder="詳細な説明を入力してください（オプション）"
+              value={description}
+              onChangeText={setDescription}
+              multiline
+              placeholderTextColor="#C7C7CC"
+            />
+          </View>
           
-          <TextInput
-            style={styles.descriptionInput}
-            placeholder="描述 (可選)"
-            value={description}
-            onChangeText={setDescription}
-            multiline
-            maxLength={500}
-          />
-          
-          <View style={styles.priorityContainer}>
-            <Text style={styles.sectionLabel}>優先級</Text>
+          {/* 優先級選擇卡片 */}
+          <View style={styles.inputCard}>
+            <View style={styles.inputHeader}>
+              <Ionicons name="flag" size={20} color="#FF9500" />
+              <Text style={styles.inputLabel}>優先度</Text>
+            </View>
             <View style={styles.priorityButtons}>
-              {(['low', 'medium', 'high'] as const).map(p => (
+              {(['high', 'medium', 'low'] as const).map((p) => (
                 <TouchableOpacity
                   key={p}
                   style={[
                     styles.priorityButton,
-                    priority === p && styles.selectedPriorityButton
+                    priority === p && { 
+                      ...styles.selectedPriorityButton,
+                      backgroundColor: getPriorityColor(p)
+                    }
                   ]}
                   onPress={() => setPriority(p)}
                 >
+                  <Ionicons 
+                    name={getPriorityIcon(p)} 
+                    size={16} 
+                    color={priority === p ? 'white' : getPriorityColor(p)}
+                    style={styles.priorityIcon}
+                  />
                   <Text style={[
                     styles.priorityButtonText,
                     priority === p && styles.selectedPriorityButtonText
                   ]}>
-                    {p === 'high' ? '高' : p === 'medium' ? '中' : '低'}
+                    {p === 'high' ? '高' : 
+                     p === 'medium' ? '中' : 
+                     '低'}
                   </Text>
                 </TouchableOpacity>
               ))}
             </View>
           </View>
           
-          <View style={styles.dueDateContainer}>
-            <Text style={styles.sectionLabel}>到期日期 (可選)</Text>
-            <TextInput
-              style={styles.dateInput}
-              placeholder="YYYY-MM-DD"
-              value={dueDate}
-              onChangeText={setDueDate}
-            />
+          {/* 期限日期卡片 */}
+          <View style={styles.inputCard}>
+            <View style={styles.inputHeader}>
+              <Ionicons name="calendar" size={20} color="#8E8E93" />
+              <Text style={styles.inputLabel}>期限日 (任意)</Text>
+            </View>
+            <View style={styles.dateInputContainer}>
+              <Ionicons name="time" size={16} color="#8E8E93" style={styles.dateIcon} />
+              <TextInput
+                style={styles.dateInput}
+                placeholder="YYYY-MM-DD"
+                value={dueDate}
+                onChangeText={setDueDate}
+                placeholderTextColor="#C7C7CC"
+              />
+            </View>
           </View>
-        </View>
-      </SafeAreaView>
+
+          {/* 底部間距 */}
+          <View style={styles.bottomSpacer} />
+        </ScrollView>
+      </View>
     </Modal>
   );
 };
 
 export default function TodoView() {
   const { user } = useAuth();
-  const { activeFamily } = useFamily();
+  const { activeFamily, userFamilies } = useFamily();
   const [todos, setTodos] = useState<TodoWithUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingTodo, setEditingTodo] = useState<TodoWithUser | undefined>();
   const [filter, setFilter] = useState<'all' | 'pending' | 'completed'>('all');
+  const [isSorting, setIsSorting] = useState(false);
+
+  // 提取用戶家庭ID列表
+  const userFamilyIds = userFamilies?.map(family => family.id) || [];
 
   const loadTodos = useCallback(async () => {
-    if (!activeFamily) return;
+    if (!activeFamily || !user) return;
     
     try {
-      const data = await todoService.getTodosByFamily(activeFamily.id);
+      // 使用新的空間感知方法
+      const data = await todoService.getTodosBySpace(activeFamily, userFamilyIds);
       setTodos(data);
+      
+      // 立即更新currentTodos以避免延遲
+      const filtered = data.filter(todo => {
+        if (filter === 'pending') return todo.status !== 'completed';
+        if (filter === 'completed') return todo.status === 'completed';
+        return true;
+      });
+      setCurrentTodos(filtered);
     } catch (error) {
       console.error('載入待辦事項失敗:', error);
-      Alert.alert('錯誤', '載入待辦事項失敗');
+      Alert.alert(t('todos.error'), t('todos.loadFailed'));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [activeFamily]);
+  }, [activeFamily, userFamilyIds, user, filter]);
 
   useEffect(() => {
     loadTodos();
@@ -299,20 +385,53 @@ export default function TodoView() {
           due_date: dueDate,
         });
       } else {
-        await todoService.createTodo({
+        // 檢查是否可以在當前空間創建待辦事項
+        if (activeFamily.id === 'meta-space') {
+          Alert.alert(
+            t('todos.error'), 
+            '無法在元空間直接創建待辦事項。請選擇特定的家庭空間。'
+          );
+          return;
+        }
+
+        if (activeFamily.tag === 'personal') {
+          Alert.alert(
+            t('todos.error'), 
+            '無法在個人空間創建待辦事項。請選擇特定的家庭空間。'
+          );
+          return;
+        }
+
+        // 檢查familyId是否為有效UUID
+        const isValidUUID = (id: string) => {
+          const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+          return uuidRegex.test(id);
+        };
+
+        if (!isValidUUID(activeFamily.id)) {
+          Alert.alert(
+            t('todos.error'), 
+            '當前空間不支持創建待辦事項。請選擇有效的家庭空間。'
+          );
+          return;
+        }
+
+        const createParams: CreateTodoParams = {
           familyId: activeFamily.id,
           title,
           description,
           priority: priority as any,
           dueDate,
           assignedTo: user.id,
-        });
+        };
+
+        await todoService.createTodo(createParams);
       }
       await loadTodos();
       setEditingTodo(undefined);
     } catch (error) {
       console.error('操作失敗:', error);
-      Alert.alert('錯誤', editingTodo ? '更新失敗' : '創建失敗');
+      Alert.alert(t('todos.error'), editingTodo ? t('todos.updateFailed') : t('todos.createFailed'));
     }
   };
 
@@ -326,18 +445,18 @@ export default function TodoView() {
       await loadTodos();
     } catch (error) {
       console.error('更新狀態失敗:', error);
-      Alert.alert('錯誤', '更新狀態失敗');
+      Alert.alert(t('todos.error'), t('todos.updateStatusFailed'));
     }
   };
 
   const handleDeleteTodo = async (todoId: string) => {
     Alert.alert(
-      '確認刪除',
-      '確定要刪除這個待辦事項嗎？',
+      t('todos.confirmDelete'),
+      t('todos.confirmDeleteMessage'),
       [
-        { text: '取消', style: 'cancel' },
+        { text: t('todos.cancel'), style: 'cancel' },
         {
-          text: '刪除',
+          text: t('todos.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -345,7 +464,7 @@ export default function TodoView() {
               await loadTodos();
             } catch (error) {
               console.error('刪除失敗:', error);
-              Alert.alert('錯誤', '刪除失敗');
+              Alert.alert(t('todos.error'), t('todos.deleteFailed'));
             }
           }
         }
@@ -358,99 +477,234 @@ export default function TodoView() {
     setShowAddModal(true);
   };
 
-  const filteredTodos = todos.filter(todo => {
-    if (filter === 'pending') return todo.status !== 'completed';
-    if (filter === 'completed') return todo.status === 'completed';
-    return true;
-  });
+  // 處理拖拽排序
+  const handleDragEnd = ({ data }: { data: TodoWithUser[] }) => {
+    // 保存原始狀態以備回滾
+    const originalCurrentTodos = [...currentTodosRef.current];
+    const originalTodos = [...todos];
+    
+    // *** 關鍵：立即同步更新狀態和ref ***
+    currentTodosRef.current = data;
+    setCurrentTodos(data);
+    
+    // 同步更新todos狀態
+    const updatedTodos = [...todos];
+    const dragUpdates = new Map();
+    data.forEach((draggedTodo, newIndex) => {
+      dragUpdates.set(draggedTodo.id, newIndex);
+    });
+    
+    updatedTodos.forEach((todo, index) => {
+      if (dragUpdates.has(todo.id)) {
+        updatedTodos[index] = { 
+          ...todo, 
+          sort_order: dragUpdates.get(todo.id) 
+        };
+      }
+    });
+    setTodos(updatedTodos);
+    
+    // *** 後台異步處理數據庫更新 ***
+    (async () => {
+      setIsSorting(true);
+      try {
+        await todoService.updateTodoOrder(data.map((todo, index) => ({ 
+          id: todo.id, 
+          sort_order: index 
+        })));
+      } catch (error) {
+        console.error('更新排序失敗:', error);
+        
+        // 只有失敗時才回滾
+        currentTodosRef.current = originalCurrentTodos;
+        setCurrentTodos(originalCurrentTodos);
+        setTodos(originalTodos);
+        
+        Alert.alert(
+          t('todos.error'), 
+          '更新順序失敗，已恢復原始順序'
+        );
+      } finally {
+        setIsSorting(false);
+      }
+    })();
+  };
+
+  const [currentTodos, setCurrentTodos] = useState<TodoWithUser[]>([]);
+  const currentTodosRef = useRef<TodoWithUser[]>([]);
+
+  // 同步ref和state
+  useEffect(() => {
+    currentTodosRef.current = currentTodos;
+  }, [currentTodos]);
+
+  // 當todos或filter改變時，更新currentTodos（但不在拖拽時）
+  useEffect(() => {
+    if (isSorting) return; // 拖拽時不重新計算
+    
+    const filtered = todos.filter(todo => {
+      if (filter === 'pending') return todo.status !== 'completed';
+      if (filter === 'completed') return todo.status === 'completed';
+      return true;
+    });
+    setCurrentTodos(filtered);
+    currentTodosRef.current = filtered;
+  }, [todos, filter, isSorting]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     loadTodos();
   }, [loadTodos]);
 
+  // 根據當前空間顯示不同的提示信息
+  const getEmptyStateMessage = () => {
+    if (!activeFamily) {
+      return t('todos.pleaseJoinFamily');
+    }
+    
+    if (activeFamily.tag === 'personal') {
+      return '個人空間中沒有待辦事項\n在這裡創建的待辦事項只有您能看到';
+    }
+    
+    if (activeFamily.id === 'meta-space') {
+      return '元空間顯示所有空間的待辦事項\n目前沒有任何待辦事項';
+    }
+    
+    return `${activeFamily.name} 中沒有待辦事項\n在這裡創建的待辦事項將與家庭成員共享`;
+  };
+
   if (!activeFamily) {
     return (
       <View style={styles.emptyContainer}>
-        <Text style={styles.emptyText}>請先加入或創建家庭</Text>
+        <Text style={styles.emptyText}>{getEmptyStateMessage()}</Text>
       </View>
     );
   }
 
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#007AFF" />
+      </View>
+    );
+  }
+
+  const renderTodoItem = ({ item, drag, isActive }: RenderItemParams<TodoWithUser>) => (
+    <TodoItem
+      todo={item}
+      onToggleComplete={handleToggleComplete}
+      onDelete={handleDeleteTodo}
+      onEdit={handleEditTodo}
+      drag={drag}
+      isActive={isActive}
+    />
+  );
+
   return (
     <View style={styles.container}>
-      {/* 篩選器 */}
+      {/* 过滤器 */}
       <View style={styles.filterContainer}>
-        {(['all', 'pending', 'completed'] as const).map(f => (
+        {(['all', 'pending', 'completed'] as const).map((filterOption) => (
           <TouchableOpacity
-            key={f}
-            style={[styles.filterButton, filter === f && styles.activeFilterButton]}
-            onPress={() => setFilter(f)}
+            key={filterOption}
+            style={[
+              styles.filterButton,
+              filter === filterOption && styles.activeFilterButton
+            ]}
+            onPress={() => setFilter(filterOption)}
           >
-            <Text style={[styles.filterButtonText, filter === f && styles.activeFilterButtonText]}>
-              {f === 'all' ? '全部' : f === 'pending' ? '進行中' : '已完成'}
+            <Text style={[
+              styles.filterButtonText,
+              filter === filterOption && styles.activeFilterButtonText
+            ]}>
+              {filterOption === 'all' ? t('todos.all') :
+               filterOption === 'pending' ? t('todos.pending') :
+               t('todos.completed')}
             </Text>
           </TouchableOpacity>
         ))}
       </View>
 
-      {/* 待辦列表 */}
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
+      {/* 待办事项列表 */}
+      {currentTodos.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>
+            {filter === 'all' ? 
+              getEmptyStateMessage() :
+              filter === 'pending' ? 
+              t('todos.noTodos') : 
+              t('todos.noCompletedTodos')
+            }
+          </Text>
+          {filter === 'all' && (
+            <Text style={styles.emptySubtext}>{t('todos.createFirstTodo')}</Text>
+          )}
         </View>
       ) : (
-        <FlatList
-          data={filteredTodos}
+        <DraggableFlatList
+          data={currentTodos}
+          renderItem={renderTodoItem}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <TodoItem
-              todo={item}
-              onToggleComplete={handleToggleComplete}
-              onDelete={handleDeleteTodo}
-              onEdit={handleEditTodo}
-            />
-          )}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
+          onDragEnd={handleDragEnd}
+          onDragBegin={() => {
+            setRefreshing(false);
+          }}
           contentContainerStyle={styles.listContainer}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>
-                {filter === 'completed' ? '沒有已完成的待辦事項' : '沒有待辦事項'}
-              </Text>
-              <Text style={styles.emptySubtext}>點擊下方按鈕創建第一個待辦事項</Text>
-            </View>
+          refreshControl={
+            <RefreshControl refreshing={refreshing && !isSorting} onRefresh={onRefresh} />
           }
+          showsVerticalScrollIndicator={false}
+          activationDistance={0}
+          autoscrollSpeed={150}
+          dragItemOverflow={false}
+          containerStyle={{ backgroundColor: 'transparent' }}
+          animationConfig={{
+            damping: 25,
+            mass: 0.1,
+            stiffness: 120,
+            overshootClamping: true,
+            restSpeedThreshold: 0.01,
+            restDisplacementThreshold: 0.01,
+          }}
         />
       )}
 
-      {/* 添加按鈕 */}
+      {/* 添加按钮 */}
       <TouchableOpacity
-        style={styles.addButton}
-        onPress={() => {
-          setEditingTodo(undefined);
-          setShowAddModal(true);
-        }}
+        style={[styles.addButton, isSorting && styles.addButtonSorting]}
+        onPress={() => setShowAddModal(true)}
+        disabled={isSorting}
       >
-        <Ionicons name="add" size={24} color="white" />
+        {isSorting ? (
+          <ActivityIndicator size="small" color="white" />
+        ) : (
+          <Ionicons name="add" size={28} color="white" />
+        )}
       </TouchableOpacity>
 
-      {/* 添加/編輯模態框 */}
+      {/* 排序狀態指示器 */}
+      {isSorting && (
+        <View style={styles.sortingIndicator}>
+          <ActivityIndicator size="small" color="#007AFF" />
+          <Text style={styles.sortingText}>正在保存順序...</Text>
+        </View>
+      )}
+
+      {/* 添加/编辑模态框 */}
       <AddTodoModal
         visible={showAddModal}
         onClose={() => {
           setShowAddModal(false);
           setEditingTodo(undefined);
         }}
-        onAdd={handleAddTodo}
-        editTodo={editingTodo}
+        onSave={handleAddTodo}
+        editingTodo={editingTodo}
       />
     </View>
   );
 }
 
+// 樣式定義
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -490,7 +744,7 @@ const styles = StyleSheet.create({
   listContainer: {
     padding: 16,
   },
-  todoItem: {
+  todoCard: {
     flexDirection: 'row',
     backgroundColor: 'white',
     padding: 16,
@@ -502,8 +756,12 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 2,
   },
-  completedItem: {
+  completedCard: {
     opacity: 0.6,
+  },
+  draggingCard: {
+    opacity: 0.5,
+    transform: [{ scale: 0.98 }],
   },
   checkboxContainer: {
     marginRight: 12,
@@ -574,6 +832,10 @@ const styles = StyleSheet.create({
     color: '#8E8E93',
     marginBottom: 4,
   },
+  dragHandle: {
+    padding: 8,
+    marginLeft: 12,
+  },
   addButton: {
     position: 'absolute',
     bottom: 24,
@@ -590,6 +852,32 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 4,
   },
+  addButtonSorting: {
+    backgroundColor: '#8E8E93',
+    shadowOpacity: 0.1,
+  },
+  sortingIndicator: {
+    position: 'absolute',
+    bottom: 90,
+    right: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  sortingText: {
+    marginLeft: 8,
+    fontSize: 12,
+    color: '#007AFF',
+    fontWeight: '500',
+  },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -601,99 +889,158 @@ const styles = StyleSheet.create({
     color: '#8E8E93',
     marginBottom: 8,
     fontWeight: '500',
+    textAlign: 'center',
   },
   emptySubtext: {
     fontSize: 14,
     color: '#C7C7CC',
+    textAlign: 'center',
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: '#f9fafb',
+    backgroundColor: '#F2F2F7',
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    backdropFilter: 'blur(20px)',
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  headerButton: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 22,
+    backgroundColor: 'rgba(142, 142, 147, 0.12)',
+  },
+  headerTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'center',
+  },
+  headerIcon: {
+    marginRight: 8,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#2c3e50',
-  },
-  cancelButton: {
-    fontSize: 16,
-    color: '#8E8E93',
+    color: '#1C1C1E',
   },
   saveButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#007AFF',
+    borderRadius: 20,
+    minWidth: 60,
+    alignItems: 'center',
+  },
+  saveButtonText: {
     fontSize: 16,
-    color: '#007AFF',
+    color: 'white',
     fontWeight: '600',
   },
   modalContent: {
-    padding: 16,
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 20,
   },
-  titleInput: {
+  inputCard: {
     backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
+    borderRadius: 16,
     marginBottom: 16,
-    minHeight: 50,
-    textAlignVertical: 'top',
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  descriptionInput: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 14,
-    marginBottom: 16,
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
-  sectionLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2c3e50',
+  inputHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 12,
   },
-  priorityContainer: {
-    marginBottom: 16,
+  inputLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1C1C1E',
+    marginLeft: 8,
+  },
+  titleInput: {
+    fontSize: 16,
+    color: '#1C1C1E',
+    minHeight: 44,
+    textAlignVertical: 'top',
+    lineHeight: 22,
+  },
+  descriptionInput: {
+    fontSize: 14,
+    color: '#1C1C1E',
+    minHeight: 80,
+    textAlignVertical: 'top',
+    lineHeight: 20,
   },
   priorityButtons: {
     flexDirection: 'row',
+    gap: 12,
   },
   priorityButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginRight: 12,
-    borderRadius: 20,
-    backgroundColor: 'white',
-    borderWidth: 1,
-    borderColor: '#e5e5ea',
+    borderRadius: 12,
+    backgroundColor: '#F2F2F7',
+    borderWidth: 1.5,
+    borderColor: 'transparent',
   },
   selectedPriorityButton: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
+    borderColor: 'transparent',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  priorityIcon: {
+    marginRight: 6,
   },
   priorityButtonText: {
     fontSize: 14,
-    color: '#666',
+    color: '#1C1C1E',
     fontWeight: '500',
   },
   selectedPriorityButtonText: {
     color: 'white',
+    fontWeight: '600',
   },
-  dueDateContainer: {
-    marginBottom: 16,
+  dateInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F2F2F7',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  dateIcon: {
+    marginRight: 12,
   },
   dateInput: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 16,
+    flex: 1,
     fontSize: 16,
+    color: '#1C1C1E',
+  },
+  bottomSpacer: {
+    height: 40,
   },
 }); 

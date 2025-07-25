@@ -1,13 +1,14 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { t } from '../lib/i18n';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 
 // 元空間定義
 const META_SPACE_FAMILY: Family = {
   id: 'meta-space',
-  name: '元空間',
-  description: '查看所有空間信息',
+  name: t('drawer.metaSpace'),
+  description: t('drawer.metaSpaceDescription'),
   avatar_url: null,
   owner_id: '',
   invite_code: null,
@@ -15,22 +16,25 @@ const META_SPACE_FAMILY: Family = {
   created_at: null,
   updated_at: null,
   member_count: 0,
+  enabled_features: null,
+  settings: null,
+  tag: null,
 };
 
 interface Family {
   id: string;
   name: string;
-  description?: string | null;
-  avatar_url?: string | null;
+  description: string | null;
+  avatar_url: string | null;
   owner_id: string;
   invite_code: string | null;
   timezone: string | null;
   created_at: string | null;
   updated_at: string | null;
   member_count: number; // 添加成员数量字段
-  enabled_features?: string[] | null;
-  settings?: any | null;
-  tag?: string | null;
+  enabled_features: string[] | null;
+  settings: any | null;
+  tag: string | null;
 }
 
 interface FamilyMember {
@@ -279,6 +283,47 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // 新增：獲取用戶所有家庭的成員關係（用於元空間）
+  const fetchAllUserFamilyMembers = async () => {
+    if (!user) return;
+    
+    try {
+      // 獲取用戶參與的所有家庭的成員關係
+      const familyIds = userFamilies.map(f => f.id);
+      if (familyIds.length === 0) return;
+
+      const { data, error } = await supabase
+        .from('family_members')
+        .select(`
+          id,
+          family_id,
+          user_id,
+          role,
+          joined_at,
+          users (
+            display_name,
+            email,
+            avatar_url
+          )
+        `)
+        .in('family_id', familyIds)
+        .order('joined_at', { ascending: true });
+
+      if (error) {
+        console.error('获取所有家庭成员失败:', error);
+        return;
+      }
+
+      // 設置為用戶在所有家庭中的成員關係
+      setFamilyMembers(data.map(member => ({
+        ...member,
+        user: member.users
+      })) as FamilyMember[]);
+    } catch (err) {
+      console.error('获取所有家庭成员异常:', err);
+    }
+  };
+
   const createFamily = async (data: { name: string; description?: string; tag?: string }) => {
     if (!user) {
       setError('用户未登录');
@@ -339,14 +384,39 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       setLoading(true);
       setError(null);
 
+      console.log('開始加入家庭，邀請碼:', inviteCode.trim(), '用戶ID:', user.id);
+
       const { data: familyData, error: familyError } = await supabase
         .from('families')
         .select('id, name')
         .eq('invite_code', inviteCode.trim())
         .single();
 
+      console.log('家庭查詢結果:', { familyData, familyError });
+
       if (familyError || !familyData) {
-        setError('邀请码无效');
+        console.error('邀請碼查詢錯誤:', familyError);
+        setError(t('joinFamily.invalidCode'));
+        return false;
+      }
+
+      // 檢查用戶是否已經是該家庭的成員
+      const { data: existingMember, error: checkError } = await supabase
+        .from('family_members')
+        .select('id')
+        .eq('family_id', familyData.id)
+        .eq('user_id', user.id)
+        .single();
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        // PGRST116 是 "no rows returned" 錯誤，這是我們期望的
+        console.error('檢查成員身份時出錯:', checkError);
+        setError('檢查成員身份失敗');
+        return false;
+      }
+
+      if (existingMember) {
+        setError(t('joinFamily.alreadyMember'));
         return false;
       }
 
@@ -359,15 +429,21 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
         });
 
       if (joinError) {
-        setError('加入家庭失败');
+        console.error('加入家庭失敗:', joinError);
+        if (joinError.code === '23505') {
+          // 唯一約束違反錯誤
+          setError(t('joinFamily.alreadyMember'));
+        } else {
+          setError(t('joinFamily.joinFailed'));
+        }
         return false;
       }
 
       await fetchUserFamilies();
       return true;
     } catch (err) {
-      // console.error('加入家庭异常:', err);
-      setError('加入家庭失败');
+      console.error('加入家庭异常:', err);
+      setError(t('joinFamily.joinFailed'));
       return false;
     } finally {
       setLoading(false);
@@ -386,8 +462,9 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     } else if (familyId === 'meta-space') {
       // 切換到元空間
       setActiveFamily(META_SPACE_FAMILY);
-      // 元空間是純粹的個人AI對話空間，不顯示任何家庭成員信息
-      setFamilyMembers([]);
+      // 元空間需要保留用戶的家庭成員關係來獲取跨家庭事件
+      // 獲取用戶所有家庭的成員關係
+      await fetchAllUserFamilyMembers();
     } else {
       // 切換到指定家庭
       const familyToSwitch = userFamilies.find(f => f.id === familyId);
@@ -464,7 +541,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     
     // 防止解散個人空間
     if (activeFamily.tag === 'personal') {
-      setError('個人空間無法解散');
+      setError(t('space.personalSpaceCannotDissolve'));
       return false;
     }
     

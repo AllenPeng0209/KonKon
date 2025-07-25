@@ -109,8 +109,8 @@ export const useEventManagement = () => {
         startTime: new Date(event.startTime),
         endTime: event.endTime ? new Date(event.endTime) : undefined,
         location: event.location,
-        // 🚀 新增：默认共享给当前激活的家庭群组
-        shareToFamilies: activeFamily?.id ? [activeFamily.id] : undefined,
+        // 🚀 修復：個人空間的事件不應該被分享，保持為私人事件
+        shareToFamilies: (activeFamily?.id && activeFamily.tag !== 'personal') ? [activeFamily.id] : undefined,
         // 🚀 新增：默认添加当前用户作为参与者
         attendees: user?.id ? [user.id] : undefined,
       };
@@ -118,8 +118,8 @@ export const useEventManagement = () => {
       const createdId = await createEvent(eventData);
 
       if (createdId) {
-        // 🚀 发送事件创建通知给家庭成员
-        if (activeFamily?.id && user?.id) {
+        // 🚀 发送事件创建通知给家庭成员（個人空間不發送通知）
+        if (activeFamily?.id && activeFamily.tag !== 'personal' && user?.id) {
           try {
             const currentUserName = user?.user_metadata?.display_name || user?.email || '用户';
             const { notifyEventCreated } = await import('../lib/notificationService');
@@ -160,8 +160,8 @@ export const useEventManagement = () => {
           startTime: new Date(event.startTime),
           endTime: event.endTime ? new Date(event.endTime) : undefined,
           location: event.location,
-          // 🚀 新增：默认共享给当前激活的家庭群组
-          shareToFamilies: activeFamily?.id ? [activeFamily.id] : undefined,
+          // 🚀 修復：個人空間的事件不應該被分享，保持為私人事件
+          shareToFamilies: (activeFamily?.id && activeFamily.tag !== 'personal') ? [activeFamily.id] : undefined,
           // 🚀 新增：默认添加当前用户作为参与者
           attendees: user?.id ? [user.id] : undefined,
         };
@@ -169,8 +169,8 @@ export const useEventManagement = () => {
         if (createdId) {
           successCount++;
           
-          // 🚀 发送事件创建通知给家庭成员
-          if (activeFamily?.id && user?.id) {
+          // 🚀 发送事件创建通知给家庭成员（個人空間不發送通知）
+          if (activeFamily?.id && activeFamily.tag !== 'personal' && user?.id) {
             try {
               const { notifyEventCreated } = await import('../lib/notificationService');
               await notifyEventCreated(
@@ -225,7 +225,7 @@ export const useEventManagement = () => {
             });
             
             if (systemEventId) {
-              console.log('系統日曆事件創建成功:', systemEventId);
+              // 系統日曆事件創建成功
             }
           } catch (calendarError) {
             console.error('系統日曆同步失敗:', calendarError);

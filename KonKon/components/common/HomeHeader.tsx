@@ -3,12 +3,12 @@ import { t } from '@/lib/i18n';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  Alert,
-  Dimensions,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Alert,
+    Dimensions,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -25,7 +25,7 @@ interface HomeHeaderProps {
   selectedFilter: string;
   onFilterChange: (filterValue: string) => void;
   onResetSettings: () => Promise<void>;
-  activeFamily?: { id: string; name: string; member_count?: number } | null;
+  activeFamily?: { id: string; name: string; member_count?: number; tag?: string } | null;
   userFamilies?: Array<{ id: string; name: string; member_count?: number }>;
   onFamilyChange?: (familyId: string | null) => void;
 }
@@ -144,7 +144,11 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
             activeOpacity={0.8}
           >
             <Text style={styles.familyName} numberOfLines={1}>
-              {activeFamily ? activeFamily.name : '選擇家庭'}
+              {activeFamily 
+                ? (activeFamily.tag === 'personal' ? t('space.personalSpace') : 
+                   activeFamily.id === 'meta-space' ? t('drawer.metaSpace') : 
+                   activeFamily.name)
+                : '選擇家庭'}
             </Text>
             <Text style={styles.familyDropdownIcon}>▼</Text>
           </TouchableOpacity>
@@ -203,7 +207,7 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
                 styles.metaSpaceMenuItem,
                 activeFamily?.id === 'meta-space' && styles.familyMenuItemActive
               ]}
-              onPress={() => handleFamilySelect({ id: 'meta-space', name: '元空間' })}
+              onPress={() => handleFamilySelect({ id: 'meta-space', name: t('drawer.metaSpace') })}
             >
               <View style={[styles.familyMenuIcon, styles.metaSpaceIcon]}>
                 <Text style={styles.familyMenuIconText}>🌌</Text>
@@ -213,7 +217,7 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
                 styles.metaSpaceText,
                 activeFamily?.id === 'meta-space' && styles.familyMenuTextActive
               ]}>
-                元空間
+                {t('drawer.metaSpace')}
               </Text>
               {activeFamily?.id === 'meta-space' && (
                 <Text style={styles.familyMenuCheck}>✓</Text>

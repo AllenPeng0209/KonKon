@@ -1,12 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import { t } from '@/lib/i18n';
+import { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  Dimensions,
-  Animated,
+    Animated,
+    Dimensions,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { CalendarViewProps } from './CalendarViewTypes';
 
@@ -161,10 +162,12 @@ export default function FamilyNotebookView({
 
   const renderHeader = () => {
     const [year, month] = currentMonth.split('-').map(Number);
-    const monthNames = [
-      '1月', '2月', '3月', '4月', '5月', '6月',
-      '7月', '8月', '9月', '10月', '11月', '12月'
-    ];
+      const monthNames = [
+    t('calendar.jan'), t('calendar.feb'), t('calendar.mar'), 
+    t('calendar.apr'), t('calendar.may'), t('calendar.jun'),
+    t('calendar.jul'), t('calendar.aug'), t('calendar.sep'), 
+    t('calendar.oct'), t('calendar.nov'), t('calendar.dec')
+  ];
 
     return (
       <Animated.View 

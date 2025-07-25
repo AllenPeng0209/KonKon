@@ -1,4 +1,5 @@
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { t } from '@/lib/i18n';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
@@ -50,20 +51,7 @@ interface DrawerProps {
   translateX: SharedValue<number>;
 }
 
-// 元空間對象定義
-const META_SPACE: Family = {
-  id: 'meta-space',
-  name: '元空間',
-  description: '查看所有空間信息',
-  avatar_url: null,
-  owner_id: '',
-  invite_code: null,
-  timezone: null,
-  created_at: null,
-  updated_at: null,
-  member_count: 0,
-  tag: 'meta'
-};
+// 元空間對象定義（將移動到組件內部以使用翻譯）
 
 interface Family {
   id: string;
@@ -275,14 +263,14 @@ const DraggableFamilyItem: React.FC<DraggableFamilyItemProps> = ({
                   isMetaSpace && styles.metaSpaceName,
                   isPersonalSpace && styles.personalSpaceName
                 ]}>
-                  {family.name}
+                  {isPersonalSpace ? t('space.personalSpace') : family.name}
                 </Text>
                 <Text style={styles.familyMemberCount}>
                   {isMetaSpace 
-                    ? `所有 ${totalSpacesCount} 個空間` 
+                    ? t('drawer.allSpaces', { count: totalSpacesCount })
                     : isActive 
-                      ? `${familyMembers.length} 位成員` 
-                      : `共 ${family.member_count || 1} 位成員`
+                      ? t('drawer.membersCount', { count: familyMembers.length })
+                      : t('drawer.totalMembersCount', { count: family.member_count || 1 })
                   }
                 </Text>
               </View>
@@ -307,6 +295,21 @@ const Drawer: React.FC<DrawerProps> = ({ onClose, translateX }) => {
   const [modalVisible, setModalVisible] = useState(false);
   
   const draggedIndex = useSharedValue(-1);
+
+  // 元空間對象定義（使用翻譯）
+  const META_SPACE: Family = {
+    id: 'meta-space',
+    name: t('drawer.metaSpace'),
+    description: t('drawer.metaSpaceDescription'),
+    avatar_url: null,
+    owner_id: '',
+    invite_code: null,
+    timezone: null,
+    created_at: null,
+    updated_at: null,
+    member_count: 0,
+    tag: 'meta'
+  };
 
   const animatedStyle = useAnimatedStyle(() => {
     return {
@@ -385,7 +388,7 @@ const Drawer: React.FC<DrawerProps> = ({ onClose, translateX }) => {
             />
             <View style={styles.profileInfo}>
               <Text style={styles.profileName}>{user?.user_metadata?.display_name || user?.email}</Text>
-              <Text style={styles.profileStatus}>查看個人資料</Text>
+              <Text style={styles.profileStatus}>{t('drawer.viewProfile')}</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={styles.profileStatus.color} />
           </TouchableOpacity>
@@ -438,7 +441,7 @@ const Drawer: React.FC<DrawerProps> = ({ onClose, translateX }) => {
           <View style={styles.footer}>
             <TouchableOpacity style={styles.addGroupButton} onPress={() => setModalVisible(true)}>
               <Ionicons name="add" size={24} color={Colors.dark.text} />
-              <Text style={styles.addGroupButtonText}>新建空間</Text>
+              <Text style={styles.addGroupButtonText}>{t('drawer.newSpace')}</Text>
             </TouchableOpacity>
           </View>
         </SafeAreaView>
@@ -459,17 +462,17 @@ const Drawer: React.FC<DrawerProps> = ({ onClose, translateX }) => {
           <View style={styles.modalView}>
             <TouchableOpacity style={styles.modalButton} onPress={handleCreateFamily}>
               <Ionicons name="add-circle-outline" size={22} color={Colors.light.tint} />
-              <Text style={styles.modalButtonText}>創建新空間</Text>
+              <Text style={styles.modalButtonText}>{t('common.createNewSpace')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.modalButton} onPress={handleJoinFamily}>
               <Ionicons name="enter-outline" size={22} color={Colors.light.tint} />
-              <Text style={styles.modalButtonText}>加入空間</Text>
+              <Text style={styles.modalButtonText}>{t('common.joinSpace')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.modalButton, { marginTop: 10, backgroundColor: '#f0f0f0' }]}
               onPress={() => setModalVisible(false)}
             >
-              <Text style={{...styles.modalButtonText, color: '#555', textAlign: 'center', width: '100%', marginLeft: 0}}>取消</Text>
+              <Text style={{...styles.modalButtonText, color: '#555', textAlign: 'center', width: '100%', marginLeft: 0}}>{t('common.cancel')}</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>

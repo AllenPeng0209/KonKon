@@ -1,5 +1,6 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useFamily } from '@/contexts/FamilyContext';
+import { t } from '@/lib/i18n';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
@@ -191,7 +192,7 @@ export default function FamilyManagement() {
   const handleDeleteFamily = useCallback(() => {
     // 檢查是否為個人空間，個人空間不允許解散
     if (activeFamily?.tag === 'personal') {
-      Alert.alert('提示', '個人空間無法解散');
+      Alert.alert('提示', t('space.personalSpaceCannotDissolve'));
       return;
     }
 
@@ -261,6 +262,8 @@ export default function FamilyManagement() {
   const isFamilyMember = familyMembers.some(member => member.user_id === user?.id);
   // 檢查是否為個人空間 - 個人空間不允許邀請其他人
   const isPersonalSpace = activeFamily?.tag === 'personal';
+  // 檢查是否為元空間 - 元空間有特殊的邏輯
+  const isMetaSpace = activeFamily?.id === 'meta-space';
 
   return (
     <SafeAreaView style={styles.container}>
@@ -325,8 +328,8 @@ export default function FamilyManagement() {
           </View>
         )}
 
-        {/* 家庭成员 */}
-        {familyMembers.length > 0 && (
+        {/* 家庭成员 - 元空間不顯示 */}
+        {familyMembers.length > 0 && !isMetaSpace && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>家庭成员</Text>
             {familyMembers.map((member) => (
@@ -377,8 +380,8 @@ export default function FamilyManagement() {
             <Ionicons name="chevron-forward" size={16} color="#C7C7CD" />
           </TouchableOpacity>
 
-          {/* 只要是家庭成員就能使用郵箱邀請，但個人空間不允許 */}
-          {isFamilyMember && !isPersonalSpace && (
+          {/* 只要是家庭成員就能使用郵箱邀請，但個人空間和元空間不允許 */}
+          {isFamilyMember && !isPersonalSpace && !isMetaSpace && (
             <TouchableOpacity
               style={styles.actionButton}
               onPress={() => setShowInviteForm(true)}
@@ -389,8 +392,8 @@ export default function FamilyManagement() {
             </TouchableOpacity>
           )}
 
-          {/* 只要是家庭成員就能分享邀請碼，但個人空間不允許 */}
-          {isFamilyMember && !isPersonalSpace && (
+          {/* 只要是家庭成員就能分享邀請碼，但個人空間和元空間不允許 */}
+          {isFamilyMember && !isPersonalSpace && !isMetaSpace && (
             <TouchableOpacity
               style={styles.actionButton}
               onPress={handleShareInviteCode}
@@ -401,8 +404,8 @@ export default function FamilyManagement() {
             </TouchableOpacity>
           )}
 
-          {/* 複製邀請碼功能，個人空間不允許 */}
-          {isFamilyMember && !isPersonalSpace && (
+          {/* 複製邀請碼功能，個人空間和元空間不允許 */}
+          {isFamilyMember && !isPersonalSpace && !isMetaSpace && (
             <TouchableOpacity
               style={styles.actionButton}
               onPress={handleCopyInviteCode}
@@ -419,7 +422,7 @@ export default function FamilyManagement() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>危险操作</Text>
             
-            {!isOwner && !isPersonalSpace && (
+            {!isOwner && !isPersonalSpace && !isMetaSpace && (
               <TouchableOpacity
                 style={[styles.actionButton, styles.dangerButton]}
                 onPress={handleLeaveFamily}
@@ -432,7 +435,7 @@ export default function FamilyManagement() {
               </TouchableOpacity>
             )}
 
-            {isOwner && !isPersonalSpace && (
+            {isOwner && !isPersonalSpace && !isMetaSpace && (
               <TouchableOpacity
                 style={[styles.actionButton, styles.dangerButton]}
                 onPress={handleDeleteFamily}
@@ -450,7 +453,17 @@ export default function FamilyManagement() {
               <View style={styles.personalSpaceNotice}>
                 <Ionicons name="information-circle" size={20} color="#8E8E93" />
                 <Text style={styles.personalSpaceNoticeText}>
-                  個人空間是您的私人工作區，無法解散或離開
+                  {t('space.personalSpaceNotice')}
+                </Text>
+              </View>
+            )}
+
+            {/* 元空間的提示信息 */}
+            {isMetaSpace && (
+              <View style={styles.personalSpaceNotice}>
+                <Ionicons name="information-circle" size={20} color="#8E8E93" />
+                <Text style={styles.personalSpaceNoticeText}>
+                  {t('space.metaSpaceIntegrationView')}
                 </Text>
               </View>
             )}

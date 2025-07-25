@@ -8,6 +8,14 @@ type NotificationInsert = Tables['family_notifications']['Insert'];
 type NotificationPreferences = Tables['notification_preferences']['Row'];
 type NotificationPreferencesInsert = Tables['notification_preferences']['Insert'];
 
+// UUID 驗證正則表達式
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+// 檢查是否為有效的 UUID
+const isValidUUID = (id?: string): boolean => {
+  return !!(id && UUID_REGEX.test(id));
+};
+
 export interface CreateNotificationParams {
   familyId: string;
   recipientId: string;
@@ -34,6 +42,11 @@ export async function createFamilyNotification(params: CreateNotificationParams)
   
   if (!user.user) {
     throw new Error('用户未登录');
+  }
+
+  // 驗證 familyId 是否為有效 UUID
+  if (!isValidUUID(params.familyId)) {
+    throw new Error('無效的家庭ID格式');
   }
 
   const notificationData: NotificationInsert = {
@@ -76,6 +89,11 @@ export async function createBatchFamilyNotifications(
   
   if (!user.user) {
     throw new Error('用户未登录');
+  }
+
+  // 驗證 familyId 是否為有效 UUID
+  if (!isValidUUID(params.familyId)) {
+    throw new Error('無效的家庭ID格式');
   }
 
   const notifications: NotificationInsert[] = recipientIds.map(recipientId => ({
@@ -183,6 +201,11 @@ export async function markNotificationAsRead(notificationId: string): Promise<vo
 
 // 批量标记通知为已读
 export async function markAllNotificationsAsRead(familyId?: string): Promise<void> {
+  // 如果 familyId 無效，直接返回
+  if (familyId && !isValidUUID(familyId)) {
+    return;
+  }
+
   let query = supabase
     .from('family_notifications')
     .update({ 
@@ -205,6 +228,11 @@ export async function markAllNotificationsAsRead(familyId?: string): Promise<voi
 
 // 获取未读通知数量
 export async function getUnreadNotificationCount(familyId?: string): Promise<number> {
+  // 如果 familyId 無效，返回 0
+  if (familyId && !isValidUUID(familyId)) {
+    return 0;
+  }
+
   let query = supabase
     .from('family_notifications')
     .select('id', { count: 'exact', head: true })
@@ -232,6 +260,11 @@ export async function getNotificationPreferences(
   
   if (!user.user) {
     throw new Error('用户未登录');
+  }
+
+  // 如果 familyId 無效，返回 null
+  if (familyId && !isValidUUID(familyId)) {
+    return null;
   }
 
   let query = supabase
@@ -264,6 +297,11 @@ export async function updateNotificationPreferences(
     throw new Error('用户未登录');
   }
 
+  // 如果 familyId 無效，拋出錯誤
+  if (familyId && !isValidUUID(familyId)) {
+    throw new Error('無效的家庭ID格式');
+  }
+
   const updateData = {
     ...preferences,
     user_id: user.user.id,
@@ -284,24 +322,38 @@ export async function updateNotificationPreferences(
   return data;
 }
 
+
+
 // 发送推送通知
 async function sendPushNotification(notification: FamilyNotification): Promise<void> {
   try {
     // 获取接收者的推送token和偏好设置
-    const { data: preferences, error: preferencesError } = await supabase
+    const { data: preferencesArray, error: preferencesError } = await supabase
       .from('notification_preferences')
       .select('push_enabled, push_token, quiet_hours_enabled, quiet_hours_start, quiet_hours_end')
       .eq('user_id', notification.recipient_id)
       .eq('family_id', notification.family_id)
-      .single();
+      .limit(1);
+
+    const preferences = preferencesArray?.[0] || null;
 
     if (preferencesError) {
-      console.log('获取通知偏好失败，跳过推送通知:', preferencesError.message);
+      console.log(`獲取用戶 ${notification.recipient_id} 通知偏好時發生錯誤:`, preferencesError.message);
       return;
     }
 
-    if (!preferences || !preferences.push_enabled || !preferences.push_token) {
-      console.log('用户未启用推送通知或无推送token');
+    if (!preferences) {
+      // 用戶沒有通知偏好設置，需要在客戶端創建
+      return;
+    }
+
+    if (!preferences.push_enabled) {
+      console.log(`用戶 ${notification.recipient_id} 未啟用推送通知`);
+      return;
+    }
+
+    if (!preferences.push_token) {
+      console.log(`用戶 ${notification.recipient_id} 沒有推送token，可能需要在應用中授權推送通知`);
       return;
     }
 
@@ -314,6 +366,8 @@ async function sendPushNotification(notification: FamilyNotification): Promise<v
       return;
     }
 
+    console.log(`準備發送推送通知給用戶 ${notification.recipient_id}，標題: ${notification.title}`);
+
     // 发送推送通知
     const pushMessage = {
       to: preferences.push_token,
@@ -325,12 +379,13 @@ async function sendPushNotification(notification: FamilyNotification): Promise<v
         type: notification.type,
         relatedId: notification.related_id,
         relatedType: notification.related_type,
+        familyId: notification.family_id,
       },
     };
 
     // 添加超时控制，避免長時間等待
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超時
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 增加到15秒
 
     const response = await fetch('https://exp.host/--/api/v2/push/send', {
       method: 'POST',
@@ -344,22 +399,41 @@ async function sendPushNotification(notification: FamilyNotification): Promise<v
     });
 
     clearTimeout(timeoutId);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
     const result = await response.json();
     
-    if (result.errors) {
+    if (result.errors && result.errors.length > 0) {
       console.error('推送通知发送失败:', result.errors);
-    } else {
-      console.log('推送通知发送成功:', result);
+      // 更新通知状态為失敗
+      await supabase
+        .from('family_notifications')
+        .update({
+          push_notification_sent: false,
+          sent_at: new Date().toISOString(),
+          metadata: Object.assign(
+            notification.metadata || {}, 
+            { push_error: result.errors[0]?.message || '推送失敗' }
+          )
+        })
+        .eq('id', notification.id);
+    } else if (result.data) {
+      console.log(`推送通知发送成功！通知ID: ${notification.id}, Expo推送ID: ${result.data.id}`);
       
-      // 更新通知状态
+      // 更新通知状态為成功
       await supabase
         .from('family_notifications')
         .update({
           push_notification_sent: true,
-          push_notification_id: result.data?.id,
+          push_notification_id: result.data.id,
           sent_at: new Date().toISOString()
         })
         .eq('id', notification.id);
+    } else {
+      console.warn('推送通知响应格式异常:', result);
     }
   } catch (error) {
     // 優雅地處理網絡連接錯誤，不影響主要功能
@@ -420,6 +494,11 @@ export async function subscribeToNotifications(
   
   if (!user) {
     throw new Error('用户未登录');
+  }
+
+  // 如果 familyId 無效，拋出錯誤
+  if (!isValidUUID(familyId)) {
+    throw new Error('無效的家庭ID格式');
   }
 
   const channel = supabase
@@ -492,22 +571,54 @@ export async function notifyEventCreated(
     throw new Error('用户未登录');
   }
 
-  // 排除创建者本人
-  const recipients = attendeeIds.filter(id => id !== user.user.id);
-  
-  if (recipients.length === 0) {
+  // 驗證 familyId 是否為有效 UUID
+  if (!isValidUUID(familyId)) {
+    console.log('無效的家庭ID，跳過通知發送');
     return;
   }
 
-  await createBatchFamilyNotifications({
-    familyId,
-    type: 'event_created',
-    title: '新日程通知',
-    message: `${creatorName} 创建了新日程「${eventTitle}」`,
-    relatedId: eventId,
-    relatedType: 'event',
-    metadata: { eventTitle, creatorName }
-  }, recipients);
+  try {
+    // 獲取家庭中的所有成員，而不是只依賴參與者列表
+    const { data: familyMembers, error: memberError } = await supabase
+      .from('family_members')
+      .select('user_id')
+      .eq('family_id', familyId);
+
+    if (memberError) {
+      console.error('獲取家庭成員失敗:', memberError);
+      return;
+    }
+
+    if (!familyMembers || familyMembers.length === 0) {
+      console.log('家庭中沒有成員，跳過通知發送');
+      return;
+    }
+
+    // 排除創建者本人，發送給其他所有家庭成員
+    const recipients = familyMembers
+      .map(member => member.user_id)
+      .filter(id => id !== user.user.id);
+    
+    if (recipients.length === 0) {
+      // 除了創建者外沒有其他家庭成員，跳過通知發送
+      return;
+    }
+
+    await createBatchFamilyNotifications({
+      familyId,
+      type: 'event_created',
+      title: '新日程通知',
+      message: `${creatorName} 创建了新日程「${eventTitle}」`,
+      relatedId: eventId,
+      relatedType: 'event',
+      metadata: { eventTitle, creatorName }
+    }, recipients);
+
+    // 已向家庭成員發送事件創建通知
+  } catch (error) {
+    console.error('發送事件創建通知時出錯:', error);
+    // 不拋出錯誤，避免影響事件創建的主要流程
+  }
 }
 
 export async function notifyEventUpdated(
@@ -523,22 +634,54 @@ export async function notifyEventUpdated(
     throw new Error('用户未登录');
   }
 
-  // 排除更新者本人
-  const recipients = attendeeIds.filter(id => id !== user.user.id);
-  
-  if (recipients.length === 0) {
+  // 驗證 familyId 是否為有效 UUID
+  if (!isValidUUID(familyId)) {
+    console.log('無效的家庭ID，跳過通知發送');
     return;
   }
 
-  await createBatchFamilyNotifications({
-    familyId,
-    type: 'event_updated',
-    title: '日程更新通知',
-    message: `${updaterName} 更新了日程「${eventTitle}」`,
-    relatedId: eventId,
-    relatedType: 'event',
-    metadata: { eventTitle, updaterName }
-  }, recipients);
+  try {
+    // 獲取家庭中的所有成員，而不是只依賴參與者列表
+    const { data: familyMembers, error: memberError } = await supabase
+      .from('family_members')
+      .select('user_id')
+      .eq('family_id', familyId);
+
+    if (memberError) {
+      console.error('獲取家庭成員失敗:', memberError);
+      return;
+    }
+
+    if (!familyMembers || familyMembers.length === 0) {
+      console.log('家庭中沒有成員，跳過通知發送');
+      return;
+    }
+
+    // 排除更新者本人，發送給其他所有家庭成員
+    const recipients = familyMembers
+      .map(member => member.user_id)
+      .filter(id => id !== user.user.id);
+    
+    if (recipients.length === 0) {
+      console.log('除了更新者外沒有其他家庭成員，跳過通知發送');
+      return;
+    }
+
+    await createBatchFamilyNotifications({
+      familyId,
+      type: 'event_updated',
+      title: '日程更新通知',
+      message: `${updaterName} 更新了日程「${eventTitle}」`,
+      relatedId: eventId,
+      relatedType: 'event',
+      metadata: { eventTitle, updaterName }
+    }, recipients);
+
+    // 已向家庭成員發送事件更新通知
+  } catch (error) {
+    console.error('發送事件更新通知時出錯:', error);
+    // 不拋出錯誤，避免影響事件更新的主要流程
+  }
 }
 
 export async function notifyEventDeleted(
@@ -553,19 +696,51 @@ export async function notifyEventDeleted(
     throw new Error('用户未登录');
   }
 
-  // 排除删除者本人
-  const recipients = attendeeIds.filter(id => id !== user.user.id);
-  
-  if (recipients.length === 0) {
+  // 驗證 familyId 是否為有效 UUID
+  if (!isValidUUID(familyId)) {
+    console.log('無效的家庭ID，跳過通知發送');
     return;
   }
 
-  await createBatchFamilyNotifications({
-    familyId,
-    type: 'event_deleted',
-    title: '日程删除通知',
-    message: `${deleterName} 删除了日程「${eventTitle}」`,
-    relatedType: 'event',
-    metadata: { eventTitle, deleterName }
-  }, recipients);
+  try {
+    // 獲取家庭中的所有成員，而不是只依賴參與者列表
+    const { data: familyMembers, error: memberError } = await supabase
+      .from('family_members')
+      .select('user_id')
+      .eq('family_id', familyId);
+
+    if (memberError) {
+      console.error('獲取家庭成員失敗:', memberError);
+      return;
+    }
+
+    if (!familyMembers || familyMembers.length === 0) {
+      console.log('家庭中沒有成員，跳過通知發送');
+      return;
+    }
+
+    // 排除刪除者本人，發送給其他所有家庭成員
+    const recipients = familyMembers
+      .map(member => member.user_id)
+      .filter(id => id !== user.user.id);
+    
+    if (recipients.length === 0) {
+      console.log('除了刪除者外沒有其他家庭成員，跳過通知發送');
+      return;
+    }
+
+    await createBatchFamilyNotifications({
+      familyId,
+      type: 'event_deleted',
+      title: '日程删除通知',
+      message: `${deleterName} 删除了日程「${eventTitle}」`,
+      relatedType: 'event',
+      metadata: { eventTitle, deleterName }
+    }, recipients);
+
+    console.log(`已向 ${recipients.length} 個家庭成員發送事件刪除通知`);
+  } catch (error) {
+    console.error('發送事件刪除通知時出錯:', error);
+    // 不拋出錯誤，避免影響事件刪除的主要流程
+  }
 } 

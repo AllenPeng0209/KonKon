@@ -1,21 +1,39 @@
-import type { Database } from './database.types';
 import { supabase } from './supabase';
 
-type Todo = Database['public']['Tables']['todos']['Row'];
-type TodoInsert = Database['public']['Tables']['todos']['Insert'];
-type TodoUpdate = Database['public']['Tables']['todos']['Update'];
+// 輔助函數：檢查是否為有效的UUID格式
+const isValidUUID = (id: string): boolean => {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(id);
+};
+
+export interface Todo {
+  id: string;
+  title: string;
+  description?: string | null;
+  priority: string;
+  status: string;
+  due_date?: string | null;
+  family_id: string;
+  user_id: string;
+  assigned_to?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  completed_at?: string | null;
+  sort_order?: number | null;
+}
 
 export interface TodoWithUser extends Todo {
   assigned_user?: {
     id: string;
     display_name: string;
-    avatar_url?: string;
-  };
+    avatar_url?: string | null;
+  } | null;
   creator?: {
     id: string;
     display_name: string;
-    avatar_url?: string;
-  };
+    avatar_url?: string | null;
+  } | null;
+  is_shared?: boolean;
 }
 
 export interface CreateTodoParams {
@@ -23,197 +41,282 @@ export interface CreateTodoParams {
   title: string;
   description?: string;
   priority?: 'low' | 'medium' | 'high';
+  dueDate?: string;
   assignedTo?: string;
-  dueDate?: string; // ISO date string
+  shareToFamilies?: string[];
+}
+
+export interface Family {
+  id: string;
+  name: string;
+  tag?: string | null;
 }
 
 class TodoService {
-  // 創建待辦事項
-  async createTodo(params: CreateTodoParams): Promise<Todo> {
+  async getTodos(familyId: string): Promise<TodoWithUser[]> {
+    const { data, error } = await supabase
+      .from('todos')
+      .select(`
+        *,
+        creator:users!todos_user_id_fkey(id, display_name, avatar_url),
+        assigned_user:users!todos_assigned_to_fkey(id, display_name, avatar_url)
+      `)
+      .eq('family_id', familyId)
+      .order('sort_order', { ascending: true });
+
+    if (error) throw error;
+    return data || [];
+  }
+
+  // 根據空間獲取待辦事項方法
+  async getTodosBySpace(activeFamily: Family, userFamilies: string[]): Promise<TodoWithUser[]> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('User not authenticated');
 
-    const todoData: TodoInsert = {
-      family_id: params.familyId,
-      user_id: user.id,
+    try {
+
+      if (activeFamily.id === 'meta-space') {
+        // 元空間：獲取用戶所有家庭的待辦事項
+        if (userFamilies.length === 0) {
+          return [];
+        }
+
+        const validFamilyIds = userFamilies.filter(id => isValidUUID(id));
+        if (validFamilyIds.length === 0) {
+          return [];
+        }
+
+        const { data: todos, error } = await supabase
+          .from('todos')
+          .select(`
+            *,
+            creator:users!todos_user_id_fkey(id, display_name, avatar_url),
+            assigned_user:users!todos_assigned_to_fkey(id, display_name, avatar_url)
+          `)
+          .in('family_id', validFamilyIds)
+          .order('sort_order', { ascending: true });
+
+        if (error) throw error;
+
+        return (todos || []).map(todo => ({
+          ...todo,
+          is_shared: true
+        })) as TodoWithUser[];
+
+      } else if (activeFamily.tag === 'personal') {
+        // 個人空間：只返回空陣列，因為個人空間的待辦事項通常與特定用戶家庭關聯
+        return [];
+
+      } else if (isValidUUID(activeFamily.id)) {
+        // 正常的家庭空間：使用有效的UUID查詢
+        const { data: todos, error } = await supabase
+          .from('todos')
+          .select(`
+            *,
+            creator:users!todos_user_id_fkey(id, display_name, avatar_url),
+            assigned_user:users!todos_assigned_to_fkey(id, display_name, avatar_url)
+          `)
+          .eq('family_id', activeFamily.id)
+          .order('sort_order', { ascending: true });
+
+        if (error) throw error;
+
+        return (todos || []).map(todo => ({
+          ...todo,
+          is_shared: false
+        })) as TodoWithUser[];
+
+      } else {
+        // 無效的家庭ID，返回空陣列
+        console.warn('Invalid family ID format:', activeFamily.id);
+        return [];
+      }
+
+    } catch (err) {
+      console.error('獲取待辦事項失敗:', err);
+      throw err;
+    }
+  }
+
+  async createTodo(params: CreateTodoParams): Promise<TodoWithUser> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
+    // 檢查familyId是否為有效UUID
+    if (!isValidUUID(params.familyId)) {
+      throw new Error(`Invalid family ID format: ${params.familyId}. Cannot create todo in virtual space.`);
+    }
+
+    // 獲取當前最大的sort_order
+    const { data: maxOrder } = await supabase
+      .from('todos')
+      .select('sort_order')
+      .eq('family_id', params.familyId)
+      .order('sort_order', { ascending: false })
+      .limit(1);
+
+    const nextOrder = (maxOrder?.[0]?.sort_order || 0) + 1;
+
+    const todoData = {
       title: params.title,
       description: params.description,
       priority: params.priority || 'medium',
-      assigned_to: params.assignedTo,
+      status: 'pending' as const,
       due_date: params.dueDate,
-      status: 'pending',
+      family_id: params.familyId,
+      user_id: user.id,
+      assigned_to: params.assignedTo || user.id,
+      sort_order: nextOrder,
     };
 
     const { data, error } = await supabase
       .from('todos')
       .insert(todoData)
-      .select()
+      .select(`
+        *,
+        creator:users!todos_user_id_fkey(id, display_name, avatar_url),
+        assigned_user:users!todos_assigned_to_fkey(id, display_name, avatar_url)
+      `)
       .single();
 
     if (error) throw error;
-    return data;
+
+    // 處理分享邏輯
+    if (params.shareToFamilies && params.shareToFamilies.length > 0) {
+      const validFamilyIds = params.shareToFamilies.filter(id => isValidUUID(id));
+      if (validFamilyIds.length > 0) {
+        await this.shareTodoToFamilies(data.id, validFamilyIds);
+      }
+    }
+
+    return data as TodoWithUser;
   }
 
-  // 獲取家庭待辦事項
-  async getTodosByFamily(familyId: string): Promise<TodoWithUser[]> {
+  async updateTodo(id: string, updates: Partial<Todo>): Promise<TodoWithUser> {
     const { data, error } = await supabase
       .from('todos')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
       .select(`
         *,
-        assigned_user:assigned_to(id, display_name, avatar_url),
-        creator:user_id(id, display_name, avatar_url)
+        creator:users!todos_user_id_fkey(id, display_name, avatar_url),
+        assigned_user:users!todos_assigned_to_fkey(id, display_name, avatar_url)
       `)
-      .eq('family_id', familyId)
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-    return data as TodoWithUser[];
-  }
-
-  // 獲取用戶的待辦事項
-  async getTodosByUser(userId: string): Promise<TodoWithUser[]> {
-    const { data, error } = await supabase
-      .from('todos')
-      .select(`
-        *,
-        assigned_user:assigned_to(id, display_name, avatar_url),
-        creator:user_id(id, display_name, avatar_url)
-      `)
-      .eq('assigned_to', userId)
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-    return data as TodoWithUser[];
-  }
-
-  // 更新待辦事項
-  async updateTodo(todoId: string, updates: TodoUpdate): Promise<Todo> {
-    const { data, error } = await supabase
-      .from('todos')
-      .update(updates)
-      .eq('id', todoId)
-      .select()
       .single();
 
     if (error) throw error;
-    return data;
+    return data as TodoWithUser;
   }
 
-  // 標記完成
-  async completeTodo(todoId: string): Promise<Todo> {
-    return this.updateTodo(todoId, {
+  async deleteTodo(id: string): Promise<boolean> {
+    const { error } = await supabase
+      .from('todos')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+    return true;
+  }
+
+  async completeTodo(id: string): Promise<TodoWithUser> {
+    return this.updateTodo(id, {
       status: 'completed',
       completed_at: new Date().toISOString(),
     });
   }
 
-  // 標記進行中
-  async startTodo(todoId: string): Promise<Todo> {
-    return this.updateTodo(todoId, {
-      status: 'in_progress',
-    });
-  }
+  // 分享待辦事項到指定家庭
+  async shareTodoToFamilies(todoId: string, familyIds: string[]): Promise<boolean> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
 
-  // 刪除待辦事項
-  async deleteTodo(todoId: string): Promise<void> {
-    const { error } = await supabase
-      .from('todos')
-      .delete()
-      .eq('id', todoId);
-
-    if (error) throw error;
-  }
-
-  // 獲取統計數據
-  async getTodoStats(familyId: string): Promise<{
-    total: number;
-    pending: number;
-    in_progress: number;
-    completed: number;
-    overdue: number;
-  }> {
-    const { data, error } = await supabase
-      .from('todos')
-      .select('status, due_date')
-      .eq('family_id', familyId);
-
-    if (error) throw error;
-    if (!data) return { total: 0, pending: 0, in_progress: 0, completed: 0, overdue: 0 };
-
-    const now = new Date();
-    const stats = {
-      total: data.length,
-      pending: 0,
-      in_progress: 0,
-      completed: 0,
-      overdue: 0,
-    };
-
-    data.forEach(todo => {
-      const status = todo.status as 'pending' | 'in_progress' | 'completed';
-      if (status in stats) {
-        stats[status]++;
-      }
+    try {
+      // 過濾出有效的UUID
+      const validFamilyIds = familyIds.filter(id => isValidUUID(id));
       
-      if (todo.due_date && todo.status !== 'completed') {
-        const dueDate = new Date(todo.due_date);
-        if (dueDate < now) {
-          stats.overdue++;
+      if (validFamilyIds.length === 0) {
+        console.warn('No valid family IDs provided for sharing');
+        return false;
+      }
+
+      const shareData = validFamilyIds.map(familyId => ({
+        todo_id: todoId,
+        family_id: familyId,
+        shared_by: user.id,
+      }));
+
+      const { error } = await supabase
+        .from('todo_shares')
+        .insert(shareData);
+
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error('分享待辦事項失敗:', err);
+      throw err;
+    }
+  }
+
+  // 取消分享待辦事項
+  async unshareTodoFromFamily(todoId: string, familyId: string): Promise<boolean> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
+    try {
+      const { error } = await supabase
+        .from('todo_shares')
+        .delete()
+        .eq('todo_id', todoId)
+        .eq('family_id', familyId)
+        .eq('shared_by', user.id);
+
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error('取消分享失敗:', err);
+      throw err;
+    }
+  }
+
+  // 批量更新待辦事項排序順序
+  async updateTodoOrder(orderUpdates: { id: string; sort_order: number }[]): Promise<boolean> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
+    if (orderUpdates.length === 0) {
+      return true;
+    }
+
+    try {
+      // 使用Promise.all並發更新，提高性能
+      const updatePromises = orderUpdates.map(update => 
+        supabase
+          .from('todos')
+          .update({ 
+            sort_order: update.sort_order,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', update.id)
+          .eq('user_id', user.id) // 額外的安全檢查
+      );
+
+      const results = await Promise.all(updatePromises);
+      
+      // 檢查是否有任何更新失敗
+      for (const result of results) {
+        if (result.error) {
+          throw result.error;
         }
       }
-    });
 
-    return stats;
-  }
-
-  // 批量操作
-  async batchUpdateTodos(todoIds: string[], updates: TodoUpdate): Promise<Todo[]> {
-    const { data, error } = await supabase
-      .from('todos')
-      .update(updates)
-      .in('id', todoIds)
-      .select();
-
-    if (error) throw error;
-    return data;
-  }
-
-  // 獲取今日到期的待辦事項
-  async getTodayDueTodos(familyId: string): Promise<TodoWithUser[]> {
-    const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
-    
-    const { data, error } = await supabase
-      .from('todos')
-      .select(`
-        *,
-        assigned_user:assigned_to(id, display_name, avatar_url),
-        creator:user_id(id, display_name, avatar_url)
-      `)
-      .eq('family_id', familyId)
-      .eq('due_date', todayStr)
-      .neq('status', 'completed')
-      .order('priority', { ascending: false });
-
-    if (error) throw error;
-    return data as TodoWithUser[];
-  }
-
-  // 搜索待辦事項
-  async searchTodos(familyId: string, query: string): Promise<TodoWithUser[]> {
-    const { data, error } = await supabase
-      .from('todos')
-      .select(`
-        *,
-        assigned_user:assigned_to(id, display_name, avatar_url),
-        creator:user_id(id, display_name, avatar_url)
-      `)
-      .eq('family_id', familyId)
-      .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-    return data as TodoWithUser[];
+      return true;
+    } catch (err) {
+      console.error('更新排序失敗:', err);
+      throw err;
+    }
   }
 }
 

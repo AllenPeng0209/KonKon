@@ -4,6 +4,7 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
 import * as React from 'react';
 import { createContext, useContext, useEffect, useState } from 'react';
+import { t } from '../lib/i18n';
 import { supabase } from '../lib/supabase';
 
 type FamilyDetails = Tables<'family_members'> & {
@@ -107,7 +108,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       // 如果已有個人空間，則不重複創建
       if (existingPersonalSpace && existingPersonalSpace.length > 0) {
-        console.log('用戶已有個人空間，跳過創建');
+        // 用戶已有個人空間，跳過創建
         return;
       }
 
@@ -129,7 +130,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const { data: personalSpace, error: createError } = await supabase
         .from('families')
         .insert({
-          name: '個人空間',
+          name: t('space.personalSpace'),
           description: '我的私人日程和任務管理空間',
           tag: 'personal',
           owner_id: userId,
@@ -156,7 +157,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return;
       }
 
-      console.log('個人空間創建成功:', personalSpace.id);
+              // 個人空間創建成功
     } catch (error) {
       console.error('創建個人空間時發生異常:', error);
     }
@@ -242,7 +243,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         console.error('[Auth] 退出登录出错:', error);
         throw error;
       }
-      console.log('[Auth] 退出登录成功');
+      // 退出登录成功
     } catch (error) {
       console.error('[Auth] 退出登录失败:', error);
       throw error;
@@ -261,7 +262,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         throw error;
       }
 
-      console.log('[Auth] 密码更新成功');
+      // 密码更新成功
       return { data, error: null };
     } catch (error) {
       console.error('[Auth] 密码更新异常:', error);

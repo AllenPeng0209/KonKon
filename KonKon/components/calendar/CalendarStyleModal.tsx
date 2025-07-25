@@ -1,4 +1,5 @@
 import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { t } from '../../lib/i18n';
 
 export interface CalendarStyle {
   id: string;
@@ -7,36 +8,86 @@ export interface CalendarStyle {
   icon: string;
 }
 
+// 從翻譯中獲取樣式名稱和描述的函數
+const getStyleInfo = (styleId: string) => {
+  const styleKey = styleId.replace('-', '');
+  
+  // 將樣式 ID 轉換為對應的翻譯鍵
+  const styleKeyMap: { [key: string]: string } = {
+    'gridmonth': 'gridMonth',
+    'weeklygrid': 'weeklyGrid', 
+    'cardmonth': 'cardMonth',
+    'agendalist': 'agendaList',
+    'timeline': 'timeline',
+    'dayfocus': 'dayFocus',
+    'compactmonth': 'compactMonth',
+    'threedayview': 'threeDayView',
+    'familygrid': 'familyGrid',
+    'familyorbit': 'familyOrbit',
+    'familypuzzle': 'familyPuzzle',
+    'familygarden': 'familyGarden',
+    'yearoverview': 'yearOverview',
+    'cloudfloating': 'cloudFloating',
+    'constellationwheel': 'constellationWheel',
+    'subwaymap': 'subwayMap',
+    'gardenplant': 'gardenPlant',
+    'puzzlepiece': 'puzzlePiece',
+    'fishingpond': 'fishingPond',
+    'spaceexploration': 'spaceExploration',
+    'treasuremap': 'treasureMap',
+    'heatmap': 'heatmap',
+    'ganttchart': 'ganttChart',
+    'heartbeat': 'heartbeat',
+    'bubblechart': 'bubbleChart',
+    'seasonallandscape': 'seasonalLandscape',
+    'bookshelf': 'bookshelf',
+    'musicstaff': 'musicStaff',
+    'kitchenrecipe': 'kitchenRecipe',
+    'runningtrack': 'runningTrack',
+    'mooddiary': 'moodDiary',
+    'fitnesschallenge': 'fitnessChallenge',
+    'cube3d': 'cube3d',
+    'aiprediction': 'aiPrediction',
+    'arview': 'arView',
+    'seasonalharmony': 'seasonalHarmony',
+    'familynotebook': 'familyNotebook',
+    'bentobox': 'bentoBox',
+    'origamicalendar': 'origamiCalendar',
+    'ryokanstyle': 'ryokanStyle'
+  };
+  
+  const translationKey = styleKeyMap[styleKey] || styleKey;
+  return {
+    name: t(`calendarStyleSelector.styles.${translationKey}` as any),
+    description: t(`calendarStyleSelector.styles.${translationKey}` as any) // 暫時使用相同的翻譯
+  };
+};
+
 const CALENDAR_STYLES: CalendarStyle[] = [
   {
     id: 'grid-month',
-    name: '網格月視圖',
-    description: '經典的月份網格日曆',
+    ...getStyleInfo('grid-month'),
     icon: '📅',
   },
   {
     id: 'weekly-grid',
-    name: '週視圖',
-    description: '按小時顯示的週日曆',
+    ...getStyleInfo('weekly-grid'),
     icon: '📊',
   },
   {
     id: 'card-month',
-    name: '卡片月視圖',
-    description: '卡片式的月份展示',
+    ...getStyleInfo('card-month'),
     icon: '🎴',
   },
   {
     id: 'timeline',
-    name: '時間軸視圖',
-    description: '單日時間軸展示',
+    ...getStyleInfo('timeline'),
     icon: '⏰',
   },
   {
-    id: 'event-stream',
-    name: '事件流視圖',
-    description: '流式事件列表展示',
-    icon: '🌊',
+    id: 'agenda-list',
+    ...getStyleInfo('agenda-list'),
+    icon: '📋',
   },
 ];
 
@@ -72,7 +123,7 @@ export default function CalendarStyleModal({
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>選擇日曆樣式</Text>
+            <Text style={styles.modalTitle}>{t('calendarStyleSelector.title')}</Text>
             <TouchableOpacity 
               onPress={onClose}
               style={styles.closeButton}
@@ -122,7 +173,7 @@ export default function CalendarStyleModal({
           
           <View style={styles.modalFooter}>
             <Text style={styles.footerText}>
-              長按日曆中心區域可重新打開此選單
+              {t('calendarStyleSelector.footerText')}
             </Text>
           </View>
         </View>

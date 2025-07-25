@@ -1,3 +1,4 @@
+import { t } from '@/lib/i18n';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useFamily } from '../contexts/FamilyContext';
@@ -59,7 +60,7 @@ export const useEvents = () => {
   const userFamilyDetails = useMemo(() => 
     familyMembers.map(m => ({
       id: m.family_id,
-      name: m.user?.display_name || '未知家庭' 
+      name: m.user?.display_name || t('common.unknownFamily')
     })), 
     [familyMembers]
   );
@@ -76,12 +77,10 @@ export const useEvents = () => {
 
       if (!activeFamily) {
         // 无活跃家庭：不获取任何事件（这种情况应该很少见）
-        console.log('無活躍家庭：不獲取任何事件');
         allEvents = [];
 
       } else if (activeFamily.tag === 'personal') {
-        // 個人空間模式：只獲取用戶創建且未分享的私人事件
-        console.log('個人空間模式：獲取用戶創建的私人事件');
+        // 個人空間模式：獲取用戶創建的所有事件（不管是否分享）
         
         // 1. 獲取用戶創建的所有事件
         const { data: userCreatedEvents, error: userEventsError } = await supabase
@@ -94,7 +93,7 @@ export const useEvents = () => {
         }
 
         if (userCreatedEvents && userCreatedEvents.length > 0) {
-          // 2. 檢查這些事件是否被分享給任何家庭
+          // 2. 檢查這些事件是否被分享，用於標記狀態
           const eventIds = userCreatedEvents.map(e => e.id);
           const { data: sharedEvents, error: shareError } = await supabase
             .from('event_shares')
@@ -105,18 +104,16 @@ export const useEvents = () => {
             console.warn('檢查事件分享狀態失敗:', shareError);
           }
 
-          // 3. 過濾出沒有被分享的事件（私人事件）
+          // 3. 包含所有用戶創建的事件，並標記是否已分享
           const sharedEventIds = new Set((sharedEvents || []).map(s => s.event_id));
-          const privateEvents = userCreatedEvents.filter(event => !sharedEventIds.has(event.id));
-          
-          console.log(`✅ 找到 ${privateEvents.length} 個私人事件，過濾掉 ${userCreatedEvents.length - privateEvents.length} 個已分享事件`);
-          
-          allEvents = privateEvents.map(event => ({ ...event, is_shared: false }));
+          allEvents = userCreatedEvents.map(event => ({ 
+            ...event, 
+            is_shared: sharedEventIds.has(event.id) 
+          }));
         }
 
       } else if (activeFamily.id === 'meta-space') {
         // 元空間模式：獲取所有空間的事件
-        console.log('元空間模式：獲取所有空間的事件');
 
         // 1. 获取用户创建的个人事件（未分享的）
         const { data: userCreatedEvents, error: userEventsError } = await supabase
@@ -139,8 +136,20 @@ export const useEvents = () => {
           }
         }
 
-        // 2. 获取用户参与的所有家庭事件
+        // 2. 获取用户参与的所有家庭中的直接家庭事件
         const userFamilyIds = userFamilies;
+        if (userFamilyIds.length > 0) {
+          const { data: directFamilyEvents, error: directFamilyError } = await supabase
+            .from('events')
+            .select('*')
+            .in('family_id', userFamilyIds);
+
+          if (directFamilyEvents && !directFamilyError) {
+            allEvents.push(...directFamilyEvents.map(event => ({ ...event, is_shared: true })));
+          }
+        }
+
+        // 3. 获取通过 event_shares 分享给用户家庭的事件
         if (userFamilyIds.length > 0) {
           const { data: familySharedEvents, error: familyError } = await supabase
             .from('event_shares')
@@ -161,7 +170,7 @@ export const useEvents = () => {
           }
         }
 
-        // 3. 获取用户参与的事件（通过 event_attendees 表）
+        // 4. 获取用户参与的事件（通过 event_attendees 表）
         const { data: attendeeEvents, error: attendeeError } = await supabase
           .from('event_attendees')
           .select(`
@@ -181,7 +190,6 @@ export const useEvents = () => {
 
       } else {
         // 家庭模式：只获取分享给当前激活家庭的事件
-        console.log('家庭模式：获取家庭事件');
 
         const { data: sharedResult, error: sharedError } = await supabase
           .from('event_shares')
@@ -260,7 +268,7 @@ export const useEvents = () => {
       setEvents(expandedEvents);
 
     } catch (err) {
-      setError(err instanceof Error ? err.message : '获取事件失败');
+      setError(err instanceof Error ? err.message : t('common.loadingEventsFailed'));
     } finally {
       setLoading(false);
     }
@@ -284,13 +292,23 @@ export const useEvents = () => {
     let viewEndDate: Date;
     
     if (year && month) {
-      // 查看特定月份时
+      // 查看特定月份时 - 擴展範圍以包含跨月事件
       viewStartDate = new Date(year, month - 1, 1); // 当前月第一天
       viewEndDate = new Date(year, month, 0); // 当前月最后一天
       
-      // 为了生成重复事件，需要更宽的时间范围 - 从原始事件开始日期到未来
+      // 🚀 修復：擴展視圖範圍，包含前後各7天以捕獲跨月事件
+      const extendedViewStartDate = new Date(viewStartDate);
+      extendedViewStartDate.setDate(extendedViewStartDate.getDate() - 7);
+      const extendedViewEndDate = new Date(viewEndDate);
+      extendedViewEndDate.setDate(extendedViewEndDate.getDate() + 7);
+      
+      // 为了生成重复事件，需要更宽的时间范围
       startDate = new Date(2025, 0, 1); // 从2025年1月1日开始，确保包含所有重复事件
       endDate = new Date(year, month + 2, 0); // 扩展到未来3个月用于计算重复
+      
+      // 使用擴展後的範圍進行事件過濾
+      viewStartDate = extendedViewStartDate;
+      viewEndDate = extendedViewEndDate;
     } else {
       // 没有指定月份时，从当前日期开始，扩展1年
       startDate = new Date();
@@ -385,7 +403,7 @@ export const useEvents = () => {
   // 创建事件
   const createEvent = async (eventData: CreateEventData): Promise<string | null> => {
     if (!user) {
-      setError('用户未登录');
+      setError(t('errors.userNotLoggedIn'));
       return null;
     }
 
@@ -524,7 +542,7 @@ export const useEvents = () => {
   // 更新事件
   const updateEvent = async (eventId: string, eventData: CreateEventData): Promise<boolean> => {
     if (!user) {
-      setError('用户未登录');
+      setError(t('errors.userNotLoggedIn'));
       return false;
     }
 
@@ -575,7 +593,7 @@ export const useEvents = () => {
         .single();
 
       if (checkError || !existingEvent) {
-        throw new Error('事件不存在或無法訪問');
+        throw new Error(t('errors.eventNotAccessible'));
       }
 
       // 檢查用戶權限：是創建者或有共享權限
@@ -670,7 +688,7 @@ export const useEvents = () => {
       }
 
       if (!updateData) {
-        throw new Error('更新失敗，未返回數據');
+        throw new Error(t('errors.noDataReturned'));
       }
 
       // 更新參與人
@@ -695,12 +713,7 @@ export const useEvents = () => {
 
       // 🚀 更新分享關係
       if (Array.isArray(shareToFamilies)) {
-        console.log('🔄 更新事件分享關係:', { 
-          eventId, 
-          shareToFamilies, 
-          originalLength: shareToFamilies.length,
-          activeFamily: activeFamily?.tag 
-        });
+                // 更新事件分享關係
         
         // 先刪除現有的分享關係（刪除該事件的所有分享記錄）
         const { data: deletedShares, error: deleteError } = await supabase
@@ -714,11 +727,10 @@ export const useEvents = () => {
           
           // 🔄 如果用戶想設置為私人事件但刪除失敗，嘗試替代方案
           if (!shareToFamilies || shareToFamilies.length === 0) {
-            console.log('⚠️  用戶想設置為私人事件但刪除失敗，可能是權限問題');
-            console.log('💡 建議：請聯繫管理員或嘗試重新登錄');
+                      // 刪除分享關係失敗，可能是權限問題
             
             // 設置錯誤信息給用戶
-            setError('無法將事件設置為私人狀態，可能是權限問題。請嘗試重新登錄或聯繫管理員。');
+            setError(t('errors.cannotSetPrivate'));
             return false;
           }
         } else {
@@ -730,22 +742,18 @@ export const useEvents = () => {
 
         // 如果有新的分享家庭，添加分享記錄 - 過濾無效的 family_id
         if (shareToFamilies && shareToFamilies.length > 0) {
-          console.log('📤 準備添加新的分享記錄:', { shareToFamilies });
+          // 準備添加新的分享記錄
           
           // 過濾掉 "meta-space" 和其他無效的 UUID
           const validFamilyIds = shareToFamilies.filter(familyId => {
             // 檢查是否為有效的 UUID 格式
             const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
             const isValid = familyId && familyId !== 'meta-space' && uuidRegex.test(familyId);
-            console.log(`🔍 驗證家庭ID: ${familyId} -> ${isValid ? '有效' : '無效'}`);
+            // 驗證家庭ID格式
             return isValid;
           });
 
-          console.log('📋 過濾後的有效家庭ID:', { 
-            original: shareToFamilies,
-            valid: validFamilyIds,
-            filteredCount: validFamilyIds.length 
-          });
+          // 過濾後的有效家庭ID
 
           if (validFamilyIds.length > 0) {
             // 🔍 檢查現有分享記錄，避免重複插入
@@ -775,7 +783,7 @@ export const useEvents = () => {
                 shared_by: user.id
               }));
 
-              console.log('💾 嘗試插入新分享記錄:', shareData);
+              // 嘗試插入新分享記錄
 
               const { data: insertedShares, error: shareError } = await supabase
                 .from('event_shares')
@@ -786,19 +794,16 @@ export const useEvents = () => {
                 console.error('❌ 插入分享關係失敗:', shareError);
                 // 不拋出錯誤，只記錄，避免影響主要更新
               } else {
-                console.log('✅ 分享關係插入成功:', { 
-                  insertedShares,
-                  insertedCount: insertedShares?.length || 0 
-                });
+                // 分享關係插入成功
               }
             } else {
-              console.log('ℹ️  所有分享記錄已存在，跳過插入');
+              // 所有分享記錄已存在，跳過插入
             }
           } else {
-            console.log('⚠️  沒有有效的家庭ID，跳過分享記錄插入');
+            // 沒有有效的家庭ID，跳過分享記錄插入
           }
         } else {
-          console.log('📝 設置為私人事件，不添加分享記錄');
+          // 設置為私人事件，不添加分享記錄
         }
       }
 
@@ -845,20 +850,20 @@ export const useEvents = () => {
   // 分享事件给家庭/群组
   const shareEventToFamily = async (eventId: string, familyId: string): Promise<boolean> => {
     if (!user) {
-      setError('用户未登录');
+      setError(t('errors.userNotLoggedIn'));
       return false;
     }
 
     // 避免分享到虛擬的元空間
     if (familyId === 'meta-space') {
-      setError('無法分享事件到元空間');
+              setError(t('space.cannotShareToMetaSpace'));
       return false;
     }
 
     // 檢查是否為有效的 UUID 格式
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(familyId)) {
-      setError('無效的家庭 ID');
+      setError(t('errors.invalidFamilyId'));
       return false;
     }
 
@@ -900,7 +905,7 @@ export const useEvents = () => {
   // 取消分享事件
   const unshareEventFromFamily = async (eventId: string, familyId: string): Promise<boolean> => {
     if (!user) {
-      setError('用户未登录');
+      setError(t('errors.userNotLoggedIn'));
       return false;
     }
 
@@ -971,6 +976,20 @@ export const useEvents = () => {
     setLastExpandKey(''); // 清除防重复键
   };
 
+  // 強制刷新事件（解決跨月事件顯示問題）
+  const forceRefreshEvents = useCallback(async () => {
+    // 清除緩存
+    setLastExpandKey('');
+    
+    // 重新獲取當前月份和下個月的事件
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth() + 1;
+    
+    // 強制刷新事件，清除緩存並重新獲取
+    await fetchEvents(currentYear, currentMonth);
+  }, [fetchEvents]);
+
   // 初始化时获取用户家庭列表
   useEffect(() => {
     if (user) {
@@ -1010,5 +1029,6 @@ export const useEvents = () => {
     getMonthEvents,
     fetchEvents,
     clearEvents,
+    forceRefreshEvents, // 🚀 新增：強制刷新事件
   };
 }; 

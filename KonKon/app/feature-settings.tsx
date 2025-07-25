@@ -24,22 +24,22 @@ interface FeatureInfo {
   defaultSettings: Record<string, any>;
 }
 
-const featureInfoMap: Record<FeatureKey, FeatureInfo> = {
+const getFeatureInfoMap = (): Record<FeatureKey, FeatureInfo> => ({
   familySchedule: {
-    name: '家庭日程',
+    name: t('featureSettings.features.familySchedule.name'),
     icon: '📅',
-    description: '管理家庭成員的日程安排和活動',
+    description: t('featureSettings.features.familySchedule.description'),
     defaultSettings: {
       syncWithSystem: true,
       enableReminders: true,
       reminderMinutes: 15,
-      selectedStyle: '網格月視圖',
+      selectedStyle: t('featureSettings.labels.gridMonthView'),
     }
   },
   familyAssistant: {
-    name: '待办事项',
+    name: t('featureSettings.features.familyAssistant.name'),
     icon: '✓',
-    description: '简单易用的家庭待办事项管理',
+    description: t('featureSettings.features.familyAssistant.description'),
     defaultSettings: {
       voiceEnabled: true,
       autoRespond: false,
@@ -47,20 +47,20 @@ const featureInfoMap: Record<FeatureKey, FeatureInfo> = {
     }
   },
   choreAssignment: {
-    name: '家務分配',
+    name: t('featureSettings.features.choreAssignment.name'),
     icon: '🏠',
-    description: '分配和追蹤家庭成員的家務任務',
+    description: t('featureSettings.features.choreAssignment.description'),
     defaultSettings: {
       enableRewards: true,
       autoRotate: false,
       weeklyReset: true,
-      selectedStyle: '任務看板',
+      selectedStyle: t('featureSettings.labels.taskBoard'),
     }
   },
   familyActivities: {
-    name: '健康管理',
+    name: t('featureSettings.features.familyActivities.name'),
     icon: '🏥',
-    description: '追蹤和管理家庭成員的健康狀況',
+    description: t('featureSettings.features.familyActivities.description'),
     defaultSettings: {
       trackHealth: true,
       medicineReminders: true,
@@ -68,9 +68,9 @@ const featureInfoMap: Record<FeatureKey, FeatureInfo> = {
     }
   },
   familyAlbum: {
-    name: '家庭相簿',
+    name: t('featureSettings.features.familyAlbum.name'),
     icon: '📸',
-    description: '收集和整理家庭珍貴回憶',
+    description: t('featureSettings.features.familyAlbum.description'),
     defaultSettings: {
       autoBackup: true,
       enableSharing: true,
@@ -78,9 +78,9 @@ const featureInfoMap: Record<FeatureKey, FeatureInfo> = {
     }
   },
   shoppingList: {
-    name: '購物清單',
+    name: t('featureSettings.features.shoppingList.name'),
     icon: '🛒',
-    description: '共享家庭購物需求和清單',
+    description: t('featureSettings.features.shoppingList.description'),
     defaultSettings: {
       syncAcrossDevices: true,
       enableCategories: true,
@@ -88,9 +88,9 @@ const featureInfoMap: Record<FeatureKey, FeatureInfo> = {
     }
   },
   familyFinance: {
-    name: '家庭財務',
+    name: t('featureSettings.features.familyFinance.name'),
     icon: '💰',
-    description: '追蹤家庭收支和預算管理',
+    description: t('featureSettings.features.familyFinance.description'),
     defaultSettings: {
       enableBudgetAlerts: true,
       monthlyBudget: 10000,
@@ -98,17 +98,17 @@ const featureInfoMap: Record<FeatureKey, FeatureInfo> = {
     }
   },
   familyRecipes: {
-    name: '餐食管理',
+    name: t('featureSettings.features.familyRecipes.name'),
     icon: '🍽️',
-    description: 'AI智能餐食規劃，解決家庭用餐難題',
+    description: t('featureSettings.features.familyRecipes.description'),
     defaultSettings: {
       enableNutritionInfo: true,
       suggestMeals: true,
       shoppingIntegration: true,
-      selectedStyle: '每日記錄',
+      selectedStyle: t('featureSettings.labels.dailyRecords'),
     }
   },
-};
+});
 
 export default function FeatureSettingsScreen() {
   const router = useRouter();
@@ -116,6 +116,7 @@ export default function FeatureSettingsScreen() {
   const { featureSettings, updateFeatureSetting } = useFeatureSettings();
   const featureKey = params.feature as FeatureKey;
   
+  const featureInfoMap = getFeatureInfoMap();
   const featureInfo = featureInfoMap[featureKey];
 
   const [localSettings, setLocalSettings] = useState(
@@ -128,11 +129,11 @@ export default function FeatureSettingsScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>功能不存在</Text>
-          <Text style={styles.errorSubtext}>參數: {featureKey || '未提供'}</Text>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backToProfileButton}>
-            <Text style={styles.backToProfileButtonText}>返回個人中心</Text>
-          </TouchableOpacity>
+                  <Text style={styles.errorText}>{t('featureSettings.errors.featureNotFound')}</Text>
+        <Text style={styles.errorSubtext}>{t('featureSettings.errors.parameterNotProvided', { param: featureKey || '未提供' })}</Text>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backToProfileButton}>
+          <Text style={styles.backToProfileButtonText}>{t('featureSettings.errors.backToProfile')}</Text>
+        </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
@@ -142,9 +143,9 @@ export default function FeatureSettingsScreen() {
     await updateFeatureSetting(featureKey, enabled, localSettings);
     if (enabled) {
       Alert.alert(
-        '功能已啟用',
-        `${featureInfo.name}現在會出現在首頁的篩選選項中`,
-        [{ text: '確定', style: 'default' }]
+        t('featureSettings.alerts.featureEnabled'),
+        t('featureSettings.alerts.featureEnabledMessage', { featureName: featureInfo.name }),
+        [{ text: t('featureSettings.alerts.ok'), style: 'default' }]
       );
     }
   };
@@ -159,6 +160,40 @@ export default function FeatureSettingsScreen() {
 
   const handleBack = () => {
     router.back();
+  };
+
+  // 樣式值翻譯映射
+  const getStyleDisplayValue = (key: string, value: any) => {
+    if (key !== 'selectedStyle' || !value) return value;
+    
+    const styleMap: Record<string, string> = {
+      // 繁體中文
+      '網格月視圖': t('featureSettings.labels.gridMonthView'),
+      '每日記錄': t('featureSettings.labels.dailyRecords'),
+      '週間概覽': t('featureSettings.labels.weeklyOverview'),
+      '營養圖表': t('featureSettings.labels.nutritionChart'),
+      '任務看板': t('featureSettings.labels.taskBoard'),
+      // 簡體中文
+      '网格月视图': t('featureSettings.labels.gridMonthView'),
+      '每日记录': t('featureSettings.labels.dailyRecords'),
+      '周间概览': t('featureSettings.labels.weeklyOverview'),
+      '营养图表': t('featureSettings.labels.nutritionChart'),
+      '任务看板': t('featureSettings.labels.taskBoard'),
+      // 英文
+      'Grid Month View': t('featureSettings.labels.gridMonthView'),
+      'Daily Records': t('featureSettings.labels.dailyRecords'),
+      'Weekly Overview': t('featureSettings.labels.weeklyOverview'),
+      'Nutrition Chart': t('featureSettings.labels.nutritionChart'),
+      'Task Board': t('featureSettings.labels.taskBoard'),
+      // 日文
+      'グリッド月表示': t('featureSettings.labels.gridMonthView'),
+      '毎日の記録': t('featureSettings.labels.dailyRecords'),
+      '週間概要': t('featureSettings.labels.weeklyOverview'),
+      '栄養チャート': t('featureSettings.labels.nutritionChart'),
+      'タスクボード': t('featureSettings.labels.taskBoard'),
+    };
+    
+    return styleMap[value] || value;
   };
 
   const renderSettingItem = (key: string, label: string, type: 'switch' | 'text' | 'number' | 'navigation', onPress?: () => void) => {
@@ -180,7 +215,7 @@ export default function FeatureSettingsScreen() {
             style={styles.textInput}
             value={value?.toString() || ''}
             onChangeText={(text) => handleSettingChange(key, text)}
-            placeholder={`輸入${label}`}
+            placeholder={t('featureSettings.labels.inputPlaceholder', { label })}
           />
         )}
         {type === 'number' && (
@@ -188,14 +223,14 @@ export default function FeatureSettingsScreen() {
             style={styles.textInput}
             value={value?.toString() || ''}
             onChangeText={(text) => handleSettingChange(key, parseInt(text) || 0)}
-            placeholder={`輸入${label}`}
+            placeholder={t('featureSettings.labels.inputPlaceholder', { label })}
             keyboardType="numeric"
           />
         )}
         {type === 'navigation' && (
           <TouchableOpacity onPress={onPress} style={styles.navigationButton}>
             <Text style={styles.navigationButtonText}>
-              {value || '選擇樣式'}
+              {getStyleDisplayValue(key, value) || t('featureSettings.labels.chooseStyle')}
             </Text>
             <Ionicons name="chevron-forward" size={20} color="#007AFF" />
           </TouchableOpacity>
@@ -206,23 +241,23 @@ export default function FeatureSettingsScreen() {
 
   const handleStyleSelection = () => {
     Alert.alert(
-      '選擇餐食視圖樣式',
-      '選擇您偏好的餐食管理視圖樣式',
+      t('featureSettings.alerts.selectMealViewStyle'),
+      t('featureSettings.alerts.selectMealViewMessage'),
       [
         {
-          text: '每日記錄',
-          onPress: () => handleSettingChange('selectedStyle', '每日記錄')
+          text: t('featureSettings.labels.dailyRecords'),
+          onPress: () => handleSettingChange('selectedStyle', t('featureSettings.labels.dailyRecords'))
         },
         {
-          text: '週間概覽', 
-          onPress: () => handleSettingChange('selectedStyle', '週間概覽')
+          text: t('featureSettings.labels.weeklyOverview'), 
+          onPress: () => handleSettingChange('selectedStyle', t('featureSettings.labels.weeklyOverview'))
         },
         {
-          text: '營養圖表',
-          onPress: () => handleSettingChange('selectedStyle', '營養圖表')
+          text: t('featureSettings.labels.nutritionChart'),
+          onPress: () => handleSettingChange('selectedStyle', t('featureSettings.labels.nutritionChart'))
         },
         {
-          text: '取消',
+          text: t('featureSettings.alerts.cancel'),
           style: 'cancel'
         }
       ]
@@ -244,7 +279,7 @@ export default function FeatureSettingsScreen() {
           renderSettingItem('syncWithSystem', t('featureSettings.settings.syncWithSystem'), 'switch'),
           renderSettingItem('enableReminders', t('featureSettings.settings.enableReminders'), 'switch'),
           renderSettingItem('reminderMinutes', t('featureSettings.settings.reminderMinutes'), 'number'),
-          renderSettingItem('selectedStyle', '選擇樣式', 'navigation', handleCalendarStyleSelection),
+          renderSettingItem('selectedStyle', t('featureSettings.labels.chooseStyle'), 'navigation', handleCalendarStyleSelection),
         ];
       case 'familyAssistant':
         return [
@@ -254,16 +289,16 @@ export default function FeatureSettingsScreen() {
         ];
       case 'choreAssignment':
         return [
-          renderSettingItem('enableRewards', '啟用獎勵系統', 'switch'),
-          renderSettingItem('autoRotate', '自動輪換任務', 'switch'),
-          renderSettingItem('weeklyReset', '每週重置', 'switch'),
-          renderSettingItem('selectedStyle', '選擇樣式', 'navigation', handleChoreStyleSelection),
+          renderSettingItem('enableRewards', t('featureSettings.settings.enableRewards'), 'switch'),
+          renderSettingItem('autoRotate', t('featureSettings.settings.autoRotate'), 'switch'),
+          renderSettingItem('weeklyReset', t('featureSettings.settings.weeklyReset'), 'switch'),
+          renderSettingItem('selectedStyle', t('featureSettings.labels.chooseStyle'), 'navigation', handleChoreStyleSelection),
         ];
       case 'familyActivities':
         return [
-          renderSettingItem('trackHealth', '健康追蹤', 'switch'),
-          renderSettingItem('medicineReminders', '用藥提醒', 'switch'),
-          renderSettingItem('healthReports', '健康報告', 'switch'),
+          renderSettingItem('trackHealth', t('featureSettings.settings.trackHealth'), 'switch'),
+          renderSettingItem('medicineReminders', t('featureSettings.settings.medicineReminders'), 'switch'),
+          renderSettingItem('healthReports', t('featureSettings.settings.healthReports'), 'switch'),
         ];
       case 'familyAlbum':
         return [
@@ -285,10 +320,10 @@ export default function FeatureSettingsScreen() {
         ];
       case 'familyRecipes':
         return [
-          renderSettingItem('enableNutritionInfo', '營養資訊', 'switch'),
-          renderSettingItem('suggestMeals', '餐點建議', 'switch'),
-          renderSettingItem('shoppingIntegration', '購物清單整合', 'switch'),
-          renderSettingItem('selectedStyle', '選擇樣式', 'navigation', handleStyleSelection),
+          renderSettingItem('enableNutritionInfo', t('featureSettings.settings.enableNutritionInfo'), 'switch'),
+          renderSettingItem('suggestMeals', t('featureSettings.settings.suggestMeals'), 'switch'),
+          renderSettingItem('shoppingIntegration', t('featureSettings.settings.shoppingIntegration'), 'switch'),
+          renderSettingItem('selectedStyle', t('featureSettings.labels.chooseStyle'), 'navigation', handleStyleSelection),
         ];
       default:
         return [];

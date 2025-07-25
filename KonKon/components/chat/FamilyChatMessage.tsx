@@ -73,7 +73,7 @@ export function FamilyChatMessage({ message }: FamilyChatMessageProps) {
   return (
     <View style={styles.container}>
       {isOwnMessage && !isAssistant ? (
-        // 自己的消息：右侧绿色气泡，无头像
+        // 自己的消息：右侧蓝色气泡，无头像
         <View style={styles.ownMessageWrapper}>
           <View style={styles.ownMessageBubble}>
             <Text style={styles.ownMessageText}>{message.content}</Text>
@@ -111,16 +111,16 @@ const styles = StyleSheet.create({
   // 自己的消息样式
   ownMessageWrapper: {
     alignItems: 'flex-end',
-
     marginBottom: 4,
+    paddingLeft: 40, // 為了平衡左右間距
   },
   ownMessageBubble: {
     backgroundColor: '#007AFF', // iOS蓝色
-    maxWidth: '70%',
+    maxWidth: '80%',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 8,
-    borderTopRightRadius: 2, // 微信特色的小角
+    borderRadius: 18,
+    borderTopRightRadius: 4, // 微信特色的小角
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -129,10 +129,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 1,
     elevation: 1,
+    alignSelf: 'flex-end',
   },
   ownMessageText: {
     fontSize: 16,
-    lineHeight: 20,
+    lineHeight: 22,
     color: '#FFFFFF', // 白色文字在蓝色背景上更清晰
   },
   // 他人的消息样式
@@ -140,6 +141,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     marginBottom: 4,
+    paddingRight: 40, // 為了平衡左右間距
   },
   avatarContainer: {
     marginRight: 8,
@@ -148,7 +150,7 @@ const styles = StyleSheet.create({
   avatar: {
     width: 40,
     height: 40,
-    borderRadius: 4, // 微信头像是圆角矩形，不是圆形
+    borderRadius: 6, // 稍微圓潤一點
     backgroundColor: '#E0E0E0',
     justifyContent: 'center',
     alignItems: 'center',
@@ -161,7 +163,7 @@ const styles = StyleSheet.create({
   },
   assistantAvatarImage: {
     backgroundColor: '#FFF5F5', // 淡粉色背景突出猫咪
-    borderRadius: 4,
+    borderRadius: 6,
   },
   avatarText: {
     fontSize: 16,
@@ -174,7 +176,8 @@ const styles = StyleSheet.create({
   },
   messageColumn: {
     flex: 1,
-    maxWidth: '70%',
+    maxWidth: '85%',
+    alignItems: 'flex-start',
   },
   senderName: {
     fontSize: 12,
@@ -186,8 +189,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 8,
-    borderTopLeftRadius: 2, // 微信特色的小角
+    borderRadius: 18,
+    borderTopLeftRadius: 4, // 微信特色的小角
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -198,10 +201,11 @@ const styles = StyleSheet.create({
     elevation: 1,
     borderWidth: 0.5,
     borderColor: '#E5E5E5',
+    alignSelf: 'flex-start',
   },
   otherMessageText: {
     fontSize: 16,
-    lineHeight: 20,
+    lineHeight: 22,
     color: '#000000',
   },
   loadingDots: {

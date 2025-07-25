@@ -24,8 +24,10 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useFamily } from '../../contexts/FamilyContext';
 import { CreateEventData } from '../../hooks/useEvents';
 import { useRecurringEvents } from '../../hooks/useRecurringEvents';
+import { t } from '../../lib/i18n';
 import { notifyEventCreated, notifyEventUpdated } from '../../lib/notificationService';
 import { supabase } from '../../lib/supabase';
+import EventComments from './EventComments';
 
 interface User {
   id: string;
@@ -156,11 +158,11 @@ interface AddEventModalProps {
 }
 
 const repeatOptions = [
-  { label: '从不', value: 'never' },
-  { label: '每天', value: 'daily' },
-  { label: '每周', value: 'weekly' },
-  { label: '每月', value: 'monthly' },
-  { label: '每年', value: 'yearly' },
+      { label: t('event.repeat.never'), value: 'never' },
+    { label: t('event.repeat.daily'), value: 'daily' },
+    { label: t('event.repeat.weekly'), value: 'weekly' },
+    { label: t('event.repeat.monthly'), value: 'monthly' },
+    { label: t('event.repeat.yearly'), value: 'yearly' },
 ];
 
 const colors = [
@@ -278,13 +280,15 @@ export default function AddEventModal({
               }
             }
 
-            console.log('🔍 查詢事件分享信息 - 開始:', {
-              originalId: editingEvent.id,
-              queryId: eventIdToQuery,
-              hasParent: !!editingEvent.parent_event_id,
-              localIsShared: editingEvent.is_shared,
-              localSharedFamilies: editingEvent.shared_families
-            });
+            // 檢查是否為有效的 UUID，如果不是則跳過查詢
+            const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+            if (!eventIdToQuery || !UUID_REGEX.test(eventIdToQuery)) {
+              // 如果不是有效的 UUID（例如臨時ID），設置為私人事件
+              setSelectedFamilies([]);
+              return;
+            }
+
+            // 查詢事件分享信息
 
             // 使用 DISTINCT 確保沒有重複的家庭ID，並獲取詳細信息
             const { data: shares, error } = await supabase
@@ -292,29 +296,15 @@ export default function AddEventModal({
               .select('family_id, shared_by, created_at')
               .eq('event_id', eventIdToQuery);
 
-            console.log('🔍 分享查詢結果 - 詳細:', { 
-              shares, 
-              error,
-              queryId: eventIdToQuery,
-              shareCount: shares?.length || 0 
-            });
+            // 分享查詢結果
 
             if (!error && shares && shares.length > 0) {
               // 使用 Set 確保家庭ID唯一性
               const uniqueFamilyIds = [...new Set(shares.map(share => share.family_id))];
-              console.log('✅ 找到分享的家庭 - 詳細:', { 
-                count: uniqueFamilyIds.length, 
-                familyIds: uniqueFamilyIds,
-                allShares: shares
-              });
+              // 找到分享的家庭
               setSelectedFamilies(uniqueFamilyIds);
             } else {
-              console.log('❌ 沒有找到分享信息，設置為私人事件 - 詳細:', {
-                hasError: !!error,
-                errorMessage: error?.message,
-                sharesLength: shares?.length || 0,
-                queryId: eventIdToQuery
-              });
+              // 沒有找到分享信息，設置為私人事件
               // 重置為空，表示私人事件
               setSelectedFamilies([]);
             }
@@ -414,8 +404,8 @@ export default function AddEventModal({
         if (user) {
           setSelectedAttendees([user.id]);
         }
-        // 🚀 默认分享给当前激活家庭
-        if (activeFamily) {
+        // 🚀 默认分享给当前激活家庭（個人空間除外，個人空間保持為私人事件）
+        if (activeFamily && activeFamily.tag !== 'personal') {
           setSelectedFamilies([activeFamily.id]);
         } else {
           setSelectedFamilies([]);
@@ -768,7 +758,7 @@ export default function AddEventModal({
             text: option.label,
             onPress: () => setRepeatOption(option.value),
           })),
-          { text: '取消', style: 'cancel' },
+          { text: t('common.cancel'), style: 'cancel' },
         ]
       );
     }
@@ -1086,7 +1076,7 @@ export default function AddEventModal({
                               selectedFamilies.length === 0 && styles.familyButtonSelected,
                             ]}
                             onPress={() => {
-                              console.log('🔒 用戶點擊私人事件按鈕');
+                              // 用戶點擊私人事件按鈕
                               setSelectedFamilies([]);
                             }}
                           >
@@ -1247,6 +1237,15 @@ export default function AddEventModal({
                 textAlignVertical="top"
               />
 
+              {/* 留言板 - 只在編輯模式下顯示 */}
+              {editingEvent && (
+                <View style={styles.commentsSection}>
+                  <EventComments 
+                    eventId={editingEvent.id} 
+                    visible={true}
+                  />
+                </View>
+              )}
 
             </ScrollView>
 
@@ -1806,5 +1805,9 @@ const styles = StyleSheet.create({
     color: '#007AFF',
     fontSize: 14,
     marginLeft: 5,
+  },
+  commentsSection: {
+    marginTop: 15,
+    width: '100%',
   },
 });
