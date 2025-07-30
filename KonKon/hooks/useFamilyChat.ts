@@ -62,7 +62,6 @@ export function useFamilyChat() {
   const isDevelopment = __DEV__;
   const isSimulator = Platform.OS === 'ios' && !Platform.isTV;
 
-  console.log(`[useFamilyChat] 環境檢測: 開發模式=${isDevelopment}, 模擬器=${isSimulator}`);
 
   // 获取当前用户详情（缓存）
   useEffect(() => {
@@ -115,7 +114,6 @@ export function useFamilyChat() {
       );
       
       if (hasIncorrectData) {
-        console.log('[FamilyChat] 檢測到錯誤的緩存數據，清除並重新加載');
         await clearFamilyChatCache(activeFamily.id);
         // 強制從服務器重新加載
         const history = await getFamilyChatHistory(
@@ -142,7 +140,6 @@ export function useFamilyChat() {
       
       if (cache && !isCacheExpired(cache)) {
         // 使用緩存數據，立即顯示
-        console.log('[FamilyChat] 使用緩存數據');
         setMessages(cache.messages);
         setCurrentCache(cache);
         setHasMoreMessages(cache.hasMoreMessages);
@@ -160,7 +157,6 @@ export function useFamilyChat() {
           const serverLatestId = latestMessages.length > 0 ? latestMessages[latestMessages.length - 1].id : null;
           
           if (cacheLatestId !== serverLatestId) {
-            console.log('[FamilyChat] 檢測到新消息，更新緩存');
             setMessages(latestMessages);
             const updatedCache = { ...cache, messages: latestMessages, lastUpdated: Date.now() };
             setCurrentCache(updatedCache);
@@ -174,7 +170,6 @@ export function useFamilyChat() {
       }
       
       // 2. 沒有有效緩存，從服務器加載
-      console.log('[FamilyChat] 從服務器加載聊天歷史');
       const history = await getFamilyChatHistory(
         activeFamily.id,
         config.minCacheMessages
@@ -215,7 +210,6 @@ export function useFamilyChat() {
       setIsLoadingMore(true);
       const config = getCacheConfig();
       
-      console.log('[FamilyChat] 加載更多歷史消息');
       
       // 使用最舊消息的ID作為分頁參數
       const olderMessages = await getFamilyChatHistory(

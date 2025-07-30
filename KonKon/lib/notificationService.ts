@@ -718,11 +718,11 @@ export async function notifyEventCreated(
     await createBatchFamilyNotifications({
       familyId,
       type: 'event_created',
-      title: '新日程通知',
-      message: `${creatorName} 创建了新日程「${eventTitle}」`,
+      title: '📅 新日程通知',
+      message: `${creatorName} 新建了日程「${eventTitle}」，点击查看详情`,
       relatedId: eventId,
       relatedType: 'event',
-      metadata: { eventTitle, creatorName }
+      metadata: { eventTitle, creatorName, action: 'created' }
     }, recipients);
 
     // 已向家庭成員發送事件創建通知
@@ -781,11 +781,11 @@ export async function notifyEventUpdated(
     await createBatchFamilyNotifications({
       familyId,
       type: 'event_updated',
-      title: '日程更新通知',
-      message: `${updaterName} 更新了日程「${eventTitle}」`,
+      title: '✏️ 日程更新通知',
+      message: `${updaterName} 修改了日程「${eventTitle}」，点击查看最新内容`,
       relatedId: eventId,
       relatedType: 'event',
-      metadata: { eventTitle, updaterName }
+      metadata: { eventTitle, updaterName, action: 'updated' }
     }, recipients);
 
     // 已向家庭成員發送事件更新通知
@@ -843,10 +843,10 @@ export async function notifyEventDeleted(
     await createBatchFamilyNotifications({
       familyId,
       type: 'event_deleted',
-      title: '日程删除通知',
+      title: '🗑️ 日程删除通知',
       message: `${deleterName} 删除了日程「${eventTitle}」`,
       relatedType: 'event',
-      metadata: { eventTitle, deleterName }
+      metadata: { eventTitle, deleterName, action: 'deleted' }
     }, recipients);
 
     console.log(`已向 ${recipients.length} 個家庭成員發送事件刪除通知`);

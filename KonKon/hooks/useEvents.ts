@@ -227,6 +227,15 @@ export const useEvents = () => {
       // 获取所有事件的参与人信息
       if (finalEvents.length > 0) {
         const eventIds = finalEvents.map(e => e.id);
+        
+        // 🐛 DEBUG: 添加調試日誌
+        console.log('🔍 [useEvents] 查詢參與者信息:', {
+          eventIds,
+          user: user?.id,
+          userEmail: user?.email,
+          eventCount: finalEvents.length
+        });
+        
         const { data: attendeesData, error: attendeesError } = await supabase
           .from('event_attendees')
           .select(`
@@ -240,6 +249,13 @@ export const useEvents = () => {
             )
           `)
           .in('event_id', eventIds);
+
+        // 🐛 DEBUG: 記錄查詢結果
+        console.log('📊 [useEvents] 參與者查詢結果:', {
+          attendeesData: attendeesData?.length || 0,
+          attendeesError,
+          sampleData: attendeesData?.slice(0, 3) // 只顯示前3條
+        });
 
         if (!attendeesError && attendeesData) {
           // 将参与人数据关联到对应的事件
@@ -258,7 +274,25 @@ export const useEvents = () => {
           // 将参与人数据附加到事件
           finalEvents.forEach(event => {
             event.attendees = attendeesMap.get(event.id) || [];
+            
+            // 🐛 DEBUG: 記錄每個事件的參與者數量
+            if (event.title.includes('按摩')) {
+              console.log(`👥 [useEvents] 事件 "${event.title}" (${event.id}) 參與者:`, {
+                count: event.attendees.length,
+                attendees: event.attendees.map(a => ({ name: a.user?.display_name, status: a.status }))
+              });
+            }
           });
+          
+          // 🐛 DEBUG: 記錄總體統計
+          const eventsWithAttendees = finalEvents.filter(e => e.attendees && e.attendees.length > 0);
+          console.log('📈 [useEvents] 參與者統計:', {
+            totalEvents: finalEvents.length,
+            eventsWithAttendees: eventsWithAttendees.length,
+            attendeesMapSize: attendeesMap.size
+          });
+        } else if (attendeesError) {
+          console.error('❌ [useEvents] 查詢參與者失敗:', attendeesError);
         }
       }
 
@@ -513,6 +547,21 @@ export const useEvents = () => {
     setLoading(true);
     setError(null);
     try {
+      // 获取要删除的事件信息（用于通知）
+      const { data: eventToDelete, error: fetchError } = await supabase
+        .from('events')
+        .select(`
+          id, title, creator_id,
+          event_shares!inner(family_id),
+          creator:users(display_name)
+        `)
+        .eq('id', eventId)
+        .single();
+
+      if (fetchError) {
+        console.error('获取事件信息失败:', fetchError);
+      }
+
       // 首先删除相关的分享记录
       await supabase.from('event_shares').delete().eq('event_id', eventId);
       
@@ -521,6 +570,29 @@ export const useEvents = () => {
       if (error) throw error;
 
       await cancelNotificationForEvent(eventId);
+
+      // 🚀 发送删除通知给家庭成员
+      if (eventToDelete && eventToDelete.event_shares.length > 0) {
+        try {
+          // 动态导入通知服务以避免循环依赖
+          const { notifyEventDeleted } = await import('../lib/notificationService');
+          
+          const creatorName = eventToDelete.creator?.display_name || '未知用户';
+          
+          // 为每个共享的家庭发送通知
+          for (const share of eventToDelete.event_shares) {
+            await notifyEventDeleted(
+              share.family_id,
+              eventToDelete.title,
+              [], // attendeeIds - 删除时不需要具体参与者
+              creatorName
+            );
+          }
+        } catch (notifyError) {
+          console.error('发送删除通知失败:', notifyError);
+          // 不影响删除操作的成功
+        }
+      }
 
       // 从本地状态中移除
       setEvents(prev => prev.filter(e => e.id !== eventId));
@@ -805,6 +877,40 @@ export const useEvents = () => {
         } else {
           // 設置為私人事件，不添加分享記錄
         }
+      }
+
+      // 🚀 发送更新通知给家庭成员
+      try {
+        // 动态导入通知服务以避免循环依赖
+        const { notifyEventUpdated } = await import('../lib/notificationService');
+        
+        // 获取用户信息
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        const updaterName = currentUser?.user_metadata?.display_name || 
+                           currentUser?.user_metadata?.full_name || 
+                           currentUser?.email || 
+                           '未知用户';
+        
+        // 为每个共享的家庭发送通知
+        if (Array.isArray(shareToFamilies)) {
+          const familiesToNotify = shareToFamilies.filter(id => {
+            // 检查是否为有效的 UUID 格式
+            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+            return id && id !== 'meta-space' && uuidRegex.test(id);
+          });
+          for (const familyId of familiesToNotify) {
+            await notifyEventUpdated(
+              familyId,
+              title,
+              eventId,
+              attendees || [], // 参与者列表
+              updaterName
+            );
+          }
+        }
+      } catch (notifyError) {
+        console.error('发送更新通知失败:', notifyError);
+        // 不影响更新操作的成功
       }
 
       // 🔄 異步重新獲取事件數據以確保數據一致性
