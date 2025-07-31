@@ -347,29 +347,24 @@ export default function TodoView() {
   const loadTodos = useCallback(async () => {
     if (!activeFamily || !user) return;
     
-    // 開始加載時，先清空現有數據，避免看到舊數據的閃爍
-    setTodos([]);
-    setCurrentTodos([]);
-    setLoading(true);
-
     try {
-      // 使用新的空間感知方法，並傳入過濾條件
-      const data = await todoService.getTodosBySpace(activeFamily, userFamilyIds, filter);
+      // ALWAYS fetch all todos, filtering will be handled on the client-side
+      const data = await todoService.getTodosBySpace(activeFamily, userFamilyIds, 'all');
       setTodos(data);
     } catch (error) {
       console.error('載入待辦事項失敗:', error);
       Alert.alert(t('todos.error'), t('todos.loadFailed'));
     } finally {
-      setLoading(false);
       setRefreshing(false);
     }
-  }, [activeFamily, userFamilyIds, user, filter]);
+  }, [activeFamily, userFamilyIds, user]);
 
   useEffect(() => {
-    loadTodos();
+    setLoading(true);
+    loadTodos().finally(() => setLoading(false));
   }, [loadTodos]);
 
-  // 當 todos 或 filter 改變時，更新 currentTodos
+  // This useEffect is now essential for client-side filtering
   useEffect(() => {
     if (filter === 'all') {
       setCurrentTodos(todos);
