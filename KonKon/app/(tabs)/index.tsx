@@ -19,10 +19,10 @@ import todoService from '@/lib/todoService';
 import EventPreviewModal from '@/components/event/EventPreviewModal';
 import FamilyHealthDashboard from '@/components/health/FamilyHealthDashboard';
 import ShoppingViewSelector, {
-  FamilyMember,
-  ShoppingBudget,
-  ShoppingItem,
-  Store,
+    FamilyMember,
+    ShoppingBudget,
+    ShoppingItem,
+    Store,
 } from '@/components/shopping/ShoppingViewSelector';
 import { useDrawer } from '@/contexts/DrawerContext';
 import { useFamily } from '@/contexts/FamilyContext';
@@ -32,18 +32,18 @@ import { useEvents } from '@/hooks/useEvents';
 import { useRecurringEvents } from '@/hooks/useRecurringEvents';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import {
-  CalendarEvent,
-  ParsedCalendarResult,
-  ParsedTodoResult,
-  processImageToCalendar,
-  processImageToMeal,
-  processImageToTodo,
-  processTextToCalendar,
-  processTextToMeal,
-  processTextToTodo,
-  processVoiceToCalendar,
-  processVoiceToMeal,
-  processVoiceToTodo
+    CalendarEvent,
+    ParsedCalendarResult,
+    ParsedTodoResult,
+    processImageToCalendar,
+    processImageToMeal,
+    processImageToTodo,
+    processTextToCalendar,
+    processTextToMeal,
+    processTextToTodo,
+    processVoiceToCalendar,
+    processVoiceToMeal,
+    processVoiceToTodo
 } from '@/lib/bailian_omni_calendar';
 import CalendarService from '@/lib/calendarService';
 import { t } from '@/lib/i18n';
@@ -56,17 +56,17 @@ import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  Image,
-  Modal,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    Image,
+    Modal,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { DateData } from 'react-native-calendars';
 import { useAuth } from '../../contexts/AuthContext';
@@ -707,13 +707,27 @@ export default function HomeScreen() {
       return;
     }
 
+    // 确定创建待办事项的目标familyId
+    let targetFamilyId: string | undefined;
+    if (activeFamily.id === 'meta-space' || activeFamily.tag === 'personal') {
+      const personalFamily = userFamilies.find(f => f.tag === 'personal');
+      if (personalFamily) {
+        targetFamilyId = personalFamily.id;
+      } else {
+        Alert.alert('錯誤', '找不到您的個人空間來保存待辦事項');
+        return;
+      }
+    } else {
+      targetFamilyId = activeFamily.id;
+    }
+
     if (result.todos && result.todos.length > 0) {
       try {
         // 批量創建待辦事項
         const createdTodos = [];
         for (const todo of result.todos) {
           const createParams = {
-            familyId: activeFamily.id,
+            familyId: targetFamilyId,
             title: todo.title,
             description: todo.description,
             priority: todo.priority,
@@ -820,6 +834,20 @@ export default function HomeScreen() {
       return;
     }
 
+    // 确定创建待办事项的目标familyId
+    let targetFamilyId: string | undefined;
+    if (activeFamily.id === 'meta-space' || activeFamily.tag === 'personal') {
+      const personalFamily = userFamilies.find(f => f.tag === 'personal');
+      if (personalFamily) {
+        targetFamilyId = personalFamily.id;
+      } else {
+        Alert.alert('錯誤', '找不到您的個人空間來保存待辦事項');
+        return;
+      }
+    } else {
+      targetFamilyId = activeFamily.id;
+    }
+
     try {
       // 使用AI解析待辦事項
       const todoResult = await processTextToTodo(text);
@@ -829,7 +857,7 @@ export default function HomeScreen() {
         const createdTodos = [];
         for (const todo of todoResult.todos) {
           const createParams = {
-            familyId: activeFamily.id,
+            familyId: targetFamilyId,
             title: todo.title,
             description: todo.description,
             priority: todo.priority,
@@ -888,7 +916,7 @@ export default function HomeScreen() {
         }
 
         const createParams = {
-          familyId: activeFamily.id,
+          familyId: targetFamilyId,
           title,
           description,
           priority,

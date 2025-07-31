@@ -73,145 +73,102 @@ export const useEvents = () => {
       setLoading(true);
       setError(null);
 
+      let eventPromises: Promise<{ data: any[] | null, error: any }>[] = [];
       let allEvents: EventWithShares[] = [];
 
       if (!activeFamily) {
-        // 无活跃家庭：不获取任何事件（这种情况应该很少见）
+        // 无活跃家庭
         allEvents = [];
-
       } else if (activeFamily.tag === 'personal') {
-        // 個人空間模式：獲取用戶創建的所有事件（不管是否分享）
-        
-        // 1. 獲取用戶創建的所有事件
-        const { data: userCreatedEvents, error: userEventsError } = await supabase
+        // 個人空間模式
+        const personalEventsQuery = supabase
           .from('events')
           .select('*')
           .eq('creator_id', user.id);
+        
+        const { data: userCreatedEvents, error: userEventsError } = await personalEventsQuery;
 
-        if (userEventsError) {
-          console.warn('獲取用戶創建的事件失敗:', userEventsError);
-        }
+        if (userEventsError) console.warn('獲取用戶創建的事件失敗:', userEventsError);
 
         if (userCreatedEvents && userCreatedEvents.length > 0) {
-          // 2. 檢查這些事件是否被分享，用於標記狀態
           const eventIds = userCreatedEvents.map(e => e.id);
           const { data: sharedEvents, error: shareError } = await supabase
             .from('event_shares')
             .select('event_id')
             .in('event_id', eventIds);
 
-          if (shareError) {
-            console.warn('檢查事件分享狀態失敗:', shareError);
-          }
+          if (shareError) console.warn('檢查事件分享狀態失敗:', shareError);
 
-          // 3. 包含所有用戶創建的事件，並標記是否已分享
           const sharedEventIds = new Set((sharedEvents || []).map(s => s.event_id));
-          allEvents = userCreatedEvents.map(event => ({ 
-            ...event, 
-            is_shared: sharedEventIds.has(event.id) 
-          }));
+          allEvents = userCreatedEvents.map(event => ({ ...event, is_shared: sharedEventIds.has(event.id) }));
         }
 
       } else if (activeFamily.id === 'meta-space') {
-        // 元空間模式：獲取所有空間的事件
-
-        // 1. 获取用户创建的个人事件（未分享的）
-        const { data: userCreatedEvents, error: userEventsError } = await supabase
-          .from('events')
-          .select('*')
-          .eq('creator_id', user.id);
-
-        if (userCreatedEvents && !userEventsError && userCreatedEvents.length > 0) {
-          // 檢查哪些事件沒有被分享
-          const eventIds = userCreatedEvents.map(e => e.id);
-          const { data: sharedEvents, error: shareError } = await supabase
-            .from('event_shares')
-            .select('event_id')
-            .in('event_id', eventIds);
-
-          if (!shareError) {
-            const sharedEventIds = new Set((sharedEvents || []).map(s => s.event_id));
-            const privateEvents = userCreatedEvents.filter(event => !sharedEventIds.has(event.id));
-            allEvents.push(...privateEvents.map(event => ({ ...event, is_shared: false })));
-          }
-        }
-
-        // 2. 获取用户参与的所有家庭中的直接家庭事件
+        // 元空間模式 - 並行查詢
         const userFamilyIds = userFamilies;
-        if (userFamilyIds.length > 0) {
-          const { data: directFamilyEvents, error: directFamilyError } = await supabase
-            .from('events')
-            .select('*')
-            .in('family_id', userFamilyIds);
 
-          if (directFamilyEvents && !directFamilyError) {
-            allEvents.push(...directFamilyEvents.map(event => ({ ...event, is_shared: true })));
-          }
-        }
+        // 1. 获取用户创建的所有事件
+        const userCreatedPromise = supabase.from('events').select('*').eq('creator_id', user.id);
+        
+        // 2. 获取用户参与的所有家庭中的直接家庭事件
+        const directFamilyPromise = userFamilyIds.length > 0
+          ? supabase.from('events').select('*').in('family_id', userFamilyIds)
+          : Promise.resolve({ data: [], error: null });
 
         // 3. 获取通过 event_shares 分享给用户家庭的事件
-        if (userFamilyIds.length > 0) {
-          const { data: familySharedEvents, error: familyError } = await supabase
-            .from('event_shares')
-            .select(`
-              event_id,
-              family_id,
-              events (
-                *
-              )
-            `)
-            .in('family_id', userFamilyIds);
+        const familySharedPromise = userFamilyIds.length > 0
+          ? supabase.from('event_shares').select('event_id, events(*)').in('family_id', userFamilyIds)
+          : Promise.resolve({ data: [], error: null });
 
-          if (familySharedEvents && !familyError) {
-            const sharedEvents = familySharedEvents
-              .filter(share => share.events)
-              .map(share => ({ ...share.events, is_shared: true, shared_family_id: share.family_id }));
-            allEvents.push(...sharedEvents);
-          }
+        // 4. 获取用户参与的事件
+        const attendeePromise = supabase.from('event_attendees').select('event_id, events(*)').eq('user_id', user.id);
+
+        const [
+          userCreatedResult,
+          directFamilyResult,
+          familySharedResult,
+          attendeeResult
+        ] = await Promise.all([
+          userCreatedPromise,
+          directFamilyPromise,
+          familySharedPromise,
+          attendeePromise
+        ]);
+
+        // 處理查詢結果
+        const userCreatedEvents = userCreatedResult.data || [];
+        const directFamilyEvents = directFamilyResult.data || [];
+        const familySharedEvents = familySharedResult.data || [];
+        const attendeeEvents = attendeeResult.data || [];
+
+        // 標記分享狀態
+        if (userCreatedEvents.length > 0) {
+          const eventIds = userCreatedEvents.map(e => e.id);
+          const { data: sharedEvents } = await supabase.from('event_shares').select('event_id').in('event_id', eventIds);
+          const sharedEventIds = new Set((sharedEvents || []).map(s => s.event_id));
+          const privateEvents = userCreatedEvents.filter(event => !sharedEventIds.has(event.id));
+          allEvents.push(...privateEvents.map(event => ({ ...event, is_shared: false })));
         }
 
-        // 4. 获取用户参与的事件（通过 event_attendees 表）
-        const { data: attendeeEvents, error: attendeeError } = await supabase
-          .from('event_attendees')
-          .select(`
-            event_id,
-            events (
-              *
-            )
-          `)
-          .eq('user_id', user.id);
-
-        if (attendeeEvents && !attendeeError) {
-          const attendeeEventsList = attendeeEvents
-            .filter(att => att.events)
-            .map(att => ({ ...att.events, is_shared: true }));
-          allEvents.push(...attendeeEventsList);
-        }
-
+        allEvents.push(...directFamilyEvents.map(event => ({ ...event, is_shared: true })));
+        allEvents.push(...familySharedEvents.filter(s => s.events).map(s => ({ ...s.events, is_shared: true })));
+        allEvents.push(...attendeeEvents.filter(a => a.events).map(a => ({ ...a.events, is_shared: true })));
+        
       } else {
-        // 家庭模式：只获取分享给当前激活家庭的事件
-
+        // 家庭模式
         const { data: sharedResult, error: sharedError } = await supabase
           .from('event_shares')
-          .select(`
-            event_id,
-            events (
-              *
-            )
-          `)
+          .select('event_id, events(*)')
           .eq('family_id', activeFamily.id);
         
         if (sharedError) throw sharedError;
 
-        // 只保留群組共享事件
-        allEvents = [
-          ...(sharedResult || [])
-            .filter(share => share.events)
-            .map(share => ({ ...share.events, is_shared: true }))
-        ];
+        allEvents = (sharedResult || [])
+          .filter(share => share.events)
+          .map(share => ({ ...share.events, is_shared: true }));
       }
 
-      // 去重
+      // 去重和後續處理
       const eventMap = new Map<string, EventWithShares>();
       allEvents.forEach(event => {
         const existing = eventMap.get(event.id);
@@ -228,13 +185,7 @@ export const useEvents = () => {
       if (finalEvents.length > 0) {
         const eventIds = finalEvents.map(e => e.id);
         
-        // 🐛 DEBUG: 添加調試日誌
-        console.log('🔍 [useEvents] 查詢參與者信息:', {
-          eventIds,
-          user: user?.id,
-          userEmail: user?.email,
-          eventCount: finalEvents.length
-        });
+
         
         const { data: attendeesData, error: attendeesError } = await supabase
           .from('event_attendees')
@@ -250,12 +201,6 @@ export const useEvents = () => {
           `)
           .in('event_id', eventIds);
 
-        // 🐛 DEBUG: 記錄查詢結果
-        console.log('📊 [useEvents] 參與者查詢結果:', {
-          attendeesData: attendeesData?.length || 0,
-          attendeesError,
-          sampleData: attendeesData?.slice(0, 3) // 只顯示前3條
-        });
 
         if (!attendeesError && attendeesData) {
           // 将参与人数据关联到对应的事件

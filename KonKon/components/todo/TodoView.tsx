@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import DraggableFlatList, { RenderItemParams } from 'react-native-draggable-flatlist';
 import { useAuth } from '../../contexts/AuthContext';
@@ -342,24 +342,22 @@ export default function TodoView() {
   const [filter, setFilter] = useState<'all' | 'pending' | 'completed'>('all');
   const [isSorting, setIsSorting] = useState(false);
 
-  // 提取用戶家庭ID列表
-  const userFamilyIds = userFamilies?.map(family => family.id) || [];
+  // 優化：使用 useMemo 來穩定 userFamilyIds 的引用
+  const userFamilyIds = useMemo(() => userFamilies?.map(family => family.id) || [], [userFamilies]);
 
   const loadTodos = useCallback(async () => {
     if (!activeFamily || !user) return;
     
+    // 開始加載時，先清空現有數據，避免看到舊數據的閃爍
+    setTodos([]);
+    setCurrentTodos([]);
+    setLoading(true);
+
     try {
-      // 使用新的空間感知方法
-      const data = await todoService.getTodosBySpace(activeFamily, userFamilyIds);
+      // 使用新的空間感知方法，並傳入過濾條件
+      const data = await todoService.getTodosBySpace(activeFamily, userFamilyIds, filter);
       setTodos(data);
-      
-      // 立即更新currentTodos以避免延遲
-      const filtered = data.filter(todo => {
-        if (filter === 'pending') return todo.status !== 'completed';
-        if (filter === 'completed') return todo.status === 'completed';
-        return true;
-      });
-      setCurrentTodos(filtered);
+      setCurrentTodos(data); // 數據庫已經過濾，直接設置
     } catch (error) {
       console.error('載入待辦事項失敗:', error);
       Alert.alert(t('todos.error'), t('todos.loadFailed'));
@@ -375,7 +373,10 @@ export default function TodoView() {
 
   const handleAddTodo = async (title: string, description?: string, priority?: string, dueDate?: string) => {
     if (!activeFamily || !user) return;
-    
+
+    // 尋找用戶的個人空間
+    const personalFamily = userFamilies.find(f => f.tag === 'personal');
+
     try {
       if (editingTodo) {
         await todoService.updateTodo(editingTodo.id, {
@@ -385,21 +386,23 @@ export default function TodoView() {
           due_date: dueDate,
         });
       } else {
-        // 檢查是否可以在當前空間創建待辦事項
-        if (activeFamily.id === 'meta-space') {
-          Alert.alert(
-            t('todos.error'), 
-            t('todos.cannotCreateInMetaSpace')
-          );
-          return;
-        }
+        // 確定待辦事項要創建在哪個familyId下
+        let targetFamilyId: string | undefined;
 
-        if (activeFamily.tag === 'personal') {
-          Alert.alert(
-            t('todos.error'), 
-            t('todos.cannotCreateInPersonalSpace')
-          );
-          return;
+        if (activeFamily.id === 'meta-space' || activeFamily.tag === 'personal') {
+          // 如果在元空間或個人空間，使用個人空間的ID
+          if (personalFamily) {
+            targetFamilyId = personalFamily.id;
+          } else {
+            Alert.alert(
+              t('todos.error'),
+              t('todos.noPersonalSpace')
+            );
+            return;
+          }
+        } else {
+          // 在普通家庭空間，直接使用activeFamily.id
+          targetFamilyId = activeFamily.id;
         }
 
         // 檢查familyId是否為有效UUID
@@ -408,16 +411,16 @@ export default function TodoView() {
           return uuidRegex.test(id);
         };
 
-        if (!isValidUUID(activeFamily.id)) {
+        if (!targetFamilyId || !isValidUUID(targetFamilyId)) {
           Alert.alert(
-            t('todos.error'), 
+            t('todos.error'),
             t('todos.invalidSpace')
           );
           return;
         }
 
         const createParams: CreateTodoParams = {
-          familyId: activeFamily.id,
+          familyId: targetFamilyId,
           title,
           description,
           priority: priority as any,
@@ -542,14 +545,11 @@ export default function TodoView() {
   useEffect(() => {
     if (isSorting) return; // 拖拽時不重新計算
     
-    const filtered = todos.filter(todo => {
-      if (filter === 'pending') return todo.status !== 'completed';
-      if (filter === 'completed') return todo.status === 'completed';
-      return true;
-    });
-    setCurrentTodos(filtered);
-    currentTodosRef.current = filtered;
-  }, [todos, filter, isSorting]);
+    // **移除客戶端過濾邏輯**
+    // 數據庫查询已经处理了过滤，这里只需确保数据同步
+    setCurrentTodos(todos);
+    currentTodosRef.current = todos;
+  }, [todos, isSorting]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);

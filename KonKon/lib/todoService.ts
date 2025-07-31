@@ -69,68 +69,60 @@ class TodoService {
   }
 
   // 根據空間獲取待辦事項方法
-  async getTodosBySpace(activeFamily: Family, userFamilies: string[]): Promise<TodoWithUser[]> {
+  async getTodosBySpace(activeFamily: Family, userFamilies: string[], filter: 'all' | 'pending' | 'completed'): Promise<TodoWithUser[]> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('User not authenticated');
 
     try {
+      let query;
 
       if (activeFamily.id === 'meta-space') {
         // 元空間：獲取用戶所有家庭的待辦事項
-        if (userFamilies.length === 0) {
-          return [];
-        }
-
+        if (userFamilies.length === 0) return [];
         const validFamilyIds = userFamilies.filter(id => isValidUUID(id));
-        if (validFamilyIds.length === 0) {
-          return [];
-        }
+        if (validFamilyIds.length === 0) return [];
 
-        const { data: todos, error } = await supabase
+        query = supabase
           .from('todos')
           .select(`
             *,
             creator:users!todos_user_id_fkey(id, display_name, avatar_url),
             assigned_user:users!todos_assigned_to_fkey(id, display_name, avatar_url)
           `)
-          .in('family_id', validFamilyIds)
-          .order('sort_order', { ascending: true });
-
-        if (error) throw error;
-
-        return (todos || []).map(todo => ({
-          ...todo,
-          is_shared: true
-        })) as TodoWithUser[];
-
-      } else if (activeFamily.tag === 'personal') {
-        // 個人空間：只返回空陣列，因為個人空間的待辦事項通常與特定用戶家庭關聯
-        return [];
+          .in('family_id', validFamilyIds);
 
       } else if (isValidUUID(activeFamily.id)) {
-        // 正常的家庭空間：使用有效的UUID查詢
-        const { data: todos, error } = await supabase
+        // 正常的家庭空間（包括個人空間）：使用有效的UUID查詢
+        query = supabase
           .from('todos')
           .select(`
             *,
             creator:users!todos_user_id_fkey(id, display_name, avatar_url),
             assigned_user:users!todos_assigned_to_fkey(id, display_name, avatar_url)
           `)
-          .eq('family_id', activeFamily.id)
-          .order('sort_order', { ascending: true });
-
-        if (error) throw error;
-
-        return (todos || []).map(todo => ({
-          ...todo,
-          is_shared: false
-        })) as TodoWithUser[];
+          .eq('family_id', activeFamily.id);
 
       } else {
         // 無效的家庭ID，返回空陣列
         console.warn('Invalid family ID format:', activeFamily.id);
         return [];
       }
+
+      // 將過濾條件應用到查詢中
+      if (filter === 'pending') {
+        query = query.neq('status', 'completed');
+      } else if (filter === 'completed') {
+        query = query.eq('status', 'completed');
+      }
+
+      const { data: todos, error } = await query.order('sort_order', { ascending: true });
+
+      if (error) throw error;
+
+      return (todos || []).map(todo => ({
+        ...todo,
+        is_shared: activeFamily.id === 'meta-space'
+      })) as TodoWithUser[];
 
     } catch (err) {
       console.error('獲取待辦事項失敗:', err);
