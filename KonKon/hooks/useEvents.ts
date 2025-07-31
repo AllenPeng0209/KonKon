@@ -501,16 +501,23 @@ export const useEvents = () => {
           creator:users(display_name)
         `)
         .eq('id', eventId)
-        .single();
+        .maybeSingle();
 
-      if (fetchError) {
+      if (fetchError && fetchError.code !== 'PGRST116') { // 忽略 "找不到行" 的錯誤
         console.error('获取事件信息失败:', fetchError);
+        // 即使获取失败，也继续尝试删除
       }
 
       // 首先删除相关的分享记录
       await supabase.from('event_shares').delete().eq('event_id', eventId);
       
-      // 然后删除事件本身
+      // 然后删除相关的参与人记录
+      await supabase.from('event_attendees').delete().eq('event_id', eventId);
+
+      // 接着删除相关的异常记录
+      await supabase.from('event_exceptions').delete().eq('parent_event_id', eventId);
+      
+      // 最后删除事件本身
       const { error } = await supabase.from('events').delete().eq('id', eventId);
       if (error) throw error;
 
@@ -540,7 +547,7 @@ export const useEvents = () => {
       }
 
       // 从本地状态中移除
-      setEvents(prev => prev.filter(e => e.id !== eventId));
+      setEvents(prev => prev.filter(e => e.id !== eventId && !e.id.startsWith(eventId + '_')));
 
       // 重新获取当月事件
       const currentDate = new Date();
@@ -607,10 +614,16 @@ export const useEvents = () => {
         .from('events')
         .select('id, creator_id, title, recurrence_rule')
         .eq('id', eventId)
-        .single();
+        .maybeSingle();
 
-      if (checkError || !existingEvent) {
+      if (checkError && checkError.code !== 'PGRST116') {
         throw new Error(t('errors.eventNotAccessible'));
+      }
+
+      if (!existingEvent) {
+        console.warn(`Attempted to update a non-existent event: ${eventId}`);
+        // or simply return false, as the event cannot be updated
+        return false;
       }
 
       // 檢查用戶權限：是創建者或有共享權限

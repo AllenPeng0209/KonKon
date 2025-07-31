@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import DraggableFlatList, { RenderItemParams } from 'react-native-draggable-flatlist';
 import { useAuth } from '../../contexts/AuthContext';
@@ -96,20 +96,6 @@ const TodoItem: React.FC<TodoItemProps> = ({ todo, onToggleComplete, onDelete, o
           >
             {todo.title}
           </Text>
-          <View style={styles.todoActions}>
-            <TouchableOpacity 
-              style={styles.actionButton}
-              onPress={() => onEdit(todo)}
-            >
-              <Ionicons name="pencil" size={16} color="#8E8E93" />
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.actionButton}
-              onPress={() => onDelete(todo.id)}
-            >
-              <Ionicons name="trash" size={16} color="#FF3B30" />
-            </TouchableOpacity>
-          </View>
         </View>
         
         {todo.description && (
@@ -141,14 +127,27 @@ const TodoItem: React.FC<TodoItemProps> = ({ todo, onToggleComplete, onDelete, o
         </View>
       </View>
 
-      {/* 拖拽手柄 */}
-      <TouchableOpacity 
-        style={styles.dragHandle}
-        onPressIn={drag}
-        delayPressIn={0}
-      >
-        <Ionicons name="reorder-three" size={20} color="#C7C7CC" />
-      </TouchableOpacity>
+      <View style={styles.rightActionContainer}>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => onEdit(todo)}
+        >
+          <Ionicons name="pencil" size={16} color="#8E8E93" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => onDelete(todo.id)}
+        >
+          <Ionicons name="trash" size={16} color="#FF3B30" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.dragHandle}
+          onPressIn={drag}
+          delayPressIn={0}
+        >
+          <Ionicons name="reorder-three" size={20} color="#C7C7CC" />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
@@ -340,10 +339,10 @@ export default function TodoView() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingTodo, setEditingTodo] = useState<TodoWithUser | undefined>();
   const [filter, setFilter] = useState<'all' | 'pending' | 'completed'>('all');
-  const [isSorting, setIsSorting] = useState(false);
 
   // 優化：使用 useMemo 來穩定 userFamilyIds 的引用
   const userFamilyIds = useMemo(() => userFamilies?.map(family => family.id) || [], [userFamilies]);
+  const [currentTodos, setCurrentTodos] = useState<TodoWithUser[]>([]);
 
   const loadTodos = useCallback(async () => {
     if (!activeFamily || !user) return;
@@ -357,7 +356,6 @@ export default function TodoView() {
       // 使用新的空間感知方法，並傳入過濾條件
       const data = await todoService.getTodosBySpace(activeFamily, userFamilyIds, filter);
       setTodos(data);
-      setCurrentTodos(data); // 數據庫已經過濾，直接設置
     } catch (error) {
       console.error('載入待辦事項失敗:', error);
       Alert.alert(t('todos.error'), t('todos.loadFailed'));
@@ -371,14 +369,37 @@ export default function TodoView() {
     loadTodos();
   }, [loadTodos]);
 
+  // 當 todos 或 filter 改變時，更新 currentTodos
+  useEffect(() => {
+    if (filter === 'all') {
+      setCurrentTodos(todos);
+    } else {
+      const filtered = todos.filter(todo => filter === 'completed' ? todo.status === 'completed' : todo.status !== 'completed');
+      setCurrentTodos(filtered);
+    }
+  }, [todos, filter]);
+
   const handleAddTodo = async (title: string, description?: string, priority?: string, dueDate?: string) => {
     if (!activeFamily || !user) return;
 
-    // 尋找用戶的個人空間
     const personalFamily = userFamilies.find(f => f.tag === 'personal');
 
     try {
       if (editingTodo) {
+        // Optimistic update for editing
+        const originalTodos = [...todos];
+        const updatedTodo = {
+          ...editingTodo,
+          title,
+          description: description || null,
+          priority: priority as any,
+          due_date: dueDate || null,
+        };
+        
+        const newTodos = todos.map(t => t.id === editingTodo.id ? updatedTodo : t);
+        setTodos(newTodos);
+        setEditingTodo(undefined);
+
         await todoService.updateTodo(editingTodo.id, {
           title,
           description,
@@ -386,36 +407,26 @@ export default function TodoView() {
           due_date: dueDate,
         });
       } else {
-        // 確定待辦事項要創建在哪個familyId下
         let targetFamilyId: string | undefined;
 
         if (activeFamily.id === 'meta-space' || activeFamily.tag === 'personal') {
-          // 如果在元空間或個人空間，使用個人空間的ID
           if (personalFamily) {
             targetFamilyId = personalFamily.id;
           } else {
-            Alert.alert(
-              t('todos.error'),
-              t('todos.noPersonalSpace')
-            );
+            Alert.alert(t('todos.error'), t('todos.noPersonalSpace'));
             return;
           }
         } else {
-          // 在普通家庭空間，直接使用activeFamily.id
           targetFamilyId = activeFamily.id;
         }
 
-        // 檢查familyId是否為有效UUID
         const isValidUUID = (id: string) => {
           const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
           return uuidRegex.test(id);
         };
 
         if (!targetFamilyId || !isValidUUID(targetFamilyId)) {
-          Alert.alert(
-            t('todos.error'),
-            t('todos.invalidSpace')
-          );
+          Alert.alert(t('todos.error'), t('todos.invalidSpace'));
           return;
         }
 
@@ -428,31 +439,48 @@ export default function TodoView() {
           assignedTo: user.id,
         };
 
-        await todoService.createTodo(createParams);
+        const newTodo = await todoService.createTodo(createParams);
+        setTodos([newTodo, ...todos]);
       }
-      await loadTodos();
-      setEditingTodo(undefined);
     } catch (error) {
       console.error('操作失敗:', error);
       Alert.alert(t('todos.error'), editingTodo ? t('todos.updateFailed') : t('todos.createFailed'));
+      // Simple rollback for editing
+      if (editingTodo) {
+        loadTodos();
+      }
     }
   };
 
   const handleToggleComplete = async (todoId: string, completed: boolean) => {
+    const originalTodos = [...todos];
+    
+    const newTodos = todos.map(todo => {
+      if (todo.id === todoId) {
+        return {
+          ...todo,
+          status: completed ? 'completed' : 'pending',
+          completed_at: completed ? new Date().toISOString() : null,
+        };
+      }
+      return todo;
+    });
+    setTodos(newTodos);
+
     try {
       if (completed) {
         await todoService.completeTodo(todoId);
       } else {
         await todoService.updateTodo(todoId, { status: 'pending', completed_at: null });
       }
-      await loadTodos();
     } catch (error) {
       console.error('更新狀態失敗:', error);
       Alert.alert(t('todos.error'), t('todos.updateStatusFailed'));
+      setTodos(originalTodos);
     }
   };
 
-  const handleDeleteTodo = async (todoId: string) => {
+  const handleDeleteTodo = (todoId: string) => {
     Alert.alert(
       t('todos.confirmDelete'),
       t('todos.confirmDeleteMessage'),
@@ -462,12 +490,16 @@ export default function TodoView() {
           text: t('todos.delete'),
           style: 'destructive',
           onPress: async () => {
+            const originalTodos = [...todos];
+            const newTodos = originalTodos.filter(todo => todo.id !== todoId);
+            setTodos(newTodos);
+
             try {
               await todoService.deleteTodo(todoId);
-              await loadTodos();
             } catch (error) {
               console.error('刪除失敗:', error);
               Alert.alert(t('todos.error'), t('todos.deleteFailed'));
+              setTodos(originalTodos);
             }
           }
         }
@@ -481,75 +513,31 @@ export default function TodoView() {
   };
 
   // 處理拖拽排序
-  const handleDragEnd = ({ data }: { data: TodoWithUser[] }) => {
-    // 保存原始狀態以備回滾
-    const originalCurrentTodos = [...currentTodosRef.current];
+  const handleDragEnd = async ({ data }: { data: TodoWithUser[] }) => {
     const originalTodos = [...todos];
-    
-    // *** 關鍵：立即同步更新狀態和ref ***
-    currentTodosRef.current = data;
-    setCurrentTodos(data);
-    
-    // 同步更新todos狀態
-    const updatedTodos = [...todos];
-    const dragUpdates = new Map();
-    data.forEach((draggedTodo, newIndex) => {
-      dragUpdates.set(draggedTodo.id, newIndex);
-    });
-    
-    updatedTodos.forEach((todo, index) => {
-      if (dragUpdates.has(todo.id)) {
-        updatedTodos[index] = { 
-          ...todo, 
-          sort_order: dragUpdates.get(todo.id) 
-        };
-      }
-    });
-    setTodos(updatedTodos);
-    
-    // *** 後台異步處理數據庫更新 ***
-    (async () => {
-      setIsSorting(true);
-      try {
-        await todoService.updateTodoOrder(data.map((todo, index) => ({ 
-          id: todo.id, 
-          sort_order: index 
-        })));
-      } catch (error) {
-        console.error('更新排序失敗:', error);
-        
-        // 只有失敗時才回滾
-        currentTodosRef.current = originalCurrentTodos;
-        setCurrentTodos(originalCurrentTodos);
-        setTodos(originalTodos);
-        
-        Alert.alert(
-          t('todos.error'), 
-          t('todos.updateOrderFailed')
-        );
-      } finally {
-        setIsSorting(false);
-      }
-    })();
+
+    // 1. 創建一個包含所有待辦事項的新列表，並將拖動的項目放在前面
+    const dataIds = new Set(data.map(i => i.id));
+    const otherTodos = originalTodos.filter(t => !dataIds.has(t.id));
+    const newTodos = [...data, ...otherTodos];
+
+    // 2. 樂觀更新UI：直接更新源頭 `todos` 狀態
+    setTodos(newTodos);
+
+    try {
+      // 3. 將完整的、新排序的列表發送到後端，以更新 sort_order
+      await todoService.updateTodoOrder(newTodos.map((todo, index) => ({ 
+        id: todo.id, 
+        sort_order: index 
+      })));
+      // 成功後，不需要做任何事，因為UI已經是最新狀態
+    } catch (error) {
+      console.error('更新排序失敗:', error);
+      Alert.alert(t('todos.error'), t('todos.updateOrderFailed'));
+      // 4. 如果後端更新失敗，則回滾到原始狀態
+      setTodos(originalTodos);
+    }
   };
-
-  const [currentTodos, setCurrentTodos] = useState<TodoWithUser[]>([]);
-  const currentTodosRef = useRef<TodoWithUser[]>([]);
-
-  // 同步ref和state
-  useEffect(() => {
-    currentTodosRef.current = currentTodos;
-  }, [currentTodos]);
-
-  // 當todos或filter改變時，更新currentTodos（但不在拖拽時）
-  useEffect(() => {
-    if (isSorting) return; // 拖拽時不重新計算
-    
-    // **移除客戶端過濾邏輯**
-    // 數據庫查询已经处理了过滤，这里只需确保数据同步
-    setCurrentTodos(todos);
-    currentTodosRef.current = todos;
-  }, [todos, isSorting]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -646,12 +634,9 @@ export default function TodoView() {
           renderItem={renderTodoItem}
           keyExtractor={(item) => item.id}
           onDragEnd={handleDragEnd}
-          onDragBegin={() => {
-            setRefreshing(false);
-          }}
           contentContainerStyle={styles.listContainer}
           refreshControl={
-            <RefreshControl refreshing={refreshing && !isSorting} onRefresh={onRefresh} />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
           showsVerticalScrollIndicator={false}
           activationDistance={0}
@@ -671,24 +656,11 @@ export default function TodoView() {
 
       {/* 添加按钮 */}
       <TouchableOpacity
-        style={[styles.addButton, isSorting && styles.addButtonSorting]}
+        style={styles.addButton}
         onPress={() => setShowAddModal(true)}
-        disabled={isSorting}
       >
-        {isSorting ? (
-          <ActivityIndicator size="small" color="white" />
-        ) : (
-          <Ionicons name="add" size={28} color="white" />
-        )}
+        <Ionicons name="add" size={28} color="white" />
       </TouchableOpacity>
-
-      {/* 排序狀態指示器 */}
-      {isSorting && (
-        <View style={styles.sortingIndicator}>
-          <ActivityIndicator size="small" color="#007AFF" />
-          <Text style={styles.sortingText}>{t('todos.savingOrder')}</Text>
-        </View>
-      )}
 
       {/* 添加/编辑模态框 */}
       <AddTodoModal
@@ -755,6 +727,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 3,
     elevation: 2,
+    alignItems: 'center',
   },
   completedCard: {
     opacity: 0.6,
@@ -765,7 +738,6 @@ const styles = StyleSheet.create({
   },
   checkboxContainer: {
     marginRight: 12,
-    paddingTop: 2,
   },
   todoContent: {
     flex: 1,
@@ -773,7 +745,6 @@ const styles = StyleSheet.create({
   todoHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
     marginBottom: 4,
   },
   todoTitle: {
@@ -786,9 +757,6 @@ const styles = StyleSheet.create({
   completedText: {
     textDecorationLine: 'line-through',
     color: '#8E8E93',
-  },
-  todoActions: {
-    flexDirection: 'row',
   },
   actionButton: {
     padding: 4,
@@ -834,7 +802,11 @@ const styles = StyleSheet.create({
   },
   dragHandle: {
     padding: 8,
-    marginLeft: 12,
+    marginLeft: 8,
+  },
+  rightActionContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   addButton: {
     position: 'absolute',
