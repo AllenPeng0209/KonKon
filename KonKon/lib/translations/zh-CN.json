@@ -552,7 +552,11 @@
     "title": "设置",
     "account": "账户",
     "editProfile": "编辑个人资料",
+    "changePassword": "更改密码",
+    "family": "家庭",
+    "familyManagement": "家庭管理",
     "general": "通用",
+    "notificationCenter": "通知中心",
     "notificationSettings": "通知设置",
     "languageSelection": "语言选择",
     "storage": "存储",
@@ -562,10 +566,13 @@
     "confirmLogoutTitle": "确认退出",
     "confirmLogoutMessage": "您确定要退出登录吗？",
     "confirmClearCacheTitle": "确认清除缓存",
-    "confirmClearCacheMessage": "您确定要清除%{size}MB的缓存吗？",
+    "confirmClearCacheMessage": "您确定要清除{size}MB的缓存吗？這包括聊天消息緩存。",
     "cancel": "取消",
     "confirm": "确认",
-    "cacheCleared": "缓存已清除"
+    "cacheCleared": "缓存已清除",
+    "cacheClearedMessage": "包括聊天消息緩存在內的所有緩存已清除完成。",
+    "clearCacheFailed": "清除失败",
+    "clearCacheFailedMessage": "部分緩存清除失敗，請稍後重試。"
   },
   "userAgreement": {
     "title": "用户协议",
@@ -735,6 +742,49 @@
     "eventsTitle": "%{count}个事件",
     "noEvents": "当天没有事件",
     "noEventsDescription": "点击日历上的日期以查看或添加事件"
+  },
+  "calendarCard": {
+    "yearMonth": "%{year}年%{month}月",
+    "eventsCount": "%{count} 个活动",
+    "noEvents": "没有活动",
+    "weekdays": {
+      "monday": "一",
+      "tuesday": "二", 
+      "wednesday": "三",
+      "thursday": "四",
+      "friday": "五",
+      "saturday": "六",
+      "sunday": "日"
+    }
+  },
+  "smartButton": {
+    "defaultText": "长按说话，创建智能相簿",
+    "permissionError": "权限错误",
+    "microphonePermissionNeeded": "需要麦克风权限才能录音",
+    "recordingFailed": "录音失败",
+    "recordingFailedMessage": "无法开始录音，请检查麦克风权限",
+    "listening": "正在聆听...",
+    "textParsingFailed": "文字解析失败",
+    "processing": "处理失败",
+    "recording": "🎤 录音中...",
+    "inputPlaceholder": "输入日程描述，如：明天下午3点开会...",
+    "processingText": "正在智能解析日程...",
+    "photo": "拍照",
+    "album": "相簿",
+    "manualAdd": "手动添加",
+    "thinkingMessages": {
+      "received": "收到！让我想想看...",
+      "thinking": "嗯... 脑筋正在高速转动...",
+      "checking": "帮你检查下日程安排~",
+      "almostDone": "马上就好啦！",
+      "generating": "嘿咻嘿咻... 正在生成魔法..."
+    },
+    "errors": {
+      "albumParsingFailed": "未能解析出相簿创建指令",
+      "scheduleParsingFailed": "未能解析出任何日程事件",
+      "aiParsingFailed": "AI 解析失败",
+      "recordingProcessFailed": "录音处理失败"
+    }
   },
   "loadingModal": {
     "processing": "正在处理..."

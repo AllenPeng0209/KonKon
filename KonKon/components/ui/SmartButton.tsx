@@ -15,6 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { t } from '../../lib/i18n';
 
 interface SmartButtonProps {
   onPress?: () => void;
@@ -41,7 +42,7 @@ export default function SmartButton({
   onPhotoPress,
   onAlbumPress,
   onManualAddPress,
-  text = '长按说话，创建智能相簿',
+  text = '',
   icon = '+',
   disabled = false,
 }: SmartButtonProps) {
@@ -55,6 +56,11 @@ export default function SmartButton({
   const recordingRef = useRef<Audio.Recording | null>(null);
   const thinkingIntervalRef = useRef<any>(null);
   const realtimeTimeoutRefs = useRef<NodeJS.Timeout[]>([]);
+
+  // 獲取本地化文字，如果沒有提供則使用默認翻譯
+  const getDisplayText = () => {
+    return text || t('smartButton.defaultText');
+  };
 
   const toggleExpanded = () => {
     const toValue = isExpanded ? 0 : 1;
@@ -126,21 +132,12 @@ export default function SmartButton({
     const textToProcess = inputText.trim();
     
     try {
-      // 嘗試解析文字相簿創建指令
-      const albumRequest = await voiceAlbumService.parseAlbumCommand?.(textToProcess);
-      
-      if (albumRequest && onAlbumParseResult) {
-        onAlbumParseResult({
-          albumName: albumRequest.albumName,
-          theme: albumRequest.theme || '日常生活',
-          keywords: albumRequest.keywords || [],
-          success: true
-        });
-      } else if (onTextResult) {
+      // 直接將文字傳遞給結果處理器
+      if (onTextResult) {
         onTextResult(textToProcess);
       }
     } catch (error: any) {
-      console.error('文字解析失敗:', error);
+      console.error(t('smartButton.textParsingFailed'), error);
       if (onTextResult) {
         onTextResult(textToProcess);
       }
@@ -165,7 +162,7 @@ export default function SmartButton({
         // 请求录音权限
         const { status } = await Audio.requestPermissionsAsync();
         if (status !== 'granted') {
-          Alert.alert('权限错误', '需要麦克风权限才能录音');
+          Alert.alert(t('smartButton.permissionError'), t('smartButton.microphonePermissionNeeded'));
           return;
         }
 
@@ -206,7 +203,7 @@ export default function SmartButton({
         
         recordingRef.current = recording;
         setIsRecording(true);
-        setRealTimeText('正在聆听...');
+        setRealTimeText(t('smartButton.listening'));
         
         // 清除之前的定时器
         realtimeTimeoutRefs.current.forEach(timeout => clearTimeout(timeout));
@@ -217,7 +214,7 @@ export default function SmartButton({
         
       } catch (error) {
         console.error('开始录音失败:', error);
-        Alert.alert('录音失败', '无法开始录音，请检查麦克风权限');
+        Alert.alert(t('smartButton.recordingFailed'), t('smartButton.recordingFailedMessage'));
       }
     }
   };
@@ -246,11 +243,11 @@ export default function SmartButton({
 
         // --- 开始卖萌动画 ---
         const thinkingMessages = [
-          '收到！让我想想看...',
-          '嗯... 脑筋正在高速转动...',
-          '帮你检查下日程安排~',
-          '马上就好啦！',
-          '嘿咻嘿咻... 正在生成魔法...',
+          t('smartButton.thinkingMessages.received'),
+          t('smartButton.thinkingMessages.thinking'),
+          t('smartButton.thinkingMessages.checking'),
+          t('smartButton.thinkingMessages.almostDone'),
+          t('smartButton.thinkingMessages.generating'),
         ];
         let messageIndex = 0;
         setRealTimeText(thinkingMessages[messageIndex]);
@@ -278,7 +275,7 @@ export default function SmartButton({
             
             if (!result || !result.success) {
               // 直接調用錯誤處理，不要拋出異常避免觸發其他邏輯
-              const errorMessage = result?.error || '未能解析出相簿创建指令';
+              const errorMessage = result?.error || t('smartButton.errors.albumParsingFailed');
               console.error('相簿創建解析失敗:', errorMessage);
               onError?.(errorMessage);
               return; // 提前返回，避免執行後續邏輯
@@ -295,7 +292,7 @@ export default function SmartButton({
             console.log('Bailian Omni Calendar 解析完成:', result);
             
             if (!result || result.events.length === 0) {
-              const errorMessage = '未能解析出任何日程事件';
+              const errorMessage = t('smartButton.errors.scheduleParsingFailed');
               console.error('日程解析失敗:', errorMessage);
               onError?.(errorMessage);
               return; // 提前返回，避免執行後續邏輯
@@ -319,12 +316,12 @@ export default function SmartButton({
         
       } catch (error) {
         console.error('录音处理失败:', error);
-        const errorMessage = error instanceof Error ? error.message : '录音处理失败';
+        const errorMessage = error instanceof Error ? error.message : t('smartButton.errors.recordingProcessFailed');
         
         if (onError) {
           onError(errorMessage);
         } else {
-          Alert.alert('处理失败', errorMessage);
+          Alert.alert(t('smartButton.processing'), errorMessage);
         }
         
         setRealTimeText('');
@@ -369,7 +366,7 @@ export default function SmartButton({
             <View style={styles.inputContainer}>
               <TextInput
                 style={styles.textInput}
-                placeholder="输入日程描述，如：明天下午3点开会..."
+                placeholder={t('smartButton.inputPlaceholder')}
                 value={inputText}
                 onChangeText={setInputText}
                 multiline
@@ -401,7 +398,7 @@ export default function SmartButton({
           {/* 处理状态提示 */}
           {isProcessing && (
             <View style={styles.processingContainer}>
-              <Text style={styles.processingText}>正在智能解析日程...</Text>
+              <Text style={styles.processingText}>{t('smartButton.processingText')}</Text>
             </View>
           )}
         </LinearGradient>
@@ -424,7 +421,7 @@ export default function SmartButton({
             onPress={handlePhotoPress}
           >
             <Text style={styles.functionIcon}>📷</Text>
-            <Text style={styles.functionText}>拍照</Text>
+            <Text style={styles.functionText}>{t('smartButton.photo')}</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
@@ -432,7 +429,7 @@ export default function SmartButton({
             onPress={handleAlbumPress}
           >
             <Text style={styles.functionIcon}>🖼️</Text>
-            <Text style={styles.functionText}>相簿</Text>
+            <Text style={styles.functionText}>{t('smartButton.album')}</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
@@ -440,7 +437,7 @@ export default function SmartButton({
             onPress={handleManualAddPress}
           >
             <Text style={styles.functionIcon}>✍️</Text>
-            <Text style={styles.functionText}>手动添加</Text>
+            <Text style={styles.functionText}>{t('smartButton.manualAdd')}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -449,7 +446,7 @@ export default function SmartButton({
       {(isRecording || realTimeText) && (
         <View style={styles.realTimeTranscriptContainer}>
           <Text style={styles.realTimeTranscriptText}>
-            {realTimeText || '正在聆听...'}
+            {realTimeText || t('smartButton.listening')}
           </Text>
         </View>
       )}
@@ -481,7 +478,7 @@ export default function SmartButton({
             styles.smartButtonText,
             isRecording && styles.smartButtonTextRecording
           ]}>
-            {isRecording ? '🎤 录音中...' : text}
+            {isRecording ? t('smartButton.recording') : getDisplayText()}
           </Text>
         </TouchableOpacity>
         

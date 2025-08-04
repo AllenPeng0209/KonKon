@@ -5,89 +5,70 @@ export interface CalendarStyle {
   id: string;
   name: string;
   description: string;
-  icon: string;
+  color: string; // 改用顏色代替emoji
 }
 
 // 從翻譯中獲取樣式名稱和描述的函數
 const getStyleInfo = (styleId: string) => {
-  const styleKey = styleId.replace('-', '');
-  
-  // 將樣式 ID 轉換為對應的翻譯鍵
-  const styleKeyMap: { [key: string]: string } = {
-    'gridmonth': 'gridMonth',
-    'weeklygrid': 'weeklyGrid', 
-    'cardmonth': 'cardMonth',
-    'agendalist': 'agendaList',
-    'timeline': 'timeline',
-    'dayfocus': 'dayFocus',
-    'compactmonth': 'compactMonth',
-    'threedayview': 'threeDayView',
-    'familygrid': 'familyGrid',
-    'familyorbit': 'familyOrbit',
-    'familypuzzle': 'familyPuzzle',
-    'familygarden': 'familyGarden',
-    'yearoverview': 'yearOverview',
-    'cloudfloating': 'cloudFloating',
-    'constellationwheel': 'constellationWheel',
-    'subwaymap': 'subwayMap',
-    'gardenplant': 'gardenPlant',
-    'puzzlepiece': 'puzzlePiece',
-    'fishingpond': 'fishingPond',
-    'spaceexploration': 'spaceExploration',
-    'treasuremap': 'treasureMap',
-    'heatmap': 'heatmap',
-    'ganttchart': 'ganttChart',
-    'heartbeat': 'heartbeat',
-    'bubblechart': 'bubbleChart',
-    'seasonallandscape': 'seasonalLandscape',
-    'bookshelf': 'bookshelf',
-    'musicstaff': 'musicStaff',
-    'kitchenrecipe': 'kitchenRecipe',
-    'runningtrack': 'runningTrack',
-    'mooddiary': 'moodDiary',
-    'fitnesschallenge': 'fitnessChallenge',
-    'cube3d': 'cube3d',
-    'aiprediction': 'aiPrediction',
-    'arview': 'arView',
-    'seasonalharmony': 'seasonalHarmony',
-    'familynotebook': 'familyNotebook',
-    'bentobox': 'bentoBox',
-    'origamicalendar': 'origamiCalendar',
-    'ryokanstyle': 'ryokanStyle'
-  };
-  
-  const translationKey = styleKeyMap[styleKey] || styleKey;
   return {
-    name: t(`calendarStyleSelector.styles.${translationKey}` as any),
-    description: t(`calendarStyleSelector.styles.${translationKey}` as any) // 暫時使用相同的翻譯
+    name: t(`calendarStyles.${styleId}.name`),
+    description: t(`calendarStyles.${styleId}.description`),
   };
+};
+
+// 如果翻譯不存在，使用默認值
+const getDefaultStyleInfo = (styleId: string) => {
+  const defaultStyles: Record<string, { name: string; description: string }> = {
+    'grid-month': {
+      name: 'グリッド月表示',
+      description: '月全体をグリッド形式で表示'
+    },
+    'weekly-grid': {
+      name: '週間グリッド',
+      description: '週単位のグリッド表示'
+    },
+    'card-month': {
+      name: 'カード月表示',
+      description: 'カード形式の月表示'
+    },
+    'timeline': {
+      name: 'タイムライン表示',
+      description: '時系列での表示'
+    },
+    'agenda-list': {
+      name: 'アジェンダリスト',
+      description: 'リスト形式での表示'
+    },
+  };
+  
+  return defaultStyles[styleId] || { name: styleId, description: '' };
 };
 
 const CALENDAR_STYLES: CalendarStyle[] = [
   {
     id: 'grid-month',
     ...getStyleInfo('grid-month'),
-    icon: '📅',
+    color: '#3B82F6', // 藍色
   },
   {
     id: 'weekly-grid',
     ...getStyleInfo('weekly-grid'),
-    icon: '📊',
+    color: '#10B981', // 綠色
   },
   {
     id: 'card-month',
     ...getStyleInfo('card-month'),
-    icon: '🎴',
+    color: '#F59E0B', // 橙色
   },
   {
     id: 'timeline',
     ...getStyleInfo('timeline'),
-    icon: '⏰',
+    color: '#EF4444', // 紅色
   },
   {
     id: 'agenda-list',
     ...getStyleInfo('agenda-list'),
-    icon: '📋',
+    color: '#8B5CF6', // 紫色
   },
 ];
 
@@ -113,7 +94,7 @@ export default function CalendarStyleModal({
     <Modal
       visible={visible}
       transparent={true}
-      animationType="fade"
+      animationType="slide"
       onRequestClose={onClose}
     >
       <TouchableOpacity 
@@ -121,62 +102,79 @@ export default function CalendarStyleModal({
         activeOpacity={1}
         onPress={onClose}
       >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>{t('calendarStyleSelector.title')}</Text>
-            <TouchableOpacity 
-              onPress={onClose}
-              style={styles.closeButton}
-            >
-              <Text style={styles.closeButtonText}>✕</Text>
-            </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.modalContainer}
+          activeOpacity={1}
+          onPress={(e) => e.stopPropagation()}
+        >
+          {/* 現代化的標題區域 */}
+          <View style={styles.headerContainer}>
+            <View style={styles.handleBar} />
+            <Text style={styles.title}>{t('calendarStyleSelector.title')}</Text>
+            <Text style={styles.subtitle}>
+              {t('calendarStyleSelector.footerText')}
+            </Text>
           </View>
           
-          <ScrollView style={styles.styleList} showsVerticalScrollIndicator={false}>
-            {CALENDAR_STYLES.map((style) => (
+          {/* 樣式選項列表 */}
+          <ScrollView 
+            style={styles.contentContainer}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+          >
+            {CALENDAR_STYLES.map((style, index) => (
               <TouchableOpacity
                 key={style.id}
                 style={[
-                  styles.styleItem,
-                  currentStyle === style.id && styles.selectedStyleItem,
+                  styles.styleOption,
+                  currentStyle === style.id && styles.selectedOption,
+                  index === CALENDAR_STYLES.length - 1 && styles.lastOption
                 ]}
                 onPress={() => handleStyleSelect(style)}
-                activeOpacity={0.7}
+                activeOpacity={0.8}
               >
-                <View style={styles.styleIcon}>
-                  <Text style={styles.iconText}>{style.icon}</Text>
-                </View>
+                {/* 顏色指示器 */}
+                <View style={[styles.colorIndicator, { backgroundColor: style.color }]} />
                 
-                <View style={styles.styleContent}>
+                {/* 文字內容 */}
+                <View style={styles.textContainer}>
                   <Text style={[
                     styles.styleName,
-                    currentStyle === style.id && styles.selectedStyleName,
+                    currentStyle === style.id && styles.selectedStyleName
                   ]}>
                     {style.name}
                   </Text>
                   <Text style={[
                     styles.styleDescription,
-                    currentStyle === style.id && styles.selectedStyleDescription,
+                    currentStyle === style.id && styles.selectedStyleDescription
                   ]}>
                     {style.description}
                   </Text>
                 </View>
                 
+                {/* 選中狀態指示器 */}
                 {currentStyle === style.id && (
-                  <View style={styles.selectedIndicator}>
-                    <Text style={styles.selectedIndicatorText}>✓</Text>
+                  <View style={[styles.selectedIndicator, { backgroundColor: style.color }]}>
+                    <View style={styles.selectedDot} />
                   </View>
                 )}
               </TouchableOpacity>
             ))}
           </ScrollView>
           
-          <View style={styles.modalFooter}>
-            <Text style={styles.footerText}>
-              {t('calendarStyleSelector.footerText')}
-            </Text>
+          {/* 底部操作區域 */}
+          <View style={styles.footerContainer}>
+            <TouchableOpacity 
+              style={styles.cancelButton}
+              onPress={onClose}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.cancelButtonText}>
+                {t('common.cancel') || 'キャンセル'}
+              </Text>
+            </TouchableOpacity>
           </View>
-        </View>
+        </TouchableOpacity>
       </TouchableOpacity>
     </Modal>
   );
@@ -185,124 +183,141 @@ export default function CalendarStyleModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    justifyContent: 'flex-end',
   },
   modalContainer: {
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
-    width: '100%',
-    maxWidth: 350,
-    maxHeight: '80%',
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '75%',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 10,
+      height: -4,
     },
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
-    elevation: 15,
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 20,
   },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  headerContainer: {
+    paddingTop: 12,
+    paddingHorizontal: 24,
+    paddingBottom: 24,
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: '#F3F4F6',
   },
-  modalTitle: {
-    fontSize: 18,
+  handleBar: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#D1D5DB',
+    borderRadius: 2,
+    marginBottom: 20,
+  },
+  title: {
+    fontSize: 20,
     fontWeight: '700',
-    color: '#1f2937',
+    color: '#111827',
+    marginBottom: 8,
+    textAlign: 'center',
   },
-  closeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#f5f5f5',
-    justifyContent: 'center',
-    alignItems: 'center',
+  subtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 20,
   },
-  closeButtonText: {
-    fontSize: 16,
-    color: '#666',
-    fontWeight: '600',
+  contentContainer: {
+    flex: 1,
   },
-  styleList: {
+  scrollContent: {
     paddingVertical: 8,
   },
-  styleItem: {
+  styleOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#f9fafb',
+    borderBottomColor: '#F9FAFB',
+    backgroundColor: '#FFFFFF',
   },
-  selectedStyleItem: {
-    backgroundColor: '#eff6ff',
-    borderBottomColor: '#dbeafe',
+  selectedOption: {
+    backgroundColor: '#F8FAFF',
+    borderBottomColor: '#E5E7EB',
   },
-  styleIcon: {
-    width: 48,
+  lastOption: {
+    borderBottomWidth: 0,
+  },
+  colorIndicator: {
+    width: 4,
     height: 48,
-    borderRadius: 24,
-    backgroundColor: '#f8fafc',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
+    borderRadius: 2,
+    marginRight: 20,
   },
-  iconText: {
-    fontSize: 20,
-  },
-  styleContent: {
+  textContainer: {
     flex: 1,
   },
   styleName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1f2937',
+    color: '#111827',
     marginBottom: 4,
+    letterSpacing: -0.2,
   },
   selectedStyleName: {
-    color: '#3b82f6',
+    color: '#1F2937',
   },
   styleDescription: {
     fontSize: 13,
-    color: '#6b7280',
+    color: '#6B7280',
     lineHeight: 18,
+    letterSpacing: -0.1,
   },
   selectedStyleDescription: {
-    color: '#60a5fa',
+    color: '#9CA3AF',
   },
   selectedIndicator: {
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#3b82f6',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
-  selectedIndicatorText: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: '600',
+  selectedDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#FFFFFF',
   },
-  modalFooter: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+  footerContainer: {
+    paddingHorizontal: 24,
+    paddingVertical: 20,
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
-    alignItems: 'center',
+    borderTopColor: '#F3F4F6',
   },
-  footerText: {
-    fontSize: 12,
-    color: '#9ca3af',
-    textAlign: 'center',
-    fontStyle: 'italic',
+  cancelButton: {
+    height: 48,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#6B7280',
+    letterSpacing: -0.2,
   },
 }); 

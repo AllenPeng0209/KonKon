@@ -119,30 +119,30 @@ export default function CalendarViewSelector({
       
       // 使用多語言翻譯的樣式選擇對話框
       Alert.alert(
-        `📅 ${t('calendarStyleSelector.title')}`,
+        t('calendarStyleSelector.title'),
         t('calendarStyleSelector.subtitle'),
         [
           { 
-            text: `📅 ${t('calendarStyleSelector.styles.gridMonth')}`, 
+            text: t('calendarStyleSelector.styles.gridMonth'), 
             onPress: () => handleStyleSelect('grid-month', t('calendarStyleSelector.styles.gridMonth')) 
           },
           { 
-            text: `📊 ${t('calendarStyleSelector.styles.weeklyGrid')}`, 
+            text: t('calendarStyleSelector.styles.weeklyGrid'), 
             onPress: () => handleStyleSelect('weekly-grid', t('calendarStyleSelector.styles.weeklyGrid')) 
           },
           { 
-            text: `🎴 ${t('calendarStyleSelector.styles.cardMonth')}`, 
+            text: t('calendarStyleSelector.styles.cardMonth'), 
             onPress: () => handleStyleSelect('card-month', t('calendarStyleSelector.styles.cardMonth')) 
           },
           { 
-            text: `📋 ${t('calendarStyleSelector.styles.agendaList')}`, 
+            text: t('calendarStyleSelector.styles.agendaList'), 
             onPress: () => handleStyleSelect('agenda-list', t('calendarStyleSelector.styles.agendaList')) 
           },
           { 
-            text: `⏰ ${t('calendarStyleSelector.styles.timeline')}`, 
+            text: t('calendarStyleSelector.styles.timeline'), 
             onPress: () => handleStyleSelect('timeline', t('calendarStyleSelector.styles.timeline')) 
           },
-          { text: `❌ ${t('calendarStyleSelector.cancel')}`, style: 'cancel' },
+          { text: t('calendarStyleSelector.cancel'), style: 'cancel' },
         ],
         { cancelable: true }
       );

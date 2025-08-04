@@ -563,18 +563,27 @@
     "title": "Settings",
     "account": "Account",
     "editProfile": "Edit Profile",
+    "changePassword": "Change Password",
+    "family": "Family",
+    "familyManagement": "Family Management",
     "general": "General",
+    "notificationCenter": "Notification Center",
     "notificationSettings": "Notification Settings",
     "languageSelection": "Language Selection",
     "storage": "Storage",
     "clearCache": "Clear Cache",
     "logout": "Log Out",
     "logoutFailed": "Logout failed, please try again later",
+    "confirmLogoutTitle": "Confirm Logout",
+    "confirmLogoutMessage": "Are you sure you want to logout?",
     "confirmClearCacheTitle": "Confirm Clear Cache",
-    "confirmClearCacheMessage": "Are you sure you want to clear %{size}MB of cache?",
+    "confirmClearCacheMessage": "Are you sure you want to clear {size}MB of cache? This includes chat message cache.",
     "cancel": "Cancel",
     "confirm": "Confirm",
     "cacheCleared": "Cache cleared",
+    "cacheClearedMessage": "All cache including chat message cache has been cleared successfully.",
+    "clearCacheFailed": "Clear failed",
+    "clearCacheFailedMessage": "Some cache failed to clear, please try again later.",
     "language": "Language",
     "logoutSuccess": "Logged out successfully"
   },
@@ -744,6 +753,49 @@
     "eventsTitle": "%{count} events",
     "noEvents": "No events on this day",
     "noEventsDescription": "Click on a date in the calendar to view or add events"
+  },
+  "calendarCard": {
+    "yearMonth": "%{year} %{month}",
+    "eventsCount": "%{count} events",
+    "noEvents": "No events",
+    "weekdays": {
+      "monday": "Mon",
+      "tuesday": "Tue", 
+      "wednesday": "Wed",
+      "thursday": "Thu",
+      "friday": "Fri",
+      "saturday": "Sat",
+      "sunday": "Sun"
+    }
+  },
+  "smartButton": {
+    "defaultText": "Long press to speak, create smart album",
+    "permissionError": "Permission Error",
+    "microphonePermissionNeeded": "Microphone permission is required for recording",
+    "recordingFailed": "Recording Failed",
+    "recordingFailedMessage": "Unable to start recording, please check microphone permissions",
+    "listening": "Listening...",
+    "textParsingFailed": "Text parsing failed",
+    "processing": "Processing failed",
+    "recording": "🎤 Recording...",
+    "inputPlaceholder": "Enter schedule description, e.g.: Meeting at 3 PM tomorrow...",
+    "processingText": "Intelligently parsing schedule...",
+    "photo": "Photo",
+    "album": "Album",
+    "manualAdd": "Manual Add",
+    "thinkingMessages": {
+      "received": "Got it! Let me think...",
+      "thinking": "Hmm... Brain spinning at high speed...",
+      "checking": "Let me check your schedule~",
+      "almostDone": "Almost done!",
+      "generating": "Working hard... Generating magic..."
+    },
+    "errors": {
+      "albumParsingFailed": "Unable to parse album creation command",
+      "scheduleParsingFailed": "Unable to parse any schedule events",
+      "aiParsingFailed": "AI parsing failed",
+      "recordingProcessFailed": "Recording processing failed"
+    }
   },
   "loadingModal": {
     "processing": "Processing..."
@@ -979,14 +1031,14 @@
   "drawer": {
     "viewProfile": "View Profile",
     "newSpace": "New Space",
-    "metaSpace": "Meta Space",
+    "metaSpace": "Meta",
     "metaSpaceDescription": "View all space information",
     "allSpaces": "All %{count} spaces",
     "membersCount": "%{count} members",
     "totalMembersCount": "%{count} members total"
   },
   "space": {
-    "personalSpace": "Personal Space",
+    "personalSpace": "Personal",
     "personalSpaceDescription": "Personal Exclusive Space",
     "personalSpaceNotice": "Personal Space is your private workspace and cannot be dissolved or left",
     "personalSpaceCannotDissolve": "Personal Space cannot be dissolved",

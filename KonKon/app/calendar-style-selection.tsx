@@ -21,69 +21,68 @@ interface StyleOption {
   id: CalendarStyleId;
   nameKey: string;
   descriptionKey: string;
-  emoji: string;
   categoryKey: string;
   color: string;
 }
 
 const styleOptions: StyleOption[] = [
   // 基礎樣式
-  { id: 'grid-month', nameKey: 'gridMonth', descriptionKey: 'gridMonthDesc', emoji: '📅', categoryKey: 'basic', color: '#3b82f6' },
-  { id: 'card-month', nameKey: 'cardMonth', descriptionKey: 'cardMonthDesc', emoji: '🗂️', categoryKey: 'family', color: '#8b5cf6' },
-  { id: 'weekly-grid', nameKey: 'weeklyGrid', descriptionKey: 'weeklyGridDesc', emoji: '📊', categoryKey: 'basic', color: '#10b981' },
-  { id: 'timeline', nameKey: 'timeline', descriptionKey: 'timelineDesc', emoji: '⏰', categoryKey: 'basic', color: '#f59e0b' },
-  { id: 'day-focus', nameKey: 'dayFocus', descriptionKey: 'dayFocusDesc', emoji: '🎯', categoryKey: 'basic', color: '#ef4444' },
-  { id: 'agenda-list', nameKey: 'agendaList', descriptionKey: 'agendaListDesc', emoji: '📋', categoryKey: 'basic', color: '#8b5cf6' },
-  { id: 'compact-month', nameKey: 'compactMonth', descriptionKey: 'compactMonthDesc', emoji: '📆', categoryKey: 'basic', color: '#06b6d4' },
-  { id: 'three-day', nameKey: 'threeDayView', descriptionKey: 'threeDayViewDesc', emoji: '📖', categoryKey: 'basic', color: '#f97316' },
+  { id: 'grid-month', nameKey: 'gridMonth', descriptionKey: 'gridMonthDesc', categoryKey: 'basic', color: '#3b82f6' },
+  { id: 'card-month', nameKey: 'cardMonth', descriptionKey: 'cardMonthDesc', categoryKey: 'family', color: '#8b5cf6' },
+  { id: 'weekly-grid', nameKey: 'weeklyGrid', descriptionKey: 'weeklyGridDesc', categoryKey: 'basic', color: '#10b981' },
+  { id: 'timeline', nameKey: 'timeline', descriptionKey: 'timelineDesc', categoryKey: 'basic', color: '#f59e0b' },
+  { id: 'day-focus', nameKey: 'dayFocus', descriptionKey: 'dayFocusDesc', categoryKey: 'basic', color: '#ef4444' },
+  { id: 'agenda-list', nameKey: 'agendaList', descriptionKey: 'agendaListDesc', categoryKey: 'basic', color: '#8b5cf6' },
+  { id: 'compact-month', nameKey: 'compactMonth', descriptionKey: 'compactMonthDesc', categoryKey: 'basic', color: '#06b6d4' },
+  { id: 'three-day', nameKey: 'threeDayView', descriptionKey: 'threeDayViewDesc', categoryKey: 'basic', color: '#f97316' },
   
   // 家庭專用
-  { id: 'family-grid', nameKey: 'familyGrid', descriptionKey: 'familyGridDesc', emoji: '👨‍👩‍👧‍👦', categoryKey: 'family', color: '#f97316' },
-  { id: 'family-orbit', nameKey: 'familyOrbit', descriptionKey: 'familyOrbitDesc', emoji: '🌀', categoryKey: 'family', color: '#6366f1' },
-  { id: 'family-puzzle', nameKey: 'familyPuzzle', descriptionKey: 'familyPuzzleDesc', emoji: '🧩', categoryKey: 'family', color: '#ec4899' },
-  { id: 'family-garden', nameKey: 'familyGarden', descriptionKey: 'familyGardenDesc', emoji: '🌻', categoryKey: 'family', color: '#22c55e' },
-  { id: 'year-overview', nameKey: 'yearOverview', descriptionKey: 'yearOverviewDesc', emoji: '📅', categoryKey: 'family', color: '#059669' },
+  { id: 'family-grid', nameKey: 'familyGrid', descriptionKey: 'familyGridDesc', categoryKey: 'family', color: '#f97316' },
+  { id: 'family-orbit', nameKey: 'familyOrbit', descriptionKey: 'familyOrbitDesc', categoryKey: 'family', color: '#6366f1' },
+  { id: 'family-puzzle', nameKey: 'familyPuzzle', descriptionKey: 'familyPuzzleDesc', categoryKey: 'family', color: '#ec4899' },
+  { id: 'family-garden', nameKey: 'familyGarden', descriptionKey: 'familyGardenDesc', categoryKey: 'family', color: '#22c55e' },
+  { id: 'year-overview', nameKey: 'yearOverview', descriptionKey: 'yearOverviewDesc', categoryKey: 'family', color: '#059669' },
   
   // 視覺創新類
-  { id: 'cloud-floating', nameKey: 'cloudFloating', descriptionKey: 'cloudFloatingDesc', emoji: '☁️', categoryKey: 'visual', color: '#38bdf8' },
-  { id: 'constellation-wheel', nameKey: 'constellationWheel', descriptionKey: 'constellationWheelDesc', emoji: '⭐', categoryKey: 'visual', color: '#a855f7' },
-  { id: 'subway-map', nameKey: 'subwayMap', descriptionKey: 'subwayMapDesc', emoji: '🚇', categoryKey: 'visual', color: '#ef4444' },
-  { id: 'garden-plant', nameKey: 'gardenPlant', descriptionKey: 'gardenPlantDesc', emoji: '🌱', categoryKey: 'visual', color: '#22c55e' },
+  { id: 'cloud-floating', nameKey: 'cloudFloating', descriptionKey: 'cloudFloatingDesc', categoryKey: 'visual', color: '#38bdf8' },
+  { id: 'constellation-wheel', nameKey: 'constellationWheel', descriptionKey: 'constellationWheelDesc', categoryKey: 'visual', color: '#a855f7' },
+  { id: 'subway-map', nameKey: 'subwayMap', descriptionKey: 'subwayMapDesc', categoryKey: 'visual', color: '#ef4444' },
+  { id: 'garden-plant', nameKey: 'gardenPlant', descriptionKey: 'gardenPlantDesc', categoryKey: 'visual', color: '#22c55e' },
   
   // 互動遊戲類
-  { id: 'puzzle-piece', nameKey: 'puzzlePiece', descriptionKey: 'puzzlePieceDesc', emoji: '🧩', categoryKey: 'interactive', color: '#f59e0b' },
-  { id: 'fishing-pond', nameKey: 'fishingPond', descriptionKey: 'fishingPondDesc', emoji: '🎣', categoryKey: 'interactive', color: '#06b6d4' },
-  { id: 'space-exploration', nameKey: 'spaceExploration', descriptionKey: 'spaceExplorationDesc', emoji: '🚀', categoryKey: 'interactive', color: '#8b5cf6' },
-  { id: 'treasure-map', nameKey: 'treasureMap', descriptionKey: 'treasureMapDesc', emoji: '🗺️', categoryKey: 'interactive', color: '#f97316' },
+  { id: 'puzzle-piece', nameKey: 'puzzlePiece', descriptionKey: 'puzzlePieceDesc', categoryKey: 'interactive', color: '#f59e0b' },
+  { id: 'fishing-pond', nameKey: 'fishingPond', descriptionKey: 'fishingPondDesc', categoryKey: 'interactive', color: '#06b6d4' },
+  { id: 'space-exploration', nameKey: 'spaceExploration', descriptionKey: 'spaceExplorationDesc', categoryKey: 'interactive', color: '#8b5cf6' },
+  { id: 'treasure-map', nameKey: 'treasureMap', descriptionKey: 'treasureMapDesc', categoryKey: 'interactive', color: '#f97316' },
   
   // 數據可視化類
-  { id: 'heatmap', nameKey: 'heatmap', descriptionKey: 'heatmapDesc', emoji: '🔥', categoryKey: 'dataViz', color: '#ef4444' },
-  { id: 'gantt-chart', nameKey: 'ganttChart', descriptionKey: 'ganttChartDesc', emoji: '📊', categoryKey: 'dataViz', color: '#059669' },
-  { id: 'heartbeat', nameKey: 'heartbeat', descriptionKey: 'heartbeatDesc', emoji: '💓', categoryKey: 'dataViz', color: '#ec4899' },
-  { id: 'bubble-chart', nameKey: 'bubbleChart', descriptionKey: 'bubbleChartDesc', emoji: '🫧', categoryKey: 'dataViz', color: '#38bdf8' },
+  { id: 'heatmap', nameKey: 'heatmap', descriptionKey: 'heatmapDesc', categoryKey: 'dataViz', color: '#ef4444' },
+  { id: 'gantt-chart', nameKey: 'ganttChart', descriptionKey: 'ganttChartDesc', categoryKey: 'dataViz', color: '#059669' },
+  { id: 'heartbeat', nameKey: 'heartbeat', descriptionKey: 'heartbeatDesc', categoryKey: 'dataViz', color: '#ec4899' },
+  { id: 'bubble-chart', nameKey: 'bubbleChart', descriptionKey: 'bubbleChartDesc', categoryKey: 'dataViz', color: '#38bdf8' },
   
   // 情境主題類
-  { id: 'seasonal-landscape', nameKey: 'seasonalLandscape', descriptionKey: 'seasonalLandscapeDesc', emoji: '🏞️', categoryKey: 'theme', color: '#22c55e' },
-  { id: 'bookshelf', nameKey: 'bookshelf', descriptionKey: 'bookshelfDesc', emoji: '📚', categoryKey: 'theme', color: '#92400e' },
-  { id: 'music-staff', nameKey: 'musicStaff', descriptionKey: 'musicStaffDesc', emoji: '🎵', categoryKey: 'theme', color: '#a855f7' },
-  { id: 'kitchen-recipe', nameKey: 'kitchenRecipe', descriptionKey: 'kitchenRecipeDesc', emoji: '👨‍🍳', categoryKey: 'theme', color: '#f59e0b' },
+  { id: 'seasonal-landscape', nameKey: 'seasonalLandscape', descriptionKey: 'seasonalLandscapeDesc', categoryKey: 'theme', color: '#22c55e' },
+  { id: 'bookshelf', nameKey: 'bookshelf', descriptionKey: 'bookshelfDesc', categoryKey: 'theme', color: '#92400e' },
+  { id: 'music-staff', nameKey: 'musicStaff', descriptionKey: 'musicStaffDesc', categoryKey: 'theme', color: '#a855f7' },
+  { id: 'kitchen-recipe', nameKey: 'kitchenRecipe', descriptionKey: 'kitchenRecipeDesc', categoryKey: 'theme', color: '#f59e0b' },
   
   // 運動健康類
-  { id: 'running-track', nameKey: 'runningTrack', descriptionKey: 'runningTrackDesc', emoji: '🏃‍♂️', categoryKey: 'fitness', color: '#ef4444' },
-  { id: 'mood-diary', nameKey: 'moodDiary', descriptionKey: 'moodDiaryDesc', emoji: '😊', categoryKey: 'fitness', color: '#ec4899' },
-  { id: 'fitness-challenge', nameKey: 'fitnessChallenge', descriptionKey: 'fitnessChallengeDesc', emoji: '💪', categoryKey: 'fitness', color: '#f97316' },
+  { id: 'running-track', nameKey: 'runningTrack', descriptionKey: 'runningTrackDesc', categoryKey: 'health', color: '#ef4444' },
+  { id: 'mood-diary', nameKey: 'moodDiary', descriptionKey: 'moodDiaryDesc', categoryKey: 'health', color: '#ec4899' },
+  { id: 'fitness-challenge', nameKey: 'fitnessChallenge', descriptionKey: 'fitnessChallengeDesc', categoryKey: 'health', color: '#22c55e' },
   
   // 未來科技類
-  { id: 'cube-3d', nameKey: 'cube3d', descriptionKey: 'cube3dDesc', emoji: '🔷', categoryKey: 'tech', color: '#06b6d4' },
-  { id: 'ai-prediction', nameKey: 'aiPrediction', descriptionKey: 'aiPredictionDesc', emoji: '🤖', categoryKey: 'tech', color: '#22c55e' },
-  { id: 'ar-view', nameKey: 'arView', descriptionKey: 'arViewDesc', emoji: '🔮', categoryKey: 'tech', color: '#8b5cf6' },
+  { id: 'cube-3d', nameKey: 'cube3d', descriptionKey: 'cube3dDesc', categoryKey: 'future', color: '#6366f1' },
+  { id: 'ai-prediction', nameKey: 'aiPrediction', descriptionKey: 'aiPredictionDesc', categoryKey: 'future', color: '#8b5cf6' },
+  { id: 'ar-view', nameKey: 'arView', descriptionKey: 'arViewDesc', categoryKey: 'future', color: '#f59e0b' },
   
-  // 日系家庭專用
-  { id: 'seasonal-harmony', nameKey: 'seasonalHarmony', descriptionKey: 'seasonalHarmonyDesc', emoji: '🌸', categoryKey: 'japanese', color: '#f472b6' },
-  { id: 'family-notebook', nameKey: 'familyNotebook', descriptionKey: 'familyNotebookDesc', emoji: '📔', categoryKey: 'japanese', color: '#a855f7' },
-  { id: 'bento-box', nameKey: 'bentoBox', descriptionKey: 'bentoBoxDesc', emoji: '🍱', categoryKey: 'japanese', color: '#84cc16' },
-  { id: 'origami-calendar', nameKey: 'origamiCalendar', descriptionKey: 'origamiCalendarDesc', emoji: '🎎', categoryKey: 'japanese', color: '#f59e0b' },
-  { id: 'ryokan-style', nameKey: 'ryokanStyle', descriptionKey: 'ryokanStyleDesc', emoji: '🏮', categoryKey: 'japanese', color: '#f97316' },
+  // 日本特色類
+  { id: 'seasonal-harmony', nameKey: 'seasonalHarmony', descriptionKey: 'seasonalHarmonyDesc', categoryKey: 'japanese', color: '#059669' },
+  { id: 'family-notebook', nameKey: 'familyNotebook', descriptionKey: 'familyNotebookDesc', categoryKey: 'japanese', color: '#92400e' },
+  { id: 'bento-box', nameKey: 'bentoBox', descriptionKey: 'bentoBoxDesc', categoryKey: 'japanese', color: '#f59e0b' },
+  { id: 'origami-calendar', nameKey: 'origamiCalendar', descriptionKey: 'origamiCalendarDesc', categoryKey: 'japanese', color: '#ec4899' },
+  { id: 'ryokan-style', nameKey: 'ryokanStyle', descriptionKey: 'ryokanStyleDesc', categoryKey: 'japanese', color: '#92400e' },
 ];
 
 export default function CalendarStyleSelection() {
@@ -189,9 +188,7 @@ export default function CalendarStyleSelection() {
         ]}
         onPress={() => handleStyleSelect(option.id)}
       >
-        <View style={[styles.styleEmoji, { backgroundColor: option.color + '20' }]}>
-          <Text style={styles.emojiText}>{option.emoji}</Text>
-        </View>
+        <View style={[styles.colorIndicator, { backgroundColor: option.color }]} />
         <View style={styles.styleInfo}>
           <Text style={[styles.styleName, isSelected && styles.styleNameSelected]}>
             {t(`calendarStyleSelector.styles.${option.nameKey}` as any)}
@@ -308,16 +305,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8fafc',
     borderWidth: 2,
   },
-  styleEmoji: {
-    width: 50,
+  colorIndicator: {
+    width: 4,
     height: 50,
-    borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 15,
-  },
-  emojiText: {
-    fontSize: 24,
+    borderRadius: 2,
+    marginRight: 20,
   },
   styleInfo: {
     flex: 1,

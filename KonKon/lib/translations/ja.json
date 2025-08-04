@@ -578,18 +578,27 @@
     "title": "設定",
     "account": "アカウント",
     "editProfile": "プロフィールを編集",
+    "changePassword": "パスワードを変更",
+    "family": "家族",
+    "familyManagement": "家族管理",
     "general": "一般",
+    "notificationCenter": "通知センター",
     "notificationSettings": "通知設定",
     "languageSelection": "言語選択",
     "storage": "ストレージ",
     "clearCache": "キャッシュをクリア",
     "logout": "ログアウト",
     "logoutFailed": "ログアウトに失敗しました、後でもう一度お試しください",
+    "confirmLogoutTitle": "ログアウトの確認",
+    "confirmLogoutMessage": "本当にログアウトしますか？",
     "confirmClearCacheTitle": "キャッシュのクリアを確認",
-    "confirmClearCacheMessage": "本当に%{size}MBのキャッシュをクリアしますか？",
+    "confirmClearCacheMessage": "本当に{size}MBのキャッシュをクリアしますか？これにはチャットメッセージキャッシュも含まれます。",
     "cancel": "キャンセル",
     "confirm": "確認",
-    "cacheCleared": "キャッシュがクリアされました"
+    "cacheCleared": "キャッシュがクリアされました",
+    "cacheClearedMessage": "チャットメッセージキャッシュを含むすべてのキャッシュがクリアされました。",
+    "clearCacheFailed": "クリアに失敗しました",
+    "clearCacheFailedMessage": "一部のキャッシュのクリアに失敗しました。後でもう一度お試しください。"
   },
   "userAgreement": {
     "title": "ユーザー契約",
@@ -757,6 +766,49 @@
     "eventsTitle": "%{count}件のイベント",
     "noEvents": "この日にはイベントがありません",
     "noEventsDescription": "カレンダーの日付をクリックしてイベントを表示または追加します"
+  },
+  "calendarCard": {
+    "yearMonth": "%{year}年%{month}月",
+    "eventsCount": "%{count} 個のイベント",
+    "noEvents": "イベントなし",
+    "weekdays": {
+      "monday": "月",
+      "tuesday": "火", 
+      "wednesday": "水",
+      "thursday": "木",
+      "friday": "金",
+      "saturday": "土",
+      "sunday": "日"
+    }
+  },
+  "smartButton": {
+    "defaultText": "長押しして話し、スマートアルバムを作成",
+    "permissionError": "権限エラー",
+    "microphonePermissionNeeded": "録音にはマイクの権限が必要です",
+    "recordingFailed": "録音失敗",
+    "recordingFailedMessage": "録音を開始できません。マイクの権限を確認してください",
+    "listening": "聞いています...",
+    "textParsingFailed": "テキスト解析失敗",
+    "processing": "処理失敗",
+    "recording": "🎤 録音中...",
+    "inputPlaceholder": "スケジュール説明を入力してください。例：明日の午後3時に会議...",
+    "processingText": "スケジュールを知的に解析中...",
+    "photo": "写真",
+    "album": "アルバム",
+    "manualAdd": "手動追加",
+    "thinkingMessages": {
+      "received": "了解！考えてみますね...",
+      "thinking": "うーん...脳がフル回転中...",
+      "checking": "スケジュールを確認しています~",
+      "almostDone": "もうすぐ完了です！",
+      "generating": "頑張っています...魔法を生成中..."
+    },
+    "errors": {
+      "albumParsingFailed": "アルバム作成コマンドを解析できませんでした",
+      "scheduleParsingFailed": "スケジュールイベントを解析できませんでした",
+      "aiParsingFailed": "AI解析に失敗しました",
+      "recordingProcessFailed": "録音処理に失敗しました"
+    }
   },
   "loadingModal": {
     "processing": "処理中..."
