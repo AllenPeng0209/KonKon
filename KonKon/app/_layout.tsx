@@ -39,6 +39,8 @@ function ProtectedLayout() {
   const [isRouteTransitioning, setIsRouteTransitioning] = useState(false);
   const translateX = useSharedValue(-width);
 
+  // 移除了 ATT 權限請求，現在在 RootLayout 中處理
+
   useEffect(() => {
     if (isDrawerVisible) {
       translateX.value = withTiming(0, { duration: 300 });
@@ -189,27 +191,42 @@ export default function RootLayout() {
   const [loaded] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
+  const [trackingPermissionRequested, setTrackingPermissionRequested] = useState(false);
 
+  // 在應用最開始就請求 ATT 權限
   useEffect(() => {
-    (async () => {
-      const { status } = await requestTrackingPermissionsAsync();
-      if (status === 'granted') {
-        console.log('Yay! I have user permission to track an advertiser identifier!');
+    const requestTrackingPermission = async () => {
+      try {
+        const { status } = await requestTrackingPermissionsAsync();
+        console.log('App Tracking Transparency permission status:', status);
+        setTrackingPermissionRequested(true);
+      } catch (error) {
+        console.error('Error requesting tracking permission:', error);
+        setTrackingPermissionRequested(true); // 即使出錯也繼續
       }
-    })();
-  }, []);
+    };
 
-  useEffect(() => {
+    // 只有在字體載入完成後才請求權限
     if (loaded) {
-      SplashScreen.hideAsync();
+      requestTrackingPermission();
     }
   }, [loaded]);
 
   useEffect(() => {
-    registerForPushNotificationsAsync();
-  }, []);
+    if (loaded && trackingPermissionRequested) {
+      SplashScreen.hideAsync();
+    }
+  }, [loaded, trackingPermissionRequested]);
 
-  if (!loaded) {
+  useEffect(() => {
+    // 只有在 ATT 權限請求完成後才註冊推送通知
+    if (trackingPermissionRequested) {
+      registerForPushNotificationsAsync();
+    }
+  }, [trackingPermissionRequested]);
+
+  // 在 ATT 權限請求完成之前顯示載入畫面
+  if (!loaded || !trackingPermissionRequested) {
     return null;
   }
 

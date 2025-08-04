@@ -18,7 +18,7 @@
       "usesAppleSignIn": true,
       "supportsTablet": true,
       "bundleIdentifier": "com.agenthub.konkon",
-      "buildNumber": "18",
+      "buildNumber": "20",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "CFBundleAllowMixedLocalizations": true,
@@ -73,7 +73,8 @@
       ],
       "expo-audio",
       "expo-image-picker",
-      "expo-apple-authentication"
+      "expo-apple-authentication",
+      "expo-tracking-transparency"
     ],
     "experiments": {
       "typedRoutes": true

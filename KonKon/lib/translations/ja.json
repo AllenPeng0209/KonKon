@@ -8,9 +8,37 @@
       "ja-JP": "日本語"
     }
   },
+  "yearMonthPicker": {
+    "title": "年月選択",
+    "subtitle": "スクロールして表示したい年月を選択",
+    "year": "年",
+    "month": "月",
+    "cancel": "キャンセル",
+    "confirm": "決定",
+    "searchTitle": "検索機能",
+    "searchPlaceholder": "検索機能開発中...",
+    "months": {
+      "1": "1月",
+      "2": "2月", 
+      "3": "3月",
+      "4": "4月",
+      "5": "5月",
+      "6": "6月",
+      "7": "7月",
+      "8": "8月",
+      "9": "9月",
+      "10": "10月",
+      "11": "11月",
+      "12": "12月"
+    }
+  },
   "calendarStyleSelector": {
     "title": "カレンダースタイルを選択",
     "subtitle": "お好みのカレンダー表示方式を選択してください：",
+    "alertTitle": "📅 カレンダースタイル選択", 
+    "alertSubtitle": "お好みの表示方式を選択してください：",
+    "cancel": "❌ キャンセル",
+    "footerText": "カレンダーを長押しで素早く切り替え",
     "categories": {
       "basic": "基本スタイル",
       "family": "家族専用",
@@ -106,11 +134,10 @@
       "origamiCalendarDesc": "日本の折り紙アートカレンダー",
       "ryokanStyleDesc": "日本の旅館テーマビュー"
     },
-    "cancel": "キャンセル",
-    "changeSuccess": "スタイルが変更されました",
+    "changeSuccess": "スタイル変更完了",
     "changeSuccessMessage": "「%{styleName}」に切り替えました",
-    "saveFailed": "保存に失敗しました",
-    "saveFailedMessage": "スタイル設定を保存できませんでした。もう一度お試しください",
+    "saveFailed": "保存失敗",
+    "saveFailedMessage": "スタイル設定の保存に失敗しました。再試行してください",
     "footerText": "お好みのカレンダービュースタイルを選択してください。設定は自動的に保存されます"
   },
   "home": {

@@ -8,9 +8,41 @@
       "ja-JP": "Japanese"
     }
   },
+  "yearMonthPicker": {
+    "title": "Select Year & Month",
+    "subtitle": "Scroll to select the year and month you want to view",
+    "year": "Year",
+    "month": "Month",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "searchTitle": "Search",
+    "searchPlaceholder": "Search feature in development...",
+    "months": {
+      "1": "Jan",
+      "2": "Feb", 
+      "3": "Mar",
+      "4": "Apr",
+      "5": "May",
+      "6": "Jun",
+      "7": "Jul",
+      "8": "Aug",
+      "9": "Sep",
+      "10": "Oct",
+      "11": "Nov",
+      "12": "Dec"
+    }
+  },
   "calendarStyleSelector": {
     "title": "Select Calendar Style",
     "subtitle": "Choose your preferred calendar display:",
+    "alertTitle": "📅 Select Calendar Style", 
+    "alertSubtitle": "Choose your preferred display method:",
+    "cancel": "❌ Cancel",
+    "footerText": "Long press calendar for quick style switching",
+    "changeSuccess": "Style Changed",
+    "changeSuccessMessage": "Switched to '%{styleName}'",
+    "saveFailed": "Save Failed",
+    "saveFailedMessage": "Unable to save style settings, please try again",
     "categories": {
       "basic": "Basic Styles",
       "family": "Family Specific",
