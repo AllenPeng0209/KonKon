@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { getCurrentLocale, t } from '../../lib/i18n';
 import { CalendarViewProps } from './CalendarViewTypes';
 
 export default function AgendaListView({
@@ -9,7 +10,7 @@ export default function AgendaListView({
 }: CalendarViewProps) {
   const scrollViewRef = useRef<ScrollView>(null);
 
-  // 根据日期分组事件并按今天为中心重新排序
+  // 根據日期分組事件並按今天為中心重新排序
   const groupAndSortEventsByDate = () => {
     const grouped: { [key: string]: any[] } = {};
     const today = new Date();
@@ -25,7 +26,7 @@ export default function AgendaListView({
       grouped[dateKey].push(event);
     });
     
-    // 按时间排序每个日期的事件
+    // 按時間排序每個日期的事件
     Object.keys(grouped).forEach(dateKey => {
       grouped[dateKey].sort((a, b) => a.start_ts - b.start_ts);
     });
@@ -54,12 +55,13 @@ export default function AgendaListView({
     tomorrow.setDate(today.getDate() + 1);
 
     if (date.toDateString() === today.toDateString()) {
-      return '今天';
+      return t('home.today');
     } else if (date.toDateString() === tomorrow.toDateString()) {
-      return '明天';
+      return t('todos.tomorrow');
     } else {
-      // 只顯示未來日期，不需要 "天前/天后" 標識
-      const dateStr = date.toLocaleDateString('zh-CN', { 
+      // 只顯示未來日期，不需要 "天前/天後" 標識
+      const locale = getCurrentLocale();
+      const dateStr = date.toLocaleDateString(locale, { 
         month: 'long', 
         day: 'numeric',
         weekday: 'long'
@@ -70,7 +72,7 @@ export default function AgendaListView({
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       
       if (diffDays > 1) {
-        return `${dateStr} (${diffDays}天後)`;
+        return `${dateStr} (${t('calendarCard.daysLater', { days: diffDays })})`;
       } else {
         return dateStr;
       }
@@ -78,7 +80,8 @@ export default function AgendaListView({
   };
 
   const formatTime = (timestamp: number) => {
-    return new Date(timestamp * 1000).toLocaleTimeString('zh-CN', {
+    const locale = getCurrentLocale();
+    return new Date(timestamp * 1000).toLocaleTimeString(locale, {
       hour: '2-digit',
       minute: '2-digit',
       hour12: false,
@@ -87,18 +90,18 @@ export default function AgendaListView({
 
   const formatDuration = (startTs: number, endTs?: number) => {
     if (!endTs) return '';
-    const duration = (endTs - startTs) / 3600; // 转换为小时
+    const duration = (endTs - startTs) / 3600; // 轉換為小時
     if (duration < 1) {
       const minutes = Math.round(duration * 60);
-      return `${minutes}分钟`;
+      return `${minutes}分鐘`;
     } else {
-      return `${duration.toFixed(1)}小时`;
+      return `${duration.toFixed(1)}小時`;
     }
   };
 
   const { grouped: groupedEvents, orderedDates, todayKey } = groupAndSortEventsByDate();
 
-  // 自动滚动到顶部（今天在最前面）
+  // 自動滾動到頂部（今天在最前面）
   useEffect(() => {
     if (orderedDates.length > 0 && scrollViewRef.current) {
       setTimeout(() => {
@@ -113,8 +116,8 @@ export default function AgendaListView({
         {orderedDates.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyIcon}>📅</Text>
-            <Text style={styles.emptyTitle}>暂无日程安排</Text>
-            <Text style={styles.emptyDescription}>您可以添加新的日程安排</Text>
+            <Text style={styles.emptyTitle}>{t('calendarCard.noEvents')}</Text>
+            <Text style={styles.emptyDescription}>{t('calendarCard.addNewEvent')}</Text>
           </View>
         ) : (
           orderedDates.map((dateKey: string) => (
@@ -127,7 +130,7 @@ export default function AgendaListView({
                   {formatDate(dateKey)}
                 </Text>
                 <Text style={styles.dateSubtitle}>
-                  {groupedEvents[dateKey].length} 个日程
+                  {t('calendarCard.eventsCount', { count: groupedEvents[dateKey].length })}
                 </Text>
               </View>
               

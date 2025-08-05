@@ -8,6 +8,22 @@
       "ja-JP": "日本語"
     }
   },
+  "calendar": {
+    "jan": "1月",
+    "feb": "2月",
+    "mar": "3月",
+    "apr": "4月",
+    "may": "5月",
+    "jun": "6月",
+    "jul": "7月",
+    "aug": "8月",
+    "sep": "9月",
+    "oct": "10月",
+    "nov": "11月",
+    "dec": "12月",
+    "noEvents": "予定はありません",
+    "addNewEvent": "新しい予定を追加できます"
+  },
   "calendarStyleSelector": {
     "title": "カレンダースタイルを選択",
     "subtitle": "お好みのカレンダー表示方式を選択してください：",
@@ -170,13 +186,13 @@
     "deleteRecurringEventMessage": "これは繰り返しイベントです。このインスタンスのみを削除しますか、それともこのシリーズのすべての将来のイベントを削除しますか？",
     "deleteInstance": "このインスタンスを削除",
     "deleteAllFuture": "すべての将来のイベントを削除",
-    "familyCalendar": "スペースカレンダー",
-    "recordFamilyTime": "スペースの素敵な時間を記録",
+    "familyCalendar": "カレンダー",
+    "recordFamilyTime": "素敵な時間を記録",
     "connectedToSystemCalendar": "システムカレンダーに接続済み",
     "today": "今日",
     "noEventsToday": "今日の予定はありません",
     "manualAddPrompt": "下の「手動追加」をクリックして新しいイベントを作成します",
-    "smartReminder": "スペースのスケジュールをスマートにリマインド、設定はこちら",
+    "smartReminder": "スケジュールをスマートにリマインド、設定はこちら",
     "longPressToTalk": "長押しして話す、素早く記録",
     "photo": "写真",
     "album": "アルバム",
@@ -443,13 +459,13 @@
     "createOrJoin": "作成または参加",
     "loading": "読み込み中...",
     "manageFamily": "スペース管理",
-    "familySchedule": "スペース日程",
-    "familyAssistant": "タスク一覧",
-    "choreAssignment": "家事分担",
-    "familyActivities": "健康管理",
-    "familyAlbum": "スペースアルバム",
-    "shoppingList": "買い物リスト",
-    "familyFinance": "スペース財務",
+    "familySchedule": "日程",
+    "familyAssistant": "タスク",
+    "choreAssignment": "家事",
+    "familyActivities": "健康",
+    "familyAlbum": "写真",
+    "shoppingList": "買物",
+    "familyFinance": "家計",
     "familyRecipes": "スペースの食事管理",
     "settings": "設定",
     "userAgreement": "ユーザー契約",
@@ -471,23 +487,23 @@
         "description": "家族メンバーのスケジュールと活動を管理"
       },
       "familyAssistant": {
-        "name": "ToDoリスト",
+        "name": "タスク",
         "description": "シンプルで使いやすい家族のToDo管理"
       },
       "choreAssignment": {
-        "name": "家事分担",
+        "name": "家事",
         "description": "家族メンバーの家事タスクを割り当てて追跡"
       },
       "familyActivities": {
-        "name": "健康管理", 
+        "name": "健康", 
         "description": "家族メンバーの健康状態を追跡・管理"
       },
       "familyAlbum": {
-        "name": "家族アルバム",
+        "name": "写真",
         "description": "大切な家族の思い出を収集・整理"
       },
       "shoppingList": {
-        "name": "買い物リスト",
+        "name": "買物",
         "description": "家族の買い物ニーズとリストを共有"
       },
       "familyFinance": {
@@ -605,7 +621,7 @@
     "lastUpdated": "最終更新日：2024年7月25日",
     "introduction": "KonKonへようこそ！本契約は、お客様とKonKon（以下「本アプリケーション」）との間で、本アプリケーションのダウンロード、インストール、使用、および本アプリケーションが提供する関連サービスの使用に関する法的合意です。",
     "serviceContentTitle": "1. サービス内容",
-    "serviceContent": "1.1 本アプリケーションは、スペースメンバーがより良いコミュニケーション、調整、およびスペース事務の計画を行うのを支援することを目的としたスペース管理ツールです。\n1.2 具体的なサービス内容には、スペースカレンダー、メンバー管理、家事分担、誕生日リマインダー、スペースアルバム、買い物リスト、スペース予算、緊急連絡先などが含まれます。\n1.3 本アプリケーションは、事業の発展に応じて、ユーザーに個別に通知することなく、サービス内容の一部を調整、アップグレード、または終了する権利を有します。",
+    "serviceContent": "1.1 本アプリケーションは、スペースメンバーがより良いコミュニケーション、調整、およびスペース事務の計画を行うのを支援することを目的としたスペース管理ツールです。\n1.2 具体的なサービス内容には、カレンダー、メンバー管理、家事分担、誕生日リマインダー、アルバム、買い物リスト、財務予算、緊急連絡先などが含まれます。\n1.3 本アプリケーションは、事業の発展に応じて、ユーザーに個別に通知することなく、サービス内容の一部を調整、アップグレード、または終了する権利を有します。",
     "userConductTitle": "2. ユーザーの行動規範",
     "userConduct": "2.1 本アプリケーションを使用する際は、適用されるすべての法令を遵守しなければなりません。\n2.2 以下の行為を含むがこれに限定されない、いかなる違法または不適切な活動にも本アプリケーションを利用してはなりません：\n- 嫌がらせ、中傷、侮辱、脅迫、わいせつ、暴力的、または法律、規制、公序良俗に違反する内容を公開、送信、拡散、保存すること。\n- 他者の知的財産権、営業秘密、肖像権、プライバシー権などの合法的権利を侵害すること。\n- コンピュータネットワークのセキュリティを危険にさらす行為を行うこと。",
     "intellectualPropertyTitle": "3. 知的財産権",
@@ -751,11 +767,11 @@
     "errorDescription": ".env.local ファイルで以下の環境変数を設定してください："
   },
   "firstSuggestions": {
-    "suggestion1": "今週のスペースの活動のスケジュールを手伝ってください",
+    "suggestion1": "今週の活動のスケジュールを手伝ってください",
     "suggestion2": "メンバーの誕生日や重要な記念日をリマインドしてください",
-    "suggestion3": "スペースの買い物リストを作成してください",
+    "suggestion3": "買い物リストを作成してください",
     "suggestion4": "家事の分担計画を立ててください",
-    "suggestion5": "スペース向けの週末のアクティビティをおすすめしてください"
+    "suggestion5": "週末のアクティビティをおすすめしてください"
   },
   "eventListModal": {
     "deleteEvent": "イベントを削除",
@@ -771,6 +787,8 @@
     "yearMonth": "%{year}年%{month}月",
     "eventsCount": "%{count} 個のイベント",
     "noEvents": "イベントなし",
+    "addNewEvent": "新しい予定を追加できます",
+    "daysLater": "%{days}日後",
     "weekdays": {
       "monday": "月",
       "tuesday": "火", 
@@ -1140,23 +1158,23 @@
         "description": "タスクの完了状況を監視"
       },
       "album": {
-        "name": "スペースアルバム",
+        "name": "写真",
         "description": "最新の写真と思い出を把握"
       },
       "chores": {
-        "name": "家事分担",
+        "name": "家事",
         "description": "家事の完了状況を追跡"
       },
       "shopping": {
-        "name": "買い物リスト",
+        "name": "買物",
         "description": "買い物のニーズを管理"
       },
       "finance": {
-        "name": "スペース管理",
+        "name": "家計",
         "description": "支出と予算を監視"
       },
       "health": {
-        "name": "健康管理",
+        "name": "健康",
         "description": "スペースメンバーの健康状態を気にかける"
       }
     },

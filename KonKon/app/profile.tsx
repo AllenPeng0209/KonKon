@@ -1,25 +1,27 @@
 import { t } from '@/lib/i18n';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
-    Alert,
-    Dimensions,
-    Image,
-    SafeAreaView,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  Dimensions,
+  Image,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { useFamily } from '../contexts/FamilyContext';
 import AvatarService from '../lib/avatarService';
 import { supabase } from '../lib/supabase';
 
-const { width: screenWidth } = Dimensions.get('window');
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -127,442 +129,413 @@ export default function ProfileScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f9fafb" />
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
       
-      {/* 顶部标题栏 - 美化版 */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#007AFF" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('profile.title')}</Text>
-        <View style={styles.headerRight} />
-      </View>
+      {/* 頂部漸層背景 */}
+      <LinearGradient
+        colors={['#2196F3', '#1976D2']}
+        style={styles.headerGradient}
+        locations={[0, 1]}
+      >
+        {/* 頂部標題欄 */}
+        <SafeAreaView>
+          <View style={styles.header}>
+            <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+              <Ionicons name="arrow-back" size={22} color="#fff" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>{t('profile.title')}</Text>
+            <View style={styles.headerRight} />
+          </View>
+        </SafeAreaView>
+
+        {/* 用戶資訊區域 */}
+        <View style={styles.userSection}>
+          <View style={styles.avatarContainer}>
+            <View style={styles.avatarOuter}>
+              <Image
+                source={{ uri: getAvatarUrl() }}
+                style={styles.avatarImage}
+                onError={(error) => {
+                  console.warn('頭像載入失敗:', error);
+                }}
+              />
+              <View style={styles.onlineIndicator} />
+            </View>
+          </View>
+          
+          <View style={styles.userInfo}>
+            <View style={styles.nameContainer}>
+              <Text style={styles.userName}>{getDisplayName()}</Text>
+              <View style={styles.vipBadge}>
+                <Ionicons name="diamond" size={10} color="#fff" />
+                <Text style={styles.vipText}>VIP</Text>
+              </View>
+            </View>
+            <Text style={styles.userId}>ID: {user?.id.slice(0, 8).toUpperCase()}</Text>
+          </View>
+
+          <TouchableOpacity style={styles.editButton} onPress={() => router.push('/edit-profile')}>
+            <Ionicons name="create-outline" size={18} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      </LinearGradient>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* 用户信息部分 - 美化版 */}
-        <View style={styles.userSection}>
-          <View style={styles.userInfo}>
-            <View style={styles.avatarContainer}>
-              <View style={styles.avatar}>
-                <Image
-                  source={{ uri: getAvatarUrl() }}
-                  style={styles.avatarImage}
-                  onError={(error) => {
-                    console.warn('頭像載入失敗:', error);
-                  }}
-                />
-                {/* 添加在線狀態指示器 */}
-                <View style={styles.onlineIndicator} />
-              </View>
-            </View>
-            <View style={styles.userDetails}>
-              <View style={styles.nameRow}>
-                <Text style={styles.userName}>{getDisplayName()}</Text>
-                <View style={styles.vipBadge}>
-                  <Ionicons name="diamond" size={12} color="#FFF" style={styles.vipBadgeIcon} />
-                  <Text style={styles.vipText}>VIP</Text>
-                </View>
-              </View>
-              <Text style={styles.userId}>ID: {user?.id.slice(0, 8).toUpperCase()}</Text>
-            </View>
-            <TouchableOpacity style={styles.editButton} onPress={() => router.push('/edit-profile')}>
-              <Ionicons name="create-outline" size={20} color="#007AFF" />
-            </TouchableOpacity>
+        {/* 家庭空間卡片 */}
+        <View style={styles.spaceCard}>
+          <View style={styles.spaceIcon}>
+            <Text style={styles.spaceEmoji}>
+              {activeFamily?.id === 'meta-space' ? '🌸' : activeFamily?.tag === 'personal' ? '🏮' : '🏯'}
+            </Text>
           </View>
-
-          {/* 家庭管理通知卡片 - 美化版 */}
-          <View style={styles.vipCard}>
-            <View style={styles.vipCardContent}>
-              <Text style={styles.vipIcon}>
-                {activeFamily?.id === 'meta-space' ? '🌌' : activeFamily?.tag === 'personal' ? '👤' : '🏡'}
-              </Text>
-              <View style={styles.vipTextContainer}>
-                <Text style={styles.vipMessage}>
-                  {activeFamily 
-                    ? (activeFamily.tag === 'personal' ? t('space.personalSpace') : activeFamily.name)
-                    : t('drawer.metaSpace')}
-                </Text>
-                <Text style={styles.vipSubMessage}>
-                  {activeFamily?.id === 'meta-space' 
-                    ? t('profile.metaSpaceView')
-                    : activeFamily?.tag === 'personal' 
-                      ? t('profile.personalSpace')
-                      : t('profile.familySpace')
-                  }
-                </Text>
-              </View>
-            </View>
-            <TouchableOpacity style={styles.vipButton} onPress={handleVIPBenefits}>
-              <Text style={styles.vipButtonText}>
-                {loading ? t('profile.loading') : t('profile.manageFamily')}
-              </Text>
-              <Ionicons name="chevron-forward" size={16} color="#FFF" style={styles.vipButtonIcon} />
-            </TouchableOpacity>
+          <View style={styles.spaceInfo}>
+            <Text style={styles.spaceTitle}>
+              {activeFamily 
+                ? (activeFamily.tag === 'personal' ? t('space.personalSpace') : activeFamily.name)
+                : t('drawer.metaSpace')}
+            </Text>
+            <Text style={styles.spaceSubtitle}>
+              {activeFamily?.id === 'meta-space' 
+                ? t('profile.metaSpaceView')
+                : activeFamily?.tag === 'personal' 
+                  ? t('profile.personalSpace')
+                  : t('profile.familySpace')
+              }
+            </Text>
           </View>
+          <TouchableOpacity style={styles.spaceButton} onPress={handleVIPBenefits}>
+            <Text style={styles.spaceButtonText}>
+              {loading ? t('profile.loading') : t('profile.manageFamily')}
+            </Text>
+            <Ionicons name="chevron-forward" size={14} color="#2196F3" />
+          </TouchableOpacity>
         </View>
 
-        {/* 功能网格 - 美化版 */}
-        <View style={styles.functionsGrid}>
-          <View style={styles.functionsRow}>
+        {/* 功能網格 */}
+        <View style={styles.functionsContainer}>
+          <View style={styles.functionsGrid}>
             <TouchableOpacity style={styles.functionItem} onPress={() => handleFunction('familySchedule')}>
-              <View style={[styles.functionIconContainer, { backgroundColor: '#FF6B6B15' }]}>
-                <Text style={styles.functionIcon}>📅</Text>
+              <View style={[styles.functionIcon, { backgroundColor: '#FFE5E5' }]}>
+                <Text style={styles.functionEmoji}>📅</Text>
               </View>
               <Text style={styles.functionText}>{t('profile.familySchedule')}</Text>
             </TouchableOpacity>
+            
             <TouchableOpacity style={styles.functionItem} onPress={() => handleFunction('familyAssistant')}>
-              <View style={[styles.functionIconContainer, { backgroundColor: '#4ECDC415' }]}>
-                <Text style={styles.functionIcon}>✅</Text>
+              <View style={[styles.functionIcon, { backgroundColor: '#E5F9E5' }]}>
+                <Text style={styles.functionEmoji}>✅</Text>
               </View>
               <Text style={styles.functionText}>{t('profile.familyAssistant')}</Text>
             </TouchableOpacity>
+            
             <TouchableOpacity style={styles.functionItem} onPress={() => handleFunction('choreAssignment')}>
-              <View style={[styles.functionIconContainer, { backgroundColor: '#45B7D115' }]}>
-                <Text style={styles.functionIcon}>🏠</Text>
+              <View style={[styles.functionIcon, { backgroundColor: '#E5F3FF' }]}>
+                <Text style={styles.functionEmoji}>🏠</Text>
               </View>
               <Text style={styles.functionText}>{t('profile.choreAssignment')}</Text>
             </TouchableOpacity>
+            
             <TouchableOpacity style={styles.functionItem} onPress={() => handleFunction('familyActivities')}>
-              <View style={[styles.functionIconContainer, { backgroundColor: '#F7DC6F15' }]}>
-                <Text style={styles.functionIcon}>💪</Text>
+              <View style={[styles.functionIcon, { backgroundColor: '#FFF5E5' }]}>
+                <Text style={styles.functionEmoji}>💪</Text>
               </View>
               <Text style={styles.functionText}>{t('profile.familyActivities')}</Text>
             </TouchableOpacity>
           </View>
-          <View style={styles.functionsRow}>
+          
+          <View style={styles.functionsGrid}>
             <TouchableOpacity style={styles.functionItem} onPress={() => handleFunction('familyAlbum')}>
-              <View style={[styles.functionIconContainer, { backgroundColor: '#BB6BD915' }]}>
-                <Text style={styles.functionIcon}>📸</Text>
+              <View style={[styles.functionIcon, { backgroundColor: '#F0E5FF' }]}>
+                <Text style={styles.functionEmoji}>📸</Text>
               </View>
               <Text style={styles.functionText}>{t('profile.familyAlbum')}</Text>
             </TouchableOpacity>
+            
             <TouchableOpacity style={styles.functionItem} onPress={() => handleFunction('shoppingList')}>
-              <View style={[styles.functionIconContainer, { backgroundColor: '#58D68D15' }]}>
-                <Text style={styles.functionIcon}>🛒</Text>
+              <View style={[styles.functionIcon, { backgroundColor: '#E5FFF5' }]}>
+                <Text style={styles.functionEmoji}>🛒</Text>
               </View>
               <Text style={styles.functionText}>{t('profile.shoppingList')}</Text>
             </TouchableOpacity>
+            
             <TouchableOpacity style={styles.functionItem} onPress={() => handleFunction('familyFinance')}>
-              <View style={[styles.functionIconContainer, { backgroundColor: '#F8C47115' }]}>
-                <Text style={styles.functionIcon}>💰</Text>
+              <View style={[styles.functionIcon, { backgroundColor: '#FFF9E5' }]}>
+                <Text style={styles.functionEmoji}>💰</Text>
               </View>
               <Text style={styles.functionText}>{t('profile.familyFinance')}</Text>
             </TouchableOpacity>
+            
             <TouchableOpacity style={styles.functionItem} onPress={() => handleFunction('familyRecipes')}>
-              <View style={[styles.functionIconContainer, { backgroundColor: '#85C1E915' }]}>
-                <Text style={styles.functionIcon}>👨‍🍳</Text>
+              <View style={[styles.functionIcon, { backgroundColor: '#E5F8FF' }]}>
+                <Text style={styles.functionEmoji}>👨‍🍳</Text>
               </View>
               <Text style={styles.functionText}>{t('profile.familyRecipes')}</Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* 设置选项 - 美化版 */}
-        <View style={styles.settingsSection}>
+        {/* 設置區域 */}
+        <View style={styles.settingsContainer}>
           <TouchableOpacity style={styles.settingItem} onPress={() => handleSetting('settings')}>
             <View style={styles.settingLeft}>
               <View style={styles.settingIconContainer}>
-                <Ionicons name="settings-outline" size={20} color="#666" />
+                <Ionicons name="settings-outline" size={18} color="#8E8E93" />
               </View>
               <Text style={styles.settingText}>{t('profile.settings')}</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#C0C0C0" />
+            <Ionicons name="chevron-forward" size={16} color="#C7C7CC" />
           </TouchableOpacity>
+          
+          <View style={styles.divider} />
+          
           <TouchableOpacity style={styles.settingItem} onPress={() => handleSetting('userAgreement')}>
             <View style={styles.settingLeft}>
               <View style={styles.settingIconContainer}>
-                <Ionicons name="document-text-outline" size={20} color="#666" />
+                <Ionicons name="document-text-outline" size={18} color="#8E8E93" />
               </View>
               <Text style={styles.settingText}>{t('profile.userAgreement')}</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#C0C0C0" />
+            <Ionicons name="chevron-forward" size={16} color="#C7C7CC" />
           </TouchableOpacity>
+          
+          <View style={styles.divider} />
+          
           <TouchableOpacity style={styles.settingItem} onPress={() => handleSetting('privacyPolicy')}>
             <View style={styles.settingLeft}>
               <View style={styles.settingIconContainer}>
-                <Ionicons name="shield-checkmark-outline" size={20} color="#666" />
+                <Ionicons name="shield-checkmark-outline" size={18} color="#8E8E93" />
               </View>
               <Text style={styles.settingText}>{t('profile.privacyPolicy')}</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#C0C0C0" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.settingItem} onPress={() => handleSetting('about')}>
-            <View style={styles.settingLeft}>
-              <View style={styles.settingIconContainer}>
-                <Ionicons name="information-circle-outline" size={20} color="#666" />
-              </View>
-              <Text style={styles.settingText}>{t('profile.about')}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color="#C0C0C0" />
+            <Ionicons name="chevron-forward" size={16} color="#C7C7CC" />
           </TouchableOpacity>
         </View>
+        
+        <View style={{ height: 40 }} />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9fafb',
+    backgroundColor: '#F8F9FA',
+  },
+  headerGradient: {
+    paddingBottom: 30,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 16,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-    // 添加輕微陰影
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
+    paddingTop: Platform.OS === 'ios' ? 10 : 30,
+    paddingBottom: 20,
   },
   backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F8F9FA',
+    backgroundColor: 'rgba(255,255,255,0.2)',
   },
   headerTitle: {
     flex: 1,
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: '#fff',
     textAlign: 'center',
   },
   headerRight: {
-    width: 44,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 20,
+    width: 36,
   },
   userSection: {
-    marginTop: 24,
-    marginBottom: 32,
-  },
-  userInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 24,
+    paddingHorizontal: 24,
+    marginBottom: 10,
   },
   avatarContainer: {
     marginRight: 16,
-    position: 'relative',
   },
-  avatar: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    backgroundColor: '#E5E5E5',
+  avatarOuter: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
-    overflow: 'hidden',
-    borderWidth: 3,
-    borderColor: '#fff',
-    // 添加陰影
+    position: 'relative',
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 6,
   },
   avatarImage: {
-    width: 82,
-    height: 82,
-    borderRadius: 41,
+    width: 70,
+    height: 70,
+    borderRadius: 35,
   },
   onlineIndicator: {
     position: 'absolute',
     bottom: 2,
     right: 2,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#4CAF50',
-    borderWidth: 3,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#34C759',
+    borderWidth: 2.5,
     borderColor: '#fff',
   },
-  userDetails: {
+  userInfo: {
     flex: 1,
   },
-  nameRow: {
+  nameContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   userName: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '700',
-    color: '#1a1a1a',
-    marginRight: 12,
+    color: '#fff',
+    marginRight: 8,
   },
   vipBadge: {
-    backgroundColor: '#FFD700',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 14,
+    backgroundColor: 'rgba(255,215,0,0.9)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    // 添加陰影
-    shadowColor: '#FFD700',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  vipBadgeIcon: {
-    marginRight: 4,
   },
   vipText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#FFF',
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#fff',
+    marginLeft: 2,
   },
   userId: {
-    fontSize: 14,
-    color: '#8E8E93',
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.8)',
     fontWeight: '500',
   },
   editButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 20,
+    marginTop: -20,
+  },
+  spaceCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#2196F3',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  spaceIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: '#F8F9FA',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E1E5E9',
-  },
-  vipCard: {
-    backgroundColor: '#007AFF',
-    borderRadius: 20,
-    padding: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    // 增強陰影效果
-    shadowColor: '#007AFF',
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  vipCardContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  vipIcon: {
-    fontSize: 32,
     marginRight: 16,
   },
-  vipTextContainer: {
+  spaceEmoji: {
+    fontSize: 24,
+  },
+  spaceInfo: {
     flex: 1,
   },
-  vipMessage: {
-    fontSize: 18,
-    color: '#FFF',
+  spaceTitle: {
+    fontSize: 16,
     fontWeight: '600',
+    color: '#1A1A1A',
     marginBottom: 2,
   },
-  vipSubMessage: {
+  spaceSubtitle: {
     fontSize: 13,
-    color: 'rgba(255,255,255,0.8)',
+    color: '#8E8E93',
     fontWeight: '400',
   },
-  vipButton: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 22,
+  spaceButton: {
+    backgroundColor: '#F0F4FF',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
     flexDirection: 'row',
     alignItems: 'center',
   },
-  vipButtonText: {
-    fontSize: 14,
-    color: '#FFF',
+  spaceButtonText: {
+    fontSize: 12,
+    color: '#2196F3',
     fontWeight: '600',
     marginRight: 4,
   },
-  vipButtonIcon: {
-    marginLeft: 2,
-  },
-  functionsGrid: {
+  functionsContainer: {
     backgroundColor: '#fff',
     borderRadius: 20,
     padding: 24,
-    marginBottom: 32,
-    // 增強陰影
+    marginBottom: 20,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
     elevation: 4,
   },
-  functionsRow: {
+  functionsGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 24,
+    marginBottom: 28,
   },
   functionItem: {
     alignItems: 'center',
     width: (screenWidth - 88) / 4,
   },
-  functionIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+  functionIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
   },
-  functionIcon: {
-    fontSize: 28,
+  functionEmoji: {
+    fontSize: 24,
   },
   functionText: {
-    fontSize: 12,
-    color: '#333',
+    fontSize: 11,
+    color: '#1A1A1A',
     textAlign: 'center',
     fontWeight: '500',
-    lineHeight: 16,
+    lineHeight: 14,
   },
-  settingsSection: {
-    backgroundColor: '#FFF',
-    borderRadius: 20,
+  settingsContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
     overflow: 'hidden',
-    marginBottom: 32,
-    // 增強陰影
+    marginBottom: 20,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
     elevation: 4,
   },
   settingItem: {
@@ -571,8 +544,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 16,
     paddingHorizontal: 20,
-    borderBottomWidth: 0.5,
-    borderBottomColor: '#F0F0F0',
   },
   settingLeft: {
     flexDirection: 'row',
@@ -580,17 +551,22 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   settingIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: '#F8F9FA',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
+    marginRight: 14,
   },
   settingText: {
-    fontSize: 16,
-    color: '#333',
+    fontSize: 15,
+    color: '#1A1A1A',
     fontWeight: '500',
   },
-}); 
+  divider: {
+    height: 0.5,
+    backgroundColor: '#E5E5EA',
+    marginLeft: 66,
+  },
+});

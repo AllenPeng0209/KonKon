@@ -8,6 +8,22 @@
       "ja-JP": "Japanese"
     }
   },
+  "calendar": {
+    "jan": "Jan",
+    "feb": "Feb",
+    "mar": "Mar",
+    "apr": "Apr",
+    "may": "May",
+    "jun": "Jun",
+    "jul": "Jul",
+    "aug": "Aug",
+    "sep": "Sep",
+    "oct": "Oct",
+    "nov": "Nov",
+    "dec": "Dec",
+    "noEvents": "No events scheduled",
+    "addNewEvent": "You can add new events"
+  },
   "calendarStyleSelector": {
     "title": "Select Calendar Style",
     "subtitle": "Choose your preferred calendar display:",
@@ -170,13 +186,13 @@
     "deleteRecurringEventMessage": "This is a recurring event. Do you want to delete only this instance, or all future events in this series?",
     "deleteInstance": "Delete This Instance",
     "deleteAllFuture": "Delete All Future",
-    "familyCalendar": "Space Calendar",
-    "recordFamilyTime": "Record space's good times",
+    "familyCalendar": "Calendar",
+    "recordFamilyTime": "Record good times",
     "connectedToSystemCalendar": "Connected to system calendar",
     "today": "Today",
     "noEventsToday": "No events scheduled for today",
     "manualAddPrompt": "Click 'Manual Add' below to create a new event",
-    "smartReminder": "Smart reminder for space schedule, click here to set up",
+    "smartReminder": "Smart reminder for schedule, click here to set up",
     "longPressToTalk": "Long press to talk, quickly record",
     "photo": "Photo",
     "album": "Album",
@@ -434,14 +450,14 @@
     "createOrJoin": "Create or Join",
     "loading": "Loading...",
     "manageFamily": "Manage Space",
-    "familySchedule": "Space Schedule",
-    "familyAssistant": "Todo List",
-    "choreAssignment": "Chore Assignment",
-    "familyActivities": "Health Management",
-    "familyAlbum": "Space Album",
-    "shoppingList": "Shopping List",
-    "familyFinance": "Space Finance",
-    "familyRecipes": "Space Meal Planning",
+    "familySchedule": "Schedule",
+    "familyAssistant": "Tasks",
+    "choreAssignment": "Chores",
+    "familyActivities": "Health",
+    "familyAlbum": "Photos",
+    "shoppingList": "Shopping",
+    "familyFinance": "Finance",
+    "familyRecipes": "Meal Planning",
     "settings": "Settings",
     "userAgreement": "User Agreement",
     "privacyPolicy": "Privacy Policy",
@@ -462,23 +478,23 @@
         "description": "Manage family members' schedules and activities"
       },
       "familyAssistant": {
-        "name": "To-Do List",
+        "name": "Tasks",
         "description": "Simple and easy-to-use family to-do list management"
       },
       "choreAssignment": {
-        "name": "Chore Assignment",
+        "name": "Chores",
         "description": "Assign and track household tasks for family members"
       },
       "familyActivities": {
-        "name": "Health Management", 
+        "name": "Health", 
         "description": "Track and manage family members' health status"
       },
       "familyAlbum": {
-        "name": "Family Album",
+        "name": "Photos",
         "description": "Collect and organize precious family memories"
       },
       "shoppingList": {
-        "name": "Shopping List",
+        "name": "Shopping",
         "description": "Share family shopping needs and lists"
       },
       "familyFinance": {
@@ -592,7 +608,7 @@
     "lastUpdated": "Last updated: July 25, 2024",
     "introduction": "Welcome to KonKon! This agreement is a legal agreement between you and KonKon (hereinafter referred to as \"this application\") regarding the download, installation, and use of this application, as well as the related services provided by this application.",
     "serviceContentTitle": "1. Service Content",
-    "serviceContent": "1.1 This application is a space management tool designed to help space members better communicate, coordinate, and plan space affairs.\n1.2 Specific services include space calendar, member management, chore assignment, birthday reminders, space album, shopping list, space budget, and emergency contacts.\n1.3 This application has the right to adjust, upgrade, or terminate parts of the service content based on business development without individual notice to users.",
+    "serviceContent": "1.1 This application is a space management tool designed to help space members better communicate, coordinate, and plan space affairs.\n1.2 Specific services include calendar, member management, chore assignment, birthday reminders, album, shopping list, budget management, and emergency contacts.\n1.3 This application has the right to adjust, upgrade, or terminate parts of the service content based on business development without individual notice to users.",
     "userConductTitle": "2. User Conduct",
     "userConduct": "2.1 When using this application, you must comply with all applicable laws and regulations.\n2.2 You shall not use this application for any illegal or improper activities, including but not limited to:\n- Publishing, transmitting, disseminating, or storing content that is harassing, defamatory, abusive, intimidating, obscene, violent, or violates any laws, regulations, public order, or social ethics.\n- Infringing on the intellectual property rights, trade secrets, portrait rights, privacy rights, and other legal rights of others.\n- Engaging in any behavior that endangers computer network security.",
     "intellectualPropertyTitle": "3. Intellectual Property",
@@ -740,9 +756,9 @@
   "firstSuggestions": {
     "suggestion1": "Help me schedule space activities for this week",
     "suggestion2": "Remind me of member birthdays and important anniversaries",
-    "suggestion3": "Create a space shopping list",
+    "suggestion3": "Create a shopping list",
     "suggestion4": "Arrange a chore schedule",
-    "suggestion5": "Recommend weekend activities for the space"
+    "suggestion5": "Recommend weekend activities"
   },
   "eventListModal": {
     "deleteEvent": "Delete Event",
@@ -758,6 +774,8 @@
     "yearMonth": "%{year} %{month}",
     "eventsCount": "%{count} events",
     "noEvents": "No events",
+    "addNewEvent": "You can add new events",
+    "daysLater": "%{days} days later",
     "weekdays": {
       "monday": "Mon",
       "tuesday": "Tue", 
@@ -913,11 +931,11 @@
     "subtitle": "How can I help you?"
   },
   "album": {
-    "familyMember": "Space Member",
+    "familyMember": "Member",
     "like": "Like",
     "comment": "Comment",
-    "loading": "Loading space memories...",
-    "emptyStateTitle": "No Space Memories Yet",
+    "loading": "Loading memories...",
+    "emptyStateTitle": "No Memories Yet",
     "emptyStateSubtitle": "Tap the button below to share the first photo!"
   },
   "addMemory": {
@@ -1119,30 +1137,30 @@
       "description": "Choose which features the assistant can actively monitor and remind you about",
       "calendar": {
         "name": "Calendar Events",
-        "description": "Track space schedules and reminders"
+        "description": "Track schedules and reminders"
       },
       "tasks": {
-        "name": "Todo Items",
+        "name": "Tasks",
         "description": "Monitor task completion status"
       },
       "album": {
-        "name": "Space Album",
+        "name": "Album",
         "description": "Stay updated on latest photos and memories"
       },
       "chores": {
-        "name": "Chore Assignment",
+        "name": "Chores",
         "description": "Track household chore completion"
       },
       "shopping": {
-        "name": "Shopping List",
+        "name": "Shopping",
         "description": "Manage shopping needs"
       },
       "finance": {
-        "name": "Space Finance",
+        "name": "Finance",
         "description": "Monitor expenses and budget"
       },
       "health": {
-        "name": "Health Management",
+        "name": "Health",
         "description": "Keep track of space members' health status"
       }
     },

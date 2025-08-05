@@ -8,6 +8,22 @@
       "ja-JP": "日文"
     }
   },
+  "calendar": {
+    "jan": "1月",
+    "feb": "2月",
+    "mar": "3月",
+    "apr": "4月",
+    "may": "5月",
+    "jun": "6月",
+    "jul": "7月",
+    "aug": "8月",
+    "sep": "9月",
+    "oct": "10月",
+    "nov": "11月",
+    "dec": "12月",
+    "noEvents": "暫無日程安排",
+    "addNewEvent": "您可以添加新的日程安排"
+  },
   "calendarStyleSelector": {
     "title": "選擇日曆樣式",
     "subtitle": "選擇您喜歡的日曆顯示方式：",
@@ -170,13 +186,13 @@
     "deleteRecurringEventMessage": "這是一個重複事件。您要僅刪除此實例，還是刪除此系列中所有將來的事件？",
     "deleteInstance": "刪除此實例",
     "deleteAllFuture": "刪除所有未來的事件",
-    "familyCalendar": "空間日曆",
-    "recordFamilyTime": "記錄空間美好時光",
+    "familyCalendar": "日曆",
+    "recordFamilyTime": "記錄美好時光",
     "connectedToSystemCalendar": "已連接系統日曆",
     "today": "今天",
     "noEventsToday": "今天還沒有安排事件",
     "manualAddPrompt": "點擊下方「手動新增」來建立新事件",
-    "smartReminder": "智慧提醒空間安排 點我設定",
+    "smartReminder": "智慧提醒安排 點我設定",
     "longPressToTalk": "長按說話，快速記錄",
     "photo": "拍照",
     "album": "相簿",
@@ -572,7 +588,7 @@
     "lastUpdated": "最後更新日期：2024年7月25日",
     "introduction": "KonKon（「我們」）非常重視您的隱私。本隱私權政策旨在說明我們如何收集、使用、儲存、分享和保護您的個人資訊。",
     "infoWeCollectTitle": "1. 我們收集的資訊",
-    "infoWeCollectContent": "為了向您提供服務，我們可能會收集以下資訊：\n- 帳戶資訊：您在註冊時提供的電子郵件地址、暱稱、密碼。\n- 空間資訊：您在建立或加入空間時主動輸入的空間名稱、空間成員關係以及其他空間成員的資訊。\n- 使用者內容：您在使用空間日曆、相簿、購物清單等功能時上傳的文字、圖片和其他內容。\n- 裝置資訊：我們可能會收集您的裝置型號、作業系統版本、唯一裝置識別碼等資訊。",
+    "infoWeCollectContent": "為了向您提供服務，我們可能會收集以下資訊：\n- 帳戶資訊：您在註冊時提供的電子郵件地址、暱稱、密碼。\n- 空間資訊：您在建立或加入空間時主動輸入的空間名稱、空間成員關係以及其他空間成員的資訊。\n- 使用者內容：您在使用日曆、相簿、購物清單等功能時上傳的文字、圖片和其他內容。\n- 裝置資訊：我們可能會收集您的裝置型號、作業系統版本、唯一裝置識別碼等資訊。",
     "howWeUseInfoTitle": "2. 我們如何使用資訊",
     "howWeUseInfoContent": "我們嚴格遵守法律法規的規定及與使用者的約定，將收集的資訊用於以下用途：\n- 向您提供各項服務功能。\n- 維護、改進、最佳化我們的服務。\n- 用於身分驗證、客戶服務、安全防範、詐騙監測等。\n- 向您推薦您可能感興趣的內容。",
     "sharingAndDisclosureTitle": "3. 資訊的分享與揭露",
@@ -592,13 +608,13 @@
     "createOrJoin": "建立或加入空間",
     "loading": "載入中...",
     "manageFamily": "管理空間",
-    "familySchedule": "空間日程",
-    "familyAssistant": "待辦事項",
-    "choreAssignment": "家務分配",
-    "familyActivities": "健康管理",
-    "familyAlbum": "空間相簿",
-    "shoppingList": "購物清單",
-    "familyFinance": "空間財務",
+    "familySchedule": "日程",
+    "familyAssistant": "待辦",
+    "choreAssignment": "家務",
+    "familyActivities": "健康",
+    "familyAlbum": "相簿",
+    "shoppingList": "購物",
+    "familyFinance": "財務",
     "familyRecipes": "餐食管理",
     "settings": "設定",
     "userAgreement": "使用者協議",
@@ -620,11 +636,11 @@
         "description": "管理家庭成員的日程安排和活動"
       },
       "familyAssistant": {
-        "name": "待辦事項",
+        "name": "待辦",
         "description": "簡單易用的家庭待辦事項管理"
       },
       "choreAssignment": {
-        "name": "家務分配",
+        "name": "家務",
         "description": "分配和追蹤家庭成員的家務任務"
       },
       "familyActivities": {
@@ -636,7 +652,7 @@
         "description": "收集和整理家庭珍貴回憶"
       },
       "shoppingList": {
-        "name": "購物清單",
+        "name": "購物",
         "description": "共享家庭購物需求和清單"
       },
       "familyFinance": {
@@ -754,7 +770,7 @@
     "lastUpdated": "最後更新日期：2024年7月25日",
     "introduction": "歡迎使用 KonKon！本協議是您與 KonKon（以下簡稱「本應用」）之間關於下載、安裝、使用本應用，以及使用本應用提供的相關服務的法律協議。",
     "serviceContentTitle": "1. 服務內容",
-    "serviceContent": "1.1 本應用是一個空間管理工具，旨在幫助空間成員更好地進行溝通、協調和規劃空間事務。\n1.2 具體服務內容包括空間日曆、成員管理、家務分配、生日提醒、空間相簿、購物清單、空間預算和緊急聯絡人等。\n1.3 本應用有權根據業務發展調整、升級或終止部分服務內容，無需單獨通知使用者。",
+    "serviceContent": "1.1 本應用是一個空間管理工具，旨在幫助空間成員更好地進行溝通、協調和規劃空間事務。\n1.2 具體服務內容包括日曆、成員管理、家務分配、生日提醒、相簿、購物清單、財務預算和緊急聯絡人等。\n1.3 本應用有權根據業務發展調整、升級或終止部分服務內容，無需單獨通知使用者。",
     "userConductTitle": "2. 使用者行為規範",
     "userConduct": "2.1 您在使用本應用時，必須遵守所有適用的法律法規。\n2.2 您不得利用本應用進行任何違法或不正當的活動，包括但不限於：\n- 發布、傳送、傳播、儲存含有騷擾、中傷、辱罵、恐嚇、淫穢、暴力或任何違反法律法規、公共秩序、社會公德的內容。\n- 侵犯他人的智慧財產權、商業秘密、肖像權、隱私權等合法權益。\n- 進行任何危害電腦網路安全的行為。",
     "intellectualPropertyTitle": "3. 智慧財產權",
@@ -900,11 +916,11 @@
     "errorDescription": "請在 .env.local 檔案中設定以下環境變數："
   },
   "firstSuggestions": {
-    "suggestion1": "幫我安排本週的空間活動",
+    "suggestion1": "幫我安排本週的活動",
           "suggestion2": "提醒我成員的生日和重要紀念日",
-    "suggestion3": "制定空間購物清單",
+    "suggestion3": "制定購物清單",
     "suggestion4": "安排家務分工計畫",
-    "suggestion5": "推薦適合空間的週末活動"
+    "suggestion5": "推薦適合的週末活動"
   },
   "eventListModal": {
     "deleteEvent": "刪除事件",
@@ -920,6 +936,8 @@
     "yearMonth": "%{year}年%{month}月",
     "eventsCount": "%{count} 個活動",
     "noEvents": "沒有活動",
+    "addNewEvent": "您可以添加新的日程安排",
+    "daysLater": "%{days}天後",
     "weekdays": {
       "monday": "一",
       "tuesday": "二", 
@@ -1148,26 +1166,26 @@
       "description": "選擇智能體可以主動了解和提醒的功能",
       "calendar": {
         "name": "日曆事件",
-        "description": "追蹤空間日程和提醒"
+        "description": "追蹤日程和提醒"
       },
       "tasks": {
-        "name": "待辦事項",
+        "name": "待辦",
         "description": "監控任務完成狀態"
       },
       "album": {
-        "name": "空間相簿",
+        "name": "相簿",
         "description": "了解最新照片和回憶"
       },
       "chores": {
-        "name": "家務分配",
+        "name": "家務",
         "description": "追蹤家務完成情況"
       },
       "shopping": {
-        "name": "購物清單",
+        "name": "購物",
         "description": "管理購物需求"
       },
       "finance": {
-        "name": "空間財務",
+        "name": "財務",
         "description": "監控支出和預算"
       },
       "health": {

@@ -236,6 +236,8 @@ type TranslationKeys =
   | 'calendar.oct'
   | 'calendar.nov'
   | 'calendar.dec'
+  | 'calendar.noEvents'
+  | 'calendar.addNewEvent'
   | 'todos.today'
   | 'todos.tomorrow'
   | 'todos.overdue'
@@ -534,6 +536,16 @@ export const t = (key: string, options?: any) => i18n.t(key, options);
 
 export const setLocale = (locale: string) => {
   i18n.locale = locale;
+};
+
+export const getCurrentLocale = () => {
+  const locale = i18n.locale;
+  
+  // 轉換為標準的 locale 格式用於 Date 格式化
+  if (locale === 'zh-CN') return 'zh-CN';
+  if (locale === 'zh-TW') return 'zh-TW';
+  if (locale === 'ja') return 'ja-JP';
+  return 'en-US';
 };
 
 export { getDeviceLocale };

@@ -1,5 +1,5 @@
-import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { t } from '../../lib/i18n';
 import { CalendarViewProps } from './CalendarViewTypes';
 
 export default function ThreeDayView({
@@ -100,7 +100,7 @@ export default function ThreeDayView({
                 {dayEvents.length === 0 ? (
                   <View style={styles.noEvents}>
                     <Text style={styles.noEventsIcon}>📅</Text>
-                    <Text style={styles.noEventsText}>暂无安排</Text>
+                    <Text style={styles.noEventsText}>{t('calendar.noEvents')}</Text>
                   </View>
                 ) : (
                   dayEvents.map((event) => (

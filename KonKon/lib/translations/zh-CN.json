@@ -8,6 +8,22 @@
       "ja-JP": "日语"
     }
   },
+  "calendar": {
+    "jan": "1月",
+    "feb": "2月",
+    "mar": "3月",
+    "apr": "4月",
+    "may": "5月",
+    "jun": "6月",
+    "jul": "7月",
+    "aug": "8月",
+    "sep": "9月",
+    "oct": "10月",
+    "nov": "11月",
+    "dec": "12月",
+    "noEvents": "暂无日程安排",
+    "addNewEvent": "您可以添加新的日程安排"
+  },
   "calendarStyleSelector": {
     "title": "选择日历样式",
     "subtitle": "选择您喜欢的日历显示方式：",
@@ -124,7 +140,7 @@
     "chores": "家务",
     "activities": "健康",
     "health": "健康",
-    "album": "相簿",
+    "album": "相册",
     "shopping": "购物",
     "finance": "财务",
     "recipes": "餐食",
@@ -169,13 +185,13 @@
     "deleteRecurringEventMessage": "这是一个重复事件。您要仅删除此实例，还是删除此系列中所有将来的事件？",
     "deleteInstance": "删除此实例",
     "deleteAllFuture": "删除所有未来的事件",
-    "familyCalendar": "空间日历",
-    "recordFamilyTime": "记录空间美好时光",
+    "familyCalendar": "日历",
+    "recordFamilyTime": "记录美好时光",
     "connectedToSystemCalendar": "已连接系统日历",
     "today": "今天",
     "noEventsToday": "今天还没有安排事件",
     "manualAddPrompt": "点击下方“手动添加”来创建新事件",
-    "smartReminder": "智能提醒空间安排 点我设置",
+    "smartReminder": "智能提醒安排 点我设置",
     "longPressToTalk": "长按说话，快速记录",
     "photo": "拍照",
     "album": "相册",
@@ -417,14 +433,14 @@
     "createOrJoin": "创建或加入",
     "loading": "加载中...",
     "manageFamily": "空间管理",
-    "familySchedule": "空间日程",
-    "familyAssistant": "待办事项",
-    "choreAssignment": "家务分配",
-    "familyActivities": "健康管理",
-    "familyAlbum": "空间相册",
-    "shoppingList": "购物清单",
-    "familyFinance": "空间财务",
-    "familyRecipes": "空间餐食",
+    "familySchedule": "日程",
+    "familyAssistant": "待办",
+    "choreAssignment": "家务",
+    "familyActivities": "健康",
+    "familyAlbum": "相册",
+    "shoppingList": "购物",
+    "familyFinance": "财务",
+    "familyRecipes": "餐食",
     "settings": "设置",
     "userAgreement": "用户协议",
     "privacyPolicy": "隐私政策",
@@ -445,11 +461,11 @@
         "description": "管理家庭成员的日程安排和活动"
       },
       "familyAssistant": {
-        "name": "待办事项",
+        "name": "待办",
         "description": "简单易用的家庭待办事项管理"
       },
       "choreAssignment": {
-        "name": "家务分配",
+        "name": "家务",
         "description": "分配和追踪家庭成员的家务任务"
       },
       "familyActivities": {
@@ -461,7 +477,7 @@
         "description": "收集和整理家庭珍贵回忆"
       },
       "shoppingList": {
-        "name": "购物清单",
+        "name": "购物",
         "description": "共享家庭购物需求和清单"
       },
       "familyFinance": {
@@ -579,7 +595,7 @@
     "lastUpdated": "最后更新日期：2024年7月25日",
     "introduction": "欢迎使用 KonKon！本协议是您与 KonKon（以下简称“本应用”）之间关于下载、安装、使用本应用，以及使用本应用提供的相关服务的法律协议。",
     "serviceContentTitle": "1. 服务内容",
-    "serviceContent": "1.1 本应用是一个空间管理工具，旨在帮助空间成员更好地进行沟通、协调和规划空间事务。\n1.2 具体服务内容包括空间日历、成员管理、家务分配、生日提醒、空间相册、购物清单、空间预算和紧急联系等。\n1.3 本应用有权根据业务发展调整、升级或终止部分服务内容，无需单独通知用户。",
+    "serviceContent": "1.1 本应用是一个空间管理工具，旨在帮助空间成员更好地进行沟通、协调和规划空间事务。\n1.2 具体服务内容包括日历、成员管理、家务分配、生日提醒、相册、购物清单、财务预算和紧急联系等。\n1.3 本应用有权根据业务发展调整、升级或终止部分服务内容，无需单独通知用户。",
     "userConductTitle": "2. 用户行为规范",
     "userConduct": "2.1 您在使用本应用时，必须遵守所有适用的法律法规。\n2.2 您不得利用本应用进行任何违法或不正当的活动，包括但不限于：\n- 发布、传送、传播、储存含有骚扰、中伤、辱骂、恐吓、淫秽、暴力或任何违反法律法规、公共秩序、社会公德的内容。\n- 侵犯他人的知识产权、商业秘密、肖像权、隐私权等合法权益。\n- 进行任何危害计算机网络安全的行为。",
     "intellectualPropertyTitle": "3. 知识产权",
@@ -727,9 +743,9 @@
   "firstSuggestions": {
     "suggestion1": "分析我家近期的日程安排",
     "suggestion2": "基于我的日程推荐活动",
-    "suggestion3": "帮我优化空间时间安排",
+    "suggestion3": "帮我优化时间安排",
     "suggestion4": "提醒重要事件和冲突",
-    "suggestion5": "制定下周空间计划",
+    "suggestion5": "制定下周计划",
     "suggestion6": "查看今天的所有安排",
     "suggestion7": "推荐合适的聚餐时间"
   },
@@ -747,6 +763,8 @@
     "yearMonth": "%{year}年%{month}月",
     "eventsCount": "%{count} 个活动",
     "noEvents": "没有活动",
+    "addNewEvent": "您可以添加新的日程安排",
+    "daysLater": "%{days}天后",
     "weekdays": {
       "monday": "一",
       "tuesday": "二", 
@@ -902,11 +920,11 @@
     "subtitle": "有什么可以帮助你的吗？"
   },
   "album": {
-    "familyMember": "空间成员",
+    "familyMember": "成员",
     "like": "喜欢",
     "comment": "评论",
-    "loading": "正在加载空间回忆...",
-    "emptyStateTitle": "还没有任何空间回忆",
+    "loading": "正在加载回忆...",
+    "emptyStateTitle": "还没有任何回忆",
     "emptyStateSubtitle": "点击下方的按钮，分享第一张照片吧！"
   },
   "addMemory": {
@@ -1108,26 +1126,26 @@
       "description": "选择智能体可以主动了解和提醒的功能",
       "calendar": {
         "name": "日历事件",
-        "description": "追踪空间日程和提醒"
+        "description": "追踪日程和提醒"
       },
       "tasks": {
-        "name": "待办事项",
+        "name": "待办",
         "description": "监控任务完成状态"
       },
       "album": {
-        "name": "空间相册",
+        "name": "相册",
         "description": "了解最新照片和回忆"
       },
       "chores": {
-        "name": "家务分配",
+        "name": "家务",
         "description": "追踪家务完成情况"
       },
       "shopping": {
-        "name": "购物清单",
+        "name": "购物",
         "description": "管理购物需求"
       },
       "finance": {
-        "name": "空间财务",
+        "name": "财务",
         "description": "监控支出和预算"
       },
       "health": {

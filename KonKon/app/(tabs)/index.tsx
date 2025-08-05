@@ -19,10 +19,10 @@ import todoService from '@/lib/todoService';
 import EventPreviewModal from '@/components/event/EventPreviewModal';
 import FamilyHealthDashboard from '@/components/health/FamilyHealthDashboard';
 import ShoppingViewSelector, {
-    FamilyMember,
-    ShoppingBudget,
-    ShoppingItem,
-    Store,
+  FamilyMember,
+  ShoppingBudget,
+  ShoppingItem,
+  Store,
 } from '@/components/shopping/ShoppingViewSelector';
 import { useDrawer } from '@/contexts/DrawerContext';
 import { useFamily } from '@/contexts/FamilyContext';
@@ -32,18 +32,18 @@ import { useEvents } from '@/hooks/useEvents';
 import { useRecurringEvents } from '@/hooks/useRecurringEvents';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import {
-    CalendarEvent,
-    ParsedCalendarResult,
-    ParsedTodoResult,
-    processImageToCalendar,
-    processImageToMeal,
-    processImageToTodo,
-    processTextToCalendar,
-    processTextToMeal,
-    processTextToTodo,
-    processVoiceToCalendar,
-    processVoiceToMeal,
-    processVoiceToTodo
+  CalendarEvent,
+  ParsedCalendarResult,
+  ParsedTodoResult,
+  processImageToCalendar,
+  processImageToMeal,
+  processImageToTodo,
+  processTextToCalendar,
+  processTextToMeal,
+  processTextToTodo,
+  processVoiceToCalendar,
+  processVoiceToMeal,
+  processVoiceToTodo
 } from '@/lib/bailian_omni_calendar';
 import CalendarService from '@/lib/calendarService';
 import { t } from '@/lib/i18n';
@@ -56,17 +56,17 @@ import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Dimensions,
-    Image,
-    Modal,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  Image,
+  Modal,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { DateData } from 'react-native-calendars';
 import { useAuth } from '../../contexts/AuthContext';
@@ -1641,40 +1641,73 @@ export default function HomeScreen() {
           <TouchableOpacity 
             style={styles.hamburgerButton} 
             onPress={openDrawer}
-            activeOpacity={0.8}
+            activeOpacity={0.7}
           >
-            <Ionicons name="menu" size={24} color="#000" />
+            <Ionicons name="menu" size={22} color="#1D1D1F" />
           </TouchableOpacity>
         </View>
+        
         <View style={styles.headerCenter}>
-          <View style={styles.centerButtonGroup}>
+                               <View style={styles.segmentedControlContainer}>
             <TouchableOpacity 
-              style={styles.familyButton}
+              style={[
+                styles.segmentedButton,
+                styles.leftSegment,
+                showFamilyMenu ? styles.segmentActive : styles.segmentInactive
+              ]}
               onPress={() => setShowFamilyMenu(!showFamilyMenu)}
               activeOpacity={0.8}
             >
-              <Text style={styles.familyName} numberOfLines={1}>
+              <Text style={[
+                styles.segmentText,
+                showFamilyMenu ? styles.segmentTextActive : styles.segmentTextInactive
+              ]} numberOfLines={1}>
                 {activeFamily 
                   ? (activeFamily.tag === 'personal' ? t('space.personalSpace') : 
                      activeFamily.id === 'meta-space' ? t('drawer.metaSpace') : 
                      activeFamily.name)
-                  : '選擇家庭'}
+                  : '空間'}
               </Text>
-              <Text style={styles.familyDropdownIcon}>▼</Text>
+              <Ionicons 
+                name="chevron-down" 
+                size={12} 
+                color={showFamilyMenu ? "#1D1D1F" : "#3C3C43"} 
+                style={styles.segmentIcon}
+              />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.recordFilterButton} onPress={toggleFilterMenu}>
-              <Text style={styles.recordFilterText}>{filterOptions.find(opt => opt.value === selectedFilter)?.label}</Text>
-              <Text style={styles.recordFilterIcon}>▼</Text>
+            
+            <TouchableOpacity 
+              style={[
+                styles.segmentedButton,
+                styles.rightSegment,
+                showFilterMenu ? styles.segmentActive : styles.segmentInactive
+              ]}
+              onPress={toggleFilterMenu}
+              activeOpacity={0.8}
+            >
+              <Text style={[
+                styles.segmentText,
+                showFilterMenu ? styles.segmentTextActive : styles.segmentTextInactive
+              ]} numberOfLines={1}>
+                {filterOptions.find(opt => opt.value === selectedFilter)?.label || 'カレンダー'}
+              </Text>
+              <Ionicons 
+                name="chevron-down" 
+                size={12} 
+                color={showFilterMenu ? "#1D1D1F" : "#3C3C43"} 
+                style={styles.segmentIcon}
+              />
             </TouchableOpacity>
           </View>
         </View>
+        
         <View style={styles.headerRight}>
           <TouchableOpacity 
             style={styles.exploreButton} 
             onPress={navigateToExplore}
-            activeOpacity={0.8}
+            activeOpacity={0.7}
           >
-            <Text style={styles.exploreIcon}>💡</Text>
+            <Ionicons name="sparkles-outline" size={18} color="#8E8E93" />
           </TouchableOpacity>
         </View>
       </View>
@@ -2561,7 +2594,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9fafb',
+    backgroundColor: '#F7F8FA',
   },
   loadingContainer: {
     flex: 1,
@@ -2577,12 +2610,19 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 8,
-    backgroundColor: '#fff',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 12,
+    backgroundColor: '#FAFBFC',
     position: 'relative',
-    height: 56, // 明確設置header高度
+    height: 64,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.06)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 3,
+    elevation: 2,
   },
   headerLeft: {
     flexDirection: 'row',
@@ -2590,8 +2630,17 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   hamburgerButton: {
-    padding: 8,
-    marginRight: 8,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 3,
   },
   recordFilterButton: {
     flexDirection: 'row',
@@ -2631,6 +2680,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 12,
   },
+  segmentedControlContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#F0F0F5',
+    borderRadius: 12,
+    padding: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  segmentedButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    minWidth: 80,
+    height: 34,
+  },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2666,21 +2735,19 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   exploreButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#F8F9FA',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 12,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowColor: '#667eea',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(102,126,234,0.15)',
   },
   exploreIcon: {
     fontSize: 18,
@@ -2698,7 +2765,7 @@ const styles = StyleSheet.create({
   },
   filterMenu: {
     position: 'absolute',
-    top: 55,
+    top: 62,
     left: '50%',
     transform: [{ translateX: -100 }],
     backgroundColor: '#FFFFFF',
@@ -2764,7 +2831,7 @@ const styles = StyleSheet.create({
   },
   familyMenu: {
     position: 'absolute',
-    top: 55,
+    top: 62,
     left: '50%',
     transform: [{ translateX: -100 }],
     backgroundColor: '#FFFFFF',
@@ -3646,5 +3713,38 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
+  },
+  segmentIcon: {
+    marginLeft: 4,
+  },
+     segmentText: {
+     fontSize: 16,
+     color: '#3C3C43',
+     fontWeight: '600',
+   },
+     segmentTextActive: {
+     color: '#1D1D1F',
+   },
+   segmentTextInactive: {
+     color: '#3C3C43',
+   },
+     segmentActive: {
+     backgroundColor: '#FFFFFF',
+     shadowColor: '#000',
+     shadowOffset: { width: 0, height: 1 },
+     shadowOpacity: 0.12,
+     shadowRadius: 2,
+     elevation: 2,
+   },
+   segmentInactive: {
+     backgroundColor: 'transparent',
+   },
+  leftSegment: {
+    borderTopLeftRadius: 12,
+    borderBottomLeftRadius: 12,
+  },
+  rightSegment: {
+    borderTopRightRadius: 12,
+    borderBottomRightRadius: 12,
   },
 });

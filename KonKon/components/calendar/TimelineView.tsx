@@ -1,5 +1,5 @@
-import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { getCurrentLocale, t } from '../../lib/i18n';
 import { CalendarViewProps } from './CalendarViewTypes';
 
 export default function TimelineView({
@@ -7,7 +7,7 @@ export default function TimelineView({
   selectedDate,
   onEventPress,
 }: CalendarViewProps) {
-  // 获取选中日期的事件
+  // 獲取選中日期的事件
   const getSelectedDateEvents = () => {
     const targetDayStart = new Date(selectedDate);
     targetDayStart.setHours(0, 0, 0, 0);
@@ -19,7 +19,7 @@ export default function TimelineView({
     }).sort((a, b) => a.start_ts - b.start_ts);
   };
 
-  // 生成时间线（24小时）
+  // 生成時間線（24小時）
   const generateTimeline = () => {
     const timeline = [];
     for (let hour = 0; hour < 24; hour++) {
@@ -33,7 +33,8 @@ export default function TimelineView({
   };
 
   const formatEventTime = (timestamp: number) => {
-    return new Date(timestamp * 1000).toLocaleTimeString('zh-CN', {
+    const locale = getCurrentLocale();
+    return new Date(timestamp * 1000).toLocaleTimeString(locale, {
       hour: '2-digit',
       minute: '2-digit',
       hour12: false,
@@ -52,9 +53,10 @@ export default function TimelineView({
     const selectedDateStr = selectedDate.toISOString().split('T')[0];
     
     if (selectedDateStr === today) {
-      return '今天';
+      return t('home.today');
     } else {
-      return selectedDate.toLocaleDateString('zh-CN', {
+      const locale = getCurrentLocale();
+      return selectedDate.toLocaleDateString(locale, {
         year: 'numeric',
         month: 'long',
         day: 'numeric',
@@ -68,11 +70,11 @@ export default function TimelineView({
 
   return (
     <View style={styles.container}>
-      {/* 日期头部 */}
+      {/* 日期頭部 */}
       <View style={styles.header}>
         <Text style={styles.dateTitle}>{formatSelectedDate()}</Text>
         <Text style={styles.eventCount}>
-          {selectedDateEvents.length} 个日程
+          {t('calendarCard.eventsCount', { count: selectedDateEvents.length })}
         </Text>
       </View>
 
@@ -80,8 +82,8 @@ export default function TimelineView({
         {selectedDateEvents.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyIcon}>⏰</Text>
-            <Text style={styles.emptyTitle}>今日无安排</Text>
-            <Text style={styles.emptyDescription}>享受这美好的自由时光</Text>
+            <Text style={styles.emptyTitle}>{t('calendarCard.noEvents')}</Text>
+            <Text style={styles.emptyDescription}>{t('calendarCard.addNewEvent')}</Text>
           </View>
         ) : (
           <View style={styles.timeline}>
@@ -90,12 +92,12 @@ export default function TimelineView({
               
               return (
                 <View key={hour} style={styles.timeSlot}>
-                  {/* 时间标签 */}
+                  {/* 時間標籤 */}
                   <View style={styles.timeLabel}>
                     <Text style={styles.timeText}>{formatTime(hour)}</Text>
                   </View>
                   
-                  {/* 时间线 */}
+                  {/* 時間線 */}
                   <View style={styles.timelineContainer}>
                     <View style={[
                       styles.timelineDot,

@@ -1,5 +1,5 @@
-import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { t } from '../../lib/i18n';
 import { CalendarViewProps } from './CalendarViewTypes';
 
 export default function FamilyGridView({
@@ -80,7 +80,7 @@ export default function FamilyGridView({
                 <View style={styles.memberEvents}>
                   {memberEvents.length === 0 ? (
                     <View style={styles.noEvents}>
-                      <Text style={styles.noEventsText}>今日空闲</Text>
+                      <Text style={styles.noEventsText}>{t('calendar.noEvents')}</Text>
                       <Text style={styles.noEventsIcon}>😊</Text>
                     </View>
                   ) : (
