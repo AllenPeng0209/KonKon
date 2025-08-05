@@ -1335,5 +1335,98 @@
       "name": "Proactive Reminders",
       "description": "Allow the assistant to send proactive reminders and suggestions"
     }
+  },
+  "subscription": {
+    "bannerText": "Start at $2.6/month, unlock full AI features!",
+    "title": "KonKon AI Subscription",
+    "painPoints": {
+      "title": "Do you have these troubles?",
+      "items": [
+        "Spend 30 minutes daily organizing family schedules, still conflicts?",
+        "Voice and photo to schedule too slow, AI understanding inaccurate?",
+        "Always miss important reminders, no smart alerts?",
+        "Want a personal AI assistant to predict and arrange your life?"
+      ]
+    },
+    "features": {
+      "title": "What KonKon Premium Can Do",
+      "aiVoiceAssistant": "Smart Voice Assistant",
+      "aiConflictDetection": "AI Conflict Detection & Suggestions",
+      "personalizedRecommendations": "Personalized AI Schedule Recommendations",
+      "multimodalAI": "High-Precision Multimodal AI Input",
+      "predictiveReminders": "AI Predictive Smart Reminders",
+      "familyTimeCoordination": "Smart Family Time Coordination",
+      "lifestyleAnalysis": "AI Lifestyle Pattern Analysis",
+      "adFree": "Ad-Free Pure Experience",
+      "premiumSupport": "AI Expert Priority Support",
+      "aiAssistantTitle": "AI Smart Assistant Features",
+      "aiAssistantDesc": "AI understands your voice and images, automatically generates precise schedules.",
+      "aiAssistantSubtext": "Let AI become your personal time management assistant, free your hands and mind."
+    },
+    "pricing": {
+      "title": "Upgrade to AI Premium, Make Intelligence Your Daily Life",
+      "monthly": "Monthly",
+      "yearly": "Yearly",
+      "monthlyPrice": "¥19.00/month",
+      "yearlyPrice": "¥188.00",
+      "yearlyPriceMonthly": "*¥15.66/month",
+      "yearlyDescription": "Annual one-time payment",
+      "saveText": "Save about 2 months!",
+      "trialText": "Includes 1 month free AI experience"
+    },
+    "cta": {
+      "solve": "AI Premium Solves All Your Troubles",
+      "startTrial": "Start 1 Month Trial",
+      "cancelAnytime": "Cancel anytime",
+      "userQuote": "Hope AI helps me arrange everything automatically"
+    },
+    "trial": {
+      "notice": "After the 1-month trial period ends, you will be charged ¥188.00 annually"
+    },
+    "faq": {
+      "title": "Q&A",
+      "trial": {
+        "question": "If I start subscription mid-month, won't I get a full month?",
+        "answer": "No, the subscription starts from the day you purchase and gives you the complete subscription period."
+      },
+      "devices": {
+        "question": "Can I use KonKon Premium on multiple devices?",
+        "answer": "Yes, as long as you log in with the same account, you can enjoy Premium features on all devices."
+      },
+      "receipt": {
+        "question": "Can I get a receipt?",
+        "answer": "Yes, after subscription you can apply for a receipt in settings, and we'll send it to you via email."
+      },
+      "sharing": {
+        "question": "Can non-Premium users access files uploaded by Premium users?",
+        "answer": "Yes, files uploaded by Premium users can be viewed and downloaded by all family members."
+      },
+      "web": {
+        "question": "Can I upload files using the web version?",
+        "answer": "Currently, file upload is limited to mobile apps, but you can view uploaded files on the web version."
+      }
+    },
+    "featureComparison": {
+      "function": "Feature",
+      "freeVersion": "Free",
+      "aiPremium": "AI Premium",
+      "dailyLimit": "3 times daily",
+      "unlimited": "Unlimited",
+      "basicVersion": "Basic",
+      "professionalVersion": "Professional"
+    },
+    "terms": {
+      "title": "Important Notes",
+      "trialOnce": "• Trial is provided only once",
+      "noRefund": "• We do not provide refunds for duplicate subscriptions from different platforms or accounts.",
+      "cancel24h": "• You can cancel your subscription (stop automatic payment) within 24 hours before your plan ends.",
+      "autoRenew": "• If you don't cancel within 24 hours before your plan ends, the plan will automatically renew and continue billing.",
+      "appleId": "• Your subscription will be charged to your Apple ID.",
+      "deleteApp": "• Please note that deleting KonKon will not stop your subscription."
+    },
+    "legal": {
+      "privacy": "Privacy Policy",
+      "terms": "Premium Service Terms"
+    }
   }
 }

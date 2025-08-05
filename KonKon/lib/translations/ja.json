@@ -1349,5 +1349,98 @@
       "name": "プロアクティブリマインダー",
       "description": "アシスタントが積極的にリマインダーや提案を送信することを許可"
     }
+  },
+  "subscription": {
+    "bannerText": "月額¥400で、AI全機能を完全解放！",
+    "title": "KonKon AI サブスクリプション",
+    "painPoints": {
+      "title": "こんなお悩みありませんか？",
+      "items": [
+        "家族のスケジュール整理に毎日30分、それでも衝突が起こる？",
+        "音声・写真からスケジュール作成が遅い、AI理解が不正確？",
+        "重要な通知をいつも見逃す、スマートアラートがない？",
+        "個人AIアシスタントに生活の予測と手配をしてほしい？"
+      ]
+    },
+    "features": {
+      "title": "KonKon プレミアムでできること",
+      "aiVoiceAssistant": "スマート音声アシスタント",
+      "aiConflictDetection": "AI衝突検出と提案",
+      "personalizedRecommendations": "パーソナライズAIスケジュール推薦",
+      "multimodalAI": "高精度マルチモーダルAI入力",
+      "predictiveReminders": "AI予測スマートリマインダー",
+      "familyTimeCoordination": "スマート家族時間調整",
+      "lifestyleAnalysis": "AIライフスタイル分析",
+      "adFree": "広告なし純粋体験",
+      "premiumSupport": "AI専門家優先サポート",
+      "aiAssistantTitle": "AIスマートアシスタント機能",
+      "aiAssistantDesc": "AIがあなたの音声と画像を理解し、正確なスケジュールを自動生成します。",
+      "aiAssistantSubtext": "AIを専属時間管理師にして、手と頭を解放しましょう。"
+    },
+    "pricing": {
+      "title": "AI Premiumにアップグレード、インテリジェンスを日常に",
+      "monthly": "月払い",
+      "yearly": "年払い",
+      "monthlyPrice": "¥19.00/月",
+      "yearlyPrice": "¥188.00",
+      "yearlyPriceMonthly": "*¥15.66/月",
+      "yearlyDescription": "年間一括払い",
+      "saveText": "約2ヶ月分お得！",
+      "trialText": "1ヶ月無料AI体験付き"
+    },
+    "cta": {
+      "solve": "AI プレミアムですべての悩みを解決",
+      "startTrial": "1ヶ月トライアル開始",
+      "cancelAnytime": "いつでもキャンセル可能",
+      "userQuote": "AIに全部自動で手配してほしい"
+    },
+    "trial": {
+      "notice": "1ヶ月トライアル期間終了後、年間¥188.00が請求されます"
+    },
+    "faq": {
+      "title": "Q&A",
+      "trial": {
+        "question": "月の途中で開始したら、丸々1ヶ月使えないのですか？",
+        "answer": "いいえ、購入日からサブスクリプションが開始され、完全な期間をご利用いただけます。"
+      },
+      "devices": {
+        "question": "複数のデバイスでKonKon Premiumを使用できますか？",
+        "answer": "はい、同じアカウントでログインすれば、すべてのデバイスでPremium機能をお楽しみいただけます。"
+      },
+      "receipt": {
+        "question": "領収書の発行はできますか？",
+        "answer": "はい、サブスクリプション後、設定で領収書を申請でき、メールで送信いたします。"
+      },
+      "sharing": {
+        "question": "Premiumユーザーがアップロードしたファイルは、非Premiumユーザーもアクセスできますか？",
+        "answer": "はい、Premiumユーザーがアップロードしたファイルは、すべての家族メンバーが閲覧・ダウンロードできます。"
+      },
+      "web": {
+        "question": "Web版でもファイルアップロードできますか？",
+        "answer": "現在、ファイルアップロード機能はモバイルアプリに限定されていますが、Web版でアップロード済みファイルの閲覧は可能です。"
+      }
+    },
+    "featureComparison": {
+      "function": "機能",
+      "freeVersion": "無料版",
+      "aiPremium": "AI Premium",
+      "dailyLimit": "1日3回",
+      "unlimited": "無制限",
+      "basicVersion": "基本版",
+      "professionalVersion": "プロ版"
+    },
+    "terms": {
+      "title": "注意事項",
+      "trialOnce": "• トライアルは1回のみ提供",
+      "noRefund": "• 異なるプラットフォームやアカウントでの重複サブスクリプションには返金いたしません。",
+      "cancel24h": "• プラン終了の24時間前までサブスクリプションの停止（自動支払い停止）が可能です。",
+      "autoRenew": "• プラン終了の24時間前まで停止しない場合、プランは自動更新され請求が続きます。",
+      "appleId": "• サブスクリプション料金はApple IDに請求されます。",
+      "deleteApp": "• KonKonを削除してもサブスクリプションは停止されませんのでご注意ください。"
+    },
+    "legal": {
+      "privacy": "プライバシーポリシー",
+      "terms": "Premiumサービス利用規約"
+    }
   }
 }
