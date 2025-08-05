@@ -53,7 +53,7 @@ export default function FamilyManagement() {
 
   const handleCreateFamily = useCallback(async () => {
     if (!familyName.trim()) {
-      Alert.alert('提示', '请输入家庭名称');
+      Alert.alert(t('familyManagement.hint'), t('familyManagement.enterFamilyName'));
       return;
     }
 
@@ -65,13 +65,13 @@ export default function FamilyManagement() {
       });
 
       if (family) {
-        Alert.alert('创建成功', `家庭"${family.name}"已创建成功！`);
+        Alert.alert(t('familyManagement.createSuccess'), t('familyManagement.familyCreatedSuccess', { familyName: family.name }));
         setShowCreateForm(false);
         setFamilyName('');
         setFamilyDescription('');
       }
     } catch (error) {
-      console.error('创建家庭失败:', error);
+      console.error(t('familyManagement.createFailed'), error);
     } finally {
       setIsSubmitting(false);
     }
@@ -79,7 +79,7 @@ export default function FamilyManagement() {
 
   const handleJoinFamily = useCallback(async () => {
     if (!inviteCode.trim()) {
-      Alert.alert('提示', '请输入邀请码');
+      Alert.alert(t('familyManagement.hint'), t('familyManagement.enterInviteCode'));
       return;
     }
 
@@ -87,12 +87,12 @@ export default function FamilyManagement() {
     try {
       const success = await joinFamilyByCode(inviteCode.trim());
       if (success) {
-        Alert.alert('加入成功', '您已成功加入家庭！');
+        Alert.alert(t('familyManagement.joinSuccess'), t('familyManagement.joinedFamilySuccess'));
         setShowJoinForm(false);
         setInviteCode('');
       }
     } catch (error) {
-      console.error('加入家庭失败:', error);
+      console.error(t('familyManagement.joinFailed'), error);
     } finally {
       setIsSubmitting(false);
     }
@@ -100,7 +100,7 @@ export default function FamilyManagement() {
 
   const handleInviteByEmail = useCallback(async () => {
     if (!inviteEmail.trim()) {
-      Alert.alert('提示', '请输入邮箱地址');
+      Alert.alert(t('familyManagement.hint'), t('familyManagement.enterEmail'));
       return;
     }
 
@@ -108,12 +108,12 @@ export default function FamilyManagement() {
     try {
       const success = await inviteByEmail(inviteEmail.trim());
       if (success) {
-        Alert.alert('邀请成功', '邀请邮件已发送！');
+        Alert.alert(t('familyManagement.inviteSuccess'), t('familyManagement.inviteEmailSent'));
         setShowInviteForm(false);
         setInviteEmail('');
       }
     } catch (error) {
-      console.error('邮箱邀请失败:', error);
+      console.error(t('familyManagement.inviteFailed'), error);
     } finally {
       setIsSubmitting(false);
     }
@@ -121,47 +121,50 @@ export default function FamilyManagement() {
 
   const handleShareInviteCode = useCallback(async () => {
     if (!activeFamily?.invite_code) {
-      Alert.alert('提示', '当前家庭没有邀请码');
+      Alert.alert(t('familyManagement.hint'), t('familyManagement.noInviteCode'));
       return;
     }
 
     try {
       await Share.share({
-        message: `邀请您加入我的家庭"${activeFamily.name}"！\n\n邀请码: ${activeFamily.invite_code}\n\n在 KonKon 应用中输入此邀请码即可加入。`,
-        title: '家庭邀请',
+        message: t('familyManagement.shareMessage', { 
+          familyName: activeFamily.name, 
+          inviteCode: activeFamily.invite_code 
+        }),
+        title: t('familyManagement.familyInvite'),
       });
     } catch (error) {
-      console.error('分享失败:', error);
+      console.error(t('familyManagement.shareFailed'), error);
     }
   }, [activeFamily]);
 
   const handleCopyInviteCode = useCallback(async () => {
     if (!activeFamily?.invite_code) {
-      Alert.alert('提示', '当前家庭没有邀请码');
+      Alert.alert(t('familyManagement.hint'), t('familyManagement.noInviteCode'));
       return;
     }
 
     try {
       await Clipboard.setString(activeFamily.invite_code);
-      Alert.alert('复制成功', '邀请码已复制到剪贴板');
+      Alert.alert(t('familyManagement.copySuccess'), t('familyManagement.inviteCodeCopied'));
     } catch (error) {
-      console.error('复制失败:', error);
+      console.error(t('familyManagement.copyFailed'), error);
     }
   }, [activeFamily]);
 
   const handleRemoveMember = useCallback((memberId: string, memberName: string) => {
     Alert.alert(
-      '确认移除',
-      `确定要移除成员"${memberName}"吗？`,
+      t('familyManagement.confirmRemove'),
+      t('familyManagement.confirmRemoveMember', { memberName }),
       [
-        { text: '取消', style: 'cancel' },
+        { text: t('familyManagement.cancel'), style: 'cancel' },
         {
-          text: '确定',
+          text: t('familyManagement.confirm'),
           style: 'destructive',
           onPress: async () => {
             const success = await removeMember(memberId);
             if (success) {
-              Alert.alert('移除成功', '成员已被移除');
+              Alert.alert(t('familyManagement.removeSuccess'), t('familyManagement.memberRemoved'));
             }
           },
         },
@@ -171,17 +174,17 @@ export default function FamilyManagement() {
 
   const handleLeaveFamily = useCallback(() => {
     Alert.alert(
-      '确认离开',
-      `确定要离开家庭"${activeFamily?.name}"吗？`,
+      t('familyManagement.confirmLeave'),
+      t('familyManagement.confirmLeaveFamily', { familyName: activeFamily?.name }),
       [
-        { text: '取消', style: 'cancel' },
+        { text: t('familyManagement.cancel'), style: 'cancel' },
         {
-          text: '确定',
+          text: t('familyManagement.confirm'),
           style: 'destructive',
           onPress: async () => {
             const success = await leaveFamily();
             if (success) {
-              Alert.alert('离开成功', '您已离开家庭');
+              Alert.alert(t('familyManagement.leaveSuccess'), t('familyManagement.leftFamily'));
             }
           },
         },
@@ -192,22 +195,22 @@ export default function FamilyManagement() {
   const handleDeleteFamily = useCallback(() => {
     // 檢查是否為個人空間，個人空間不允許解散
     if (activeFamily?.tag === 'personal') {
-      Alert.alert('提示', t('space.personalSpaceCannotDissolve'));
+      Alert.alert(t('familyManagement.hint'), t('space.personalSpaceCannotDissolve'));
       return;
     }
 
     Alert.alert(
-      '确认解散',
-      `确定要解散家庭"${activeFamily?.name}"吗？此操作无法撤销。`,
+      t('familyManagement.confirmDissolve'),
+      t('familyManagement.confirmDissolveFamilyMessage', { familyName: activeFamily?.name }),
       [
-        { text: '取消', style: 'cancel' },
+        { text: t('familyManagement.cancel'), style: 'cancel' },
         {
-          text: '解散',
+          text: t('familyManagement.dissolve'),
           style: 'destructive',
           onPress: async () => {
             const success = await deleteFamily();
             if (success) {
-              Alert.alert('解散成功', '家庭已解散');
+              Alert.alert(t('familyManagement.dissolveSuccess'), t('familyManagement.familyDissolved'));
             }
           },
         },
@@ -223,7 +226,7 @@ export default function FamilyManagement() {
 
   const handleUpdateFamilyName = useCallback(async () => {
     if (!activeFamily || !newFamilyName.trim()) {
-      Alert.alert('提示', '请输入有效的家庭名称');
+      Alert.alert(t('familyManagement.hint'), t('familyManagement.validFamilyNameRequired'));
       return;
     }
 
@@ -231,12 +234,12 @@ export default function FamilyManagement() {
     try {
       const success = await updateFamilyName(activeFamily.id, newFamilyName.trim());
       if (success) {
-        Alert.alert('修改成功', '家庭名称已更新');
+        Alert.alert(t('familyManagement.updateSuccess'), t('familyManagement.familyNameUpdated'));
         setShowEditNameForm(false);
         setNewFamilyName('');
       }
     } catch (error) {
-      console.error('修改家庭名称失败:', error);
+      console.error(t('familyManagement.updateFailed'), error);
     } finally {
       setIsSubmitting(false);
     }
@@ -248,10 +251,10 @@ export default function FamilyManagement() {
     
     try {
       await switchFamily(familyId);
-      Alert.alert('切换成功', '已切换到新的家庭');
+      Alert.alert(t('familyManagement.switchSuccess'), t('familyManagement.switchedToNewFamily'));
     } catch (error) {
-      console.error('切换家庭失败:', error);
-      Alert.alert('切换失败', '切换家庭时发生错误');
+      console.error(t('familyManagement.switchFailed'), error);
+      Alert.alert(t('familyManagement.switchFailed'), t('familyManagement.switchError'));
     } finally {
       setIsSubmitting(false);
     }
@@ -271,7 +274,7 @@ export default function FamilyManagement() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#000" />
         </TouchableOpacity>
-        <Text style={styles.title}>家庭管理</Text>
+        <Text style={styles.title}>{t('familyManagement.title')}</Text>
         <TouchableOpacity onPress={refreshFamilies} style={styles.refreshButton}>
           <Ionicons name="refresh" size={24} color="#007AFF" />
         </TouchableOpacity>
@@ -286,7 +289,7 @@ export default function FamilyManagement() {
         {/* 當前家庭信息 */}
         {activeFamily && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>当前家庭</Text>
+            <Text style={styles.sectionTitle}>{t('familyManagement.currentFamily')}</Text>
             
             <View style={styles.familyCard}>
               <View style={styles.familyInfo}>
@@ -299,7 +302,7 @@ export default function FamilyManagement() {
                           onPress={() => setShowFamilySelector(true)}
                         >
                           <Ionicons name="swap-horizontal" size={18} color="#fff" />
-                          <Text style={styles.buttonText}>切換</Text>
+                          <Text style={styles.buttonText}>{t('familyManagement.switch')}</Text>
                         </TouchableOpacity>
                       )}
                       {isOwner && (
@@ -308,7 +311,7 @@ export default function FamilyManagement() {
                           onPress={handleEditFamilyName}
                         >
                           <Ionicons name="pencil" size={18} color="#fff" />
-                          <Text style={styles.buttonText}>編輯</Text>
+                          <Text style={styles.buttonText}>{t('familyManagement.edit')}</Text>
                         </TouchableOpacity>
                       )}
                     </View>
@@ -319,7 +322,7 @@ export default function FamilyManagement() {
                   </Text>
                 )}
                 <Text style={styles.familyMeta}>
-                  {familyMembers.length} 名成员 • {isOwner ? '您是管理员' : '您是成员'}
+                  {t('familyManagement.memberCount', { count: familyMembers.length })} • {isOwner ? t('familyManagement.youAreOwner') : t('familyManagement.youAreMember')}
                 </Text>
               </View>
               
@@ -331,15 +334,15 @@ export default function FamilyManagement() {
         {/* 家庭成员 - 元空間不顯示 */}
         {familyMembers.length > 0 && !isMetaSpace && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>家庭成员</Text>
+            <Text style={styles.sectionTitle}>{t('familyManagement.familyMembers')}</Text>
             {familyMembers.map((member) => (
               <View key={member.id} style={styles.memberCard}>
                 <View style={styles.memberInfo}>
                   <Text style={styles.memberName}>
-                    {member.user?.display_name || member.user?.email || '未知用户'}
+                    {member.user?.display_name || member.user?.email || t('familyManagement.unknownUser')}
                   </Text>
                   <Text style={styles.memberRole}>
-                    {member.role === 'owner' ? '管理员' : '成员'}
+                    {member.role === 'owner' ? t('familyManagement.owner') : t('familyManagement.member')}
                   </Text>
                 </View>
                 {isOwner && member.user_id !== user?.id && (
@@ -347,7 +350,7 @@ export default function FamilyManagement() {
                     style={styles.removeButton}
                     onPress={() => handleRemoveMember(
                       member.id,
-                      member.user?.display_name || member.user?.email || '未知用户'
+                      member.user?.display_name || member.user?.email || t('familyManagement.unknownUser')
                     )}
                   >
                     <Ionicons name="remove-circle" size={20} color="#FF3B30" />
@@ -360,14 +363,14 @@ export default function FamilyManagement() {
 
         {/* 快捷操作 */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>快捷操作</Text>
+          <Text style={styles.sectionTitle}>{t('familyManagement.quickActions')}</Text>
           
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => setShowCreateForm(true)}
           >
             <Ionicons name="add-circle" size={24} color="#34C759" />
-            <Text style={styles.actionButtonText}>创建新家庭</Text>
+            <Text style={styles.actionButtonText}>{t('familyManagement.createNewFamily')}</Text>
             <Ionicons name="chevron-forward" size={16} color="#C7C7CD" />
           </TouchableOpacity>
 
@@ -376,7 +379,7 @@ export default function FamilyManagement() {
             onPress={() => setShowJoinForm(true)}
           >
             <Ionicons name="person-add" size={24} color="#007AFF" />
-            <Text style={styles.actionButtonText}>加入家庭</Text>
+            <Text style={styles.actionButtonText}>{t('familyManagement.joinFamily')}</Text>
             <Ionicons name="chevron-forward" size={16} color="#C7C7CD" />
           </TouchableOpacity>
 
@@ -387,7 +390,7 @@ export default function FamilyManagement() {
               onPress={() => setShowInviteForm(true)}
             >
               <Ionicons name="mail" size={24} color="#FF9500" />
-              <Text style={styles.actionButtonText}>邮箱邀请</Text>
+              <Text style={styles.actionButtonText}>{t('familyManagement.emailInvite')}</Text>
               <Ionicons name="chevron-forward" size={16} color="#C7C7CD" />
             </TouchableOpacity>
           )}
@@ -399,7 +402,7 @@ export default function FamilyManagement() {
               onPress={handleShareInviteCode}
             >
               <Ionicons name="share" size={24} color="#007AFF" />
-              <Text style={styles.actionButtonText}>分享邀请</Text>
+              <Text style={styles.actionButtonText}>{t('familyManagement.shareInvite')}</Text>
               <Ionicons name="chevron-forward" size={16} color="#C7C7CD" />
             </TouchableOpacity>
           )}
@@ -411,7 +414,7 @@ export default function FamilyManagement() {
               onPress={handleCopyInviteCode}
             >
               <Ionicons name="copy" size={24} color="#007AFF" />
-              <Text style={styles.actionButtonText}>复制邀请码</Text>
+              <Text style={styles.actionButtonText}>{t('familyManagement.copyInviteCode')}</Text>
               <Ionicons name="chevron-forward" size={16} color="#C7C7CD" />
             </TouchableOpacity>
           )}
@@ -420,7 +423,7 @@ export default function FamilyManagement() {
         {/* 危险操作 */}
         {activeFamily && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>危险操作</Text>
+            <Text style={styles.sectionTitle}>{t('familyManagement.dangerousActions')}</Text>
             
             {!isOwner && !isPersonalSpace && !isMetaSpace && (
               <TouchableOpacity
@@ -429,7 +432,7 @@ export default function FamilyManagement() {
               >
                 <Ionicons name="exit" size={24} color="#FF3B30" />
                 <Text style={[styles.actionButtonText, styles.dangerText]}>
-                  离开家庭
+                  {t('familyManagement.leaveFamily')}
                 </Text>
                 <Ionicons name="chevron-forward" size={16} color="#C7C7CD" />
               </TouchableOpacity>
@@ -442,7 +445,7 @@ export default function FamilyManagement() {
               >
                 <Ionicons name="trash" size={24} color="#FF3B30" />
                 <Text style={[styles.actionButtonText, styles.dangerText]}>
-                  解散家庭
+                  {t('familyManagement.dissolveFamily')}
                 </Text>
                 <Ionicons name="chevron-forward" size={16} color="#C7C7CD" />
               </TouchableOpacity>
@@ -475,11 +478,11 @@ export default function FamilyManagement() {
       {showCreateForm && (
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>创建家庭</Text>
+            <Text style={styles.modalTitle}>{t('familyManagement.createFamilyModal')}</Text>
             
             <TextInput
               style={styles.input}
-              placeholder="家庭名称"
+              placeholder={t('familyManagement.familyName')}
               value={familyName}
               onChangeText={setFamilyName}
               maxLength={50}
@@ -487,7 +490,7 @@ export default function FamilyManagement() {
             
             <TextInput
               style={[styles.input, styles.textArea]}
-              placeholder="家庭描述（可选）"
+              placeholder={t('familyManagement.familyDescription')}
               value={familyDescription}
               onChangeText={setFamilyDescription}
               multiline
@@ -499,7 +502,7 @@ export default function FamilyManagement() {
                 style={styles.cancelButton}
                 onPress={() => setShowCreateForm(false)}
               >
-                <Text style={styles.cancelButtonText}>取消</Text>
+                <Text style={styles.cancelButtonText}>{t('familyManagement.cancel')}</Text>
               </TouchableOpacity>
               
               <TouchableOpacity
@@ -510,7 +513,7 @@ export default function FamilyManagement() {
                 {isSubmitting ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
-                  <Text style={styles.confirmButtonText}>创建</Text>
+                  <Text style={styles.confirmButtonText}>{t('familyManagement.create')}</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -522,11 +525,11 @@ export default function FamilyManagement() {
       {showJoinForm && (
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>加入家庭</Text>
+            <Text style={styles.modalTitle}>{t('familyManagement.joinFamilyModal')}</Text>
             
             <TextInput
               style={styles.input}
-              placeholder="输入邀请码"
+              placeholder={t('familyManagement.inviteCodePlaceholder')}
               value={inviteCode}
               onChangeText={setInviteCode}
               maxLength={20}
@@ -537,7 +540,7 @@ export default function FamilyManagement() {
                 style={styles.cancelButton}
                 onPress={() => setShowJoinForm(false)}
               >
-                <Text style={styles.cancelButtonText}>取消</Text>
+                <Text style={styles.cancelButtonText}>{t('familyManagement.cancel')}</Text>
               </TouchableOpacity>
               
               <TouchableOpacity
@@ -548,7 +551,7 @@ export default function FamilyManagement() {
                 {isSubmitting ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
-                  <Text style={styles.confirmButtonText}>加入</Text>
+                  <Text style={styles.confirmButtonText}>{t('familyManagement.join')}</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -560,11 +563,11 @@ export default function FamilyManagement() {
       {showInviteForm && (
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>邮箱邀请</Text>
+            <Text style={styles.modalTitle}>{t('familyManagement.emailInviteModal')}</Text>
             
             <TextInput
               style={styles.input}
-              placeholder="输入邮箱地址"
+              placeholder={t('familyManagement.emailPlaceholder')}
               value={inviteEmail}
               onChangeText={setInviteEmail}
               keyboardType="email-address"
@@ -576,7 +579,7 @@ export default function FamilyManagement() {
                 style={styles.cancelButton}
                 onPress={() => setShowInviteForm(false)}
               >
-                <Text style={styles.cancelButtonText}>取消</Text>
+                <Text style={styles.cancelButtonText}>{t('familyManagement.cancel')}</Text>
               </TouchableOpacity>
               
               <TouchableOpacity
@@ -587,7 +590,7 @@ export default function FamilyManagement() {
                 {isSubmitting ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
-                  <Text style={styles.confirmButtonText}>邀请</Text>
+                  <Text style={styles.confirmButtonText}>{t('familyManagement.invite')}</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -599,11 +602,11 @@ export default function FamilyManagement() {
       {showEditNameForm && (
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>修改家庭名称</Text>
+            <Text style={styles.modalTitle}>{t('familyManagement.editFamilyNameModal')}</Text>
             
             <TextInput
               style={styles.input}
-              placeholder="输入新的家庭名称"
+              placeholder={t('familyManagement.newFamilyNamePlaceholder')}
               value={newFamilyName}
               onChangeText={setNewFamilyName}
               maxLength={50}
@@ -618,7 +621,7 @@ export default function FamilyManagement() {
                   setNewFamilyName('');
                 }}
               >
-                <Text style={styles.cancelButtonText}>取消</Text>
+                <Text style={styles.cancelButtonText}>{t('familyManagement.cancel')}</Text>
               </TouchableOpacity>
               
               <TouchableOpacity
@@ -629,7 +632,7 @@ export default function FamilyManagement() {
                 {isSubmitting ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
-                  <Text style={styles.confirmButtonText}>保存</Text>
+                  <Text style={styles.confirmButtonText}>{t('familyManagement.save')}</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -641,7 +644,7 @@ export default function FamilyManagement() {
       {showFamilySelector && (
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>選擇家庭</Text>
+            <Text style={styles.modalTitle}>{t('familyManagement.selectFamily')}</Text>
             
             <ScrollView style={styles.familyListContainer}>
               {userFamilies.map((family, index) => (
@@ -668,7 +671,7 @@ export default function FamilyManagement() {
                       </Text>
                     )}
                     <Text style={styles.familyOptionMeta}>
-                      {family.member_count || 0} 名成員
+                      {t('familyManagement.memberCountShort', { count: family.member_count || 0 })}
                     </Text>
                   </View>
                   {activeFamily?.id === family.id && (
@@ -682,7 +685,7 @@ export default function FamilyManagement() {
               style={styles.cancelButton}
               onPress={() => setShowFamilySelector(false)}
             >
-              <Text style={styles.cancelButtonText}>取消</Text>
+              <Text style={styles.cancelButtonText}>{t('familyManagement.cancel')}</Text>
             </TouchableOpacity>
           </View>
         </View>

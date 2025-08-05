@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Colors } from '../../constants/Colors';
 import { useNotifications } from '../../hooks/useNotifications';
+import { t } from '../../lib/i18n';
 import { handleNotificationNavigation } from '../../lib/notificationNavigation';
 import { NotificationWithSender } from '../../lib/notificationService';
 import { supabase } from '../../lib/supabase';
@@ -158,7 +159,7 @@ export default function NotificationBell({ colorScheme }: NotificationBellProps)
       >
         <SafeAreaView style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>通知</Text>
+            <Text style={styles.modalTitle}>{t('notifications.title')}</Text>
             <TouchableOpacity
               style={styles.closeButton}
               onPress={() => setShowNotifications(false)}

@@ -3,20 +3,21 @@ import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
-  Alert,
-  Image,
-  Modal,
-  Platform,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    Alert,
+    Image,
+    Modal,
+    Platform,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import AvatarService from '../lib/avatarService';
+import { t } from '../lib/i18n';
 import { supabase } from '../lib/supabase';
 
 // 生成年份數組 (1950-2024)
@@ -119,11 +120,11 @@ export default function EditProfileScreen() {
 
   const handleSave = async () => {
     if (!user) {
-      Alert.alert('錯誤', '用戶未登入');
+      Alert.alert(t('editProfile.error'), t('editProfile.notLoggedIn'));
       return;
     }
     if (!name.trim()) {
-      Alert.alert('錯誤', '昵稱不能為空');
+      Alert.alert(t('editProfile.error'), t('editProfile.nicknameRequired'));
       return;
     }
 
@@ -162,12 +163,12 @@ export default function EditProfileScreen() {
         console.warn('Auth metadata 更新失敗:', authError);
       }
 
-      Alert.alert('成功', '您的個人資料已更新', [
-        { text: '好的', onPress: () => router.back() }
+      Alert.alert(t('editProfile.success'), t('editProfile.profileUpdated'), [
+        { text: t('editProfile.ok'), onPress: () => router.back() }
       ]);
 
     } catch (error: any) {
-      Alert.alert('保存失敗', error.message);
+      Alert.alert(t('editProfile.saveFailed'), error.message);
     } finally {
       setLoading(false);
     }
@@ -175,24 +176,24 @@ export default function EditProfileScreen() {
 
   const showAvatarOptions = () => {
     Alert.alert(
-      '選擇頭像',
-      '請選擇頭像來源',
+      t('editProfile.selectAvatar'),
+      t('editProfile.selectAvatarSource'),
       [
         {
-          text: '拍照',
+          text: t('editProfile.takePhoto'),
           onPress: handleTakePhoto
         },
         {
-          text: '從相冊選擇',
+          text: t('editProfile.pickFromLibrary'),
           onPress: handlePickFromLibrary
         },
         ...(avatarUrl ? [{
-          text: '刪除頭像',
+          text: t('editProfile.deleteAvatar'),
           style: 'destructive' as const,
           onPress: handleDeleteAvatar
         }] : []),
         {
-          text: '取消',
+          text: t('editProfile.cancel'),
           style: 'cancel' as const
         }
       ]
@@ -209,13 +210,13 @@ export default function EditProfileScreen() {
         
         if (result.success && result.avatarUrl) {
           setAvatarUrl(result.avatarUrl);
-          Alert.alert('成功', '頭像更新成功');
+          Alert.alert(t('editProfile.success'), t('editProfile.avatarUpdated'));
         } else {
-          Alert.alert('錯誤', result.error || '頭像更新失敗');
+          Alert.alert(t('editProfile.error'), result.error || t('editProfile.avatarUpdateFailed'));
         }
       }
     } catch (error: any) {
-      Alert.alert('錯誤', error.message || '拍照失敗');
+      Alert.alert(t('editProfile.error'), error.message || t('editProfile.takePhotoFailed'));
     } finally {
       setAvatarLoading(false);
     }
@@ -231,13 +232,13 @@ export default function EditProfileScreen() {
         
         if (result.success && result.avatarUrl) {
           setAvatarUrl(result.avatarUrl);
-          Alert.alert('成功', '頭像更新成功');
+          Alert.alert(t('editProfile.success'), t('editProfile.avatarUpdated'));
         } else {
-          Alert.alert('錯誤', result.error || '頭像更新失敗');
+          Alert.alert(t('editProfile.error'), result.error || t('editProfile.avatarUpdateFailed'));
         }
       }
     } catch (error: any) {
-      Alert.alert('錯誤', error.message || '選擇照片失敗');
+      Alert.alert(t('editProfile.error'), error.message || t('editProfile.pickPhotoFailed'));
     } finally {
       setAvatarLoading(false);
     }
@@ -245,12 +246,12 @@ export default function EditProfileScreen() {
 
   const handleDeleteAvatar = async () => {
     Alert.alert(
-      '確認刪除',
-      '確定要刪除頭像嗎？',
+      t('editProfile.confirmDelete'),
+      t('editProfile.confirmDeleteAvatar'),
       [
-        { text: '取消', style: 'cancel' },
+        { text: t('editProfile.cancel'), style: 'cancel' },
         {
-          text: '刪除',
+          text: t('editProfile.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -259,12 +260,12 @@ export default function EditProfileScreen() {
               
               if (result.success) {
                 setAvatarUrl(null);
-                Alert.alert('成功', '頭像已刪除');
+                Alert.alert(t('editProfile.success'), t('editProfile.avatarDeleted'));
               } else {
-                Alert.alert('錯誤', result.error || '刪除頭像失敗');
+                Alert.alert(t('editProfile.error'), result.error || t('editProfile.deleteAvatarFailed'));
               }
             } catch (error: any) {
-              Alert.alert('錯誤', error.message || '刪除頭像失敗');
+              Alert.alert(t('editProfile.error'), error.message || t('editProfile.deleteAvatarFailed'));
             } finally {
               setAvatarLoading(false);
             }
@@ -278,24 +279,24 @@ export default function EditProfileScreen() {
     if (avatarUrl) {
       return avatarUrl;
     }
-    return AvatarService.getPlaceholderUrl(name || '用戶');
+    return AvatarService.getPlaceholderUrl(name || t('editProfile.user'));
   };
 
   const getGenderLabel = (value: string) => {
     const genderOptions = {
-      'male': '男',
-      'female': '女',
-      'other': '其他',
-      'prefer_not_to_say': '不願透露'
+      'male': t('editProfile.genders.male'),
+      'female': t('editProfile.genders.female'),
+      'other': t('editProfile.genders.other'),
+      'prefer_not_to_say': t('editProfile.genders.preferNotToSay')
     };
-    return genderOptions[value as keyof typeof genderOptions] || '請選擇';
+    return genderOptions[value as keyof typeof genderOptions] || t('editProfile.pleaseSelect');
   };
 
   const getBirthDateLabel = () => {
     if (birthYear && birthMonth && birthDay) {
-      return `${birthYear}年${birthMonth}月${birthDay}日`;
+      return `${birthYear}${t('editProfile.datePicker.year')}${birthMonth}${t('editProfile.datePicker.month')}${birthDay}${t('editProfile.datePicker.day')}`;
     }
-    return '請選擇生日';
+    return t('editProfile.pleasSelectBirthday');
   };
 
   return (
@@ -305,10 +306,10 @@ export default function EditProfileScreen() {
         <TouchableOpacity onPress={handleBack} style={styles.headerButton}>
           <Ionicons name="arrow-back" size={24} color="#1C1C1E" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>編輯個人資料</Text>
+        <Text style={styles.headerTitle}>{t('editProfile.title')}</Text>
         <TouchableOpacity onPress={handleSave} style={styles.headerButton} disabled={loading}>
           <Text style={[styles.saveText, loading && styles.saveTextDisabled]}>
-            {loading ? '保存中' : '保存'}
+            {loading ? t('editProfile.saving') : t('editProfile.save')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -327,38 +328,38 @@ export default function EditProfileScreen() {
             />
             {avatarLoading && (
               <View style={styles.avatarOverlay}>
-                <Text style={styles.loadingText}>上傳中...</Text>
+                <Text style={styles.loadingText}>{t('editProfile.uploading')}</Text>
               </View>
             )}
             <View style={styles.avatarEditIcon}>
               <Ionicons name="camera" size={20} color="#FFF" />
             </View>
           </TouchableOpacity>
-          <Text style={styles.avatarHint}>點擊更換頭像</Text>
+          <Text style={styles.avatarHint}>{t('editProfile.clickToChangeAvatar')}</Text>
         </View>
 
         {/* 表單區域 */}
         <View style={styles.formContainer}>
           {/* 昵稱 */}
           <View style={styles.fieldContainer}>
-            <Text style={styles.fieldLabel}>昵稱</Text>
+            <Text style={styles.fieldLabel}>{t('editProfile.nickname')}</Text>
             <TextInput
               style={styles.textInput}
               value={name}
               onChangeText={setName}
-              placeholder="請輸入您的昵稱"
+              placeholder={t('editProfile.nicknamePlaceholder')}
               placeholderTextColor="#8E8E93"
             />
           </View>
 
           {/* 手機號碼 */}
           <View style={styles.fieldContainer}>
-            <Text style={styles.fieldLabel}>手機號碼</Text>
+            <Text style={styles.fieldLabel}>{t('editProfile.phone')}</Text>
             <TextInput
               style={styles.textInput}
               value={phone}
               onChangeText={setPhone}
-              placeholder="請輸入手機號碼"
+              placeholder={t('editProfile.phonePlaceholder')}
               placeholderTextColor="#8E8E93"
               keyboardType="phone-pad"
             />
@@ -366,7 +367,7 @@ export default function EditProfileScreen() {
 
           {/* 性別 */}
           <View style={styles.fieldContainer}>
-            <Text style={styles.fieldLabel}>性別</Text>
+            <Text style={styles.fieldLabel}>{t('editProfile.gender')}</Text>
             <TouchableOpacity 
               style={styles.pickerButton}
               onPress={() => setShowGenderPicker(true)}
@@ -380,7 +381,7 @@ export default function EditProfileScreen() {
 
           {/* 生日 */}
           <View style={styles.fieldContainer}>
-            <Text style={styles.fieldLabel}>生日</Text>
+            <Text style={styles.fieldLabel}>{t('editProfile.birthday')}</Text>
             <TouchableOpacity 
               style={styles.pickerButton}
               onPress={() => setShowBirthDatePicker(true)}
@@ -394,12 +395,12 @@ export default function EditProfileScreen() {
 
           {/* 興趣愛好 */}
           <View style={styles.fieldContainer}>
-            <Text style={styles.fieldLabel}>興趣愛好</Text>
+            <Text style={styles.fieldLabel}>{t('editProfile.interests')}</Text>
             <TextInput
               style={[styles.textInput, styles.textArea]}
               value={interests}
               onChangeText={setInterests}
-              placeholder="分享一下您的興趣愛好"
+              placeholder={t('editProfile.interestsPlaceholder')}
               placeholderTextColor="#8E8E93"
               multiline
               numberOfLines={3}
@@ -420,11 +421,11 @@ export default function EditProfileScreen() {
           <View style={styles.pickerModal}>
             <View style={styles.pickerHeader}>
               <TouchableOpacity onPress={() => setShowGenderPicker(false)}>
-                <Text style={styles.pickerCancel}>取消</Text>
+                <Text style={styles.pickerCancel}>{t('editProfile.cancel')}</Text>
               </TouchableOpacity>
-              <Text style={styles.pickerTitle}>選擇性別</Text>
+              <Text style={styles.pickerTitle}>{t('editProfile.selectGender')}</Text>
               <TouchableOpacity onPress={() => setShowGenderPicker(false)}>
-                <Text style={styles.pickerDone}>完成</Text>
+                <Text style={styles.pickerDone}>{t('editProfile.done')}</Text>
               </TouchableOpacity>
             </View>
             <Picker
@@ -432,11 +433,11 @@ export default function EditProfileScreen() {
               onValueChange={(itemValue) => setGender(itemValue)}
               style={styles.picker}
             >
-              <Picker.Item label="請選擇" value="" />
-              <Picker.Item label="男" value="male" />
-              <Picker.Item label="女" value="female" />
-              <Picker.Item label="其他" value="other" />
-              <Picker.Item label="不願透露" value="prefer_not_to_say" />
+              <Picker.Item label={t('editProfile.pleaseSelect')} value="" />
+              <Picker.Item label={t('editProfile.genders.male')} value="male" />
+              <Picker.Item label={t('editProfile.genders.female')} value="female" />
+              <Picker.Item label={t('editProfile.genders.other')} value="other" />
+              <Picker.Item label={t('editProfile.genders.preferNotToSay')} value="prefer_not_to_say" />
             </Picker>
           </View>
         </View>
@@ -453,48 +454,48 @@ export default function EditProfileScreen() {
           <View style={styles.pickerModal}>
             <View style={styles.pickerHeader}>
               <TouchableOpacity onPress={() => setShowBirthDatePicker(false)}>
-                <Text style={styles.pickerCancel}>取消</Text>
+                <Text style={styles.pickerCancel}>{t('editProfile.cancel')}</Text>
               </TouchableOpacity>
-              <Text style={styles.pickerTitle}>選擇生日</Text>
+              <Text style={styles.pickerTitle}>{t('editProfile.selectBirthday')}</Text>
               <TouchableOpacity onPress={() => setShowBirthDatePicker(false)}>
-                <Text style={styles.pickerDone}>完成</Text>
+                <Text style={styles.pickerDone}>{t('editProfile.done')}</Text>
               </TouchableOpacity>
             </View>
             <View style={styles.multiPickerContainer}>
               <View style={styles.pickerColumn}>
-                <Text style={styles.pickerColumnTitle}>年</Text>
+                <Text style={styles.pickerColumnTitle}>{t('editProfile.datePicker.year')}</Text>
                 <Picker
                   selectedValue={birthYear}
                   onValueChange={(itemValue) => setBirthYear(itemValue)}
                   style={styles.columnPicker}
                 >
-                  <Picker.Item label="年" value="" />
+                  <Picker.Item label={t('editProfile.datePicker.year')} value="" />
                   {years.map(year => (
                     <Picker.Item key={year} label={year} value={year} />
                   ))}
                 </Picker>
               </View>
               <View style={styles.pickerColumn}>
-                <Text style={styles.pickerColumnTitle}>月</Text>
+                <Text style={styles.pickerColumnTitle}>{t('editProfile.datePicker.month')}</Text>
                 <Picker
                   selectedValue={birthMonth}
                   onValueChange={(itemValue) => setBirthMonth(itemValue)}
                   style={styles.columnPicker}
                 >
-                  <Picker.Item label="月" value="" />
+                  <Picker.Item label={t('editProfile.datePicker.month')} value="" />
                   {months.map(month => (
                     <Picker.Item key={month} label={month} value={month} />
                   ))}
                 </Picker>
               </View>
               <View style={styles.pickerColumn}>
-                <Text style={styles.pickerColumnTitle}>日</Text>
+                <Text style={styles.pickerColumnTitle}>{t('editProfile.datePicker.day')}</Text>
                 <Picker
                   selectedValue={birthDay}
                   onValueChange={(itemValue) => setBirthDay(itemValue)}
                   style={styles.columnPicker}
                 >
-                  <Picker.Item label="日" value="" />
+                  <Picker.Item label={t('editProfile.datePicker.day')} value="" />
                   {days.map(day => (
                     <Picker.Item key={day} label={day} value={day} />
                   ))}

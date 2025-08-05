@@ -1,4 +1,5 @@
 import { Database } from './database.types';
+import { t } from './i18n';
 import { supabase } from './supabase';
 
 // 类型定义
@@ -718,8 +719,8 @@ export async function notifyEventCreated(
     await createBatchFamilyNotifications({
       familyId,
       type: 'event_created',
-      title: '📅 新日程通知',
-      message: `${creatorName} 新建了日程「${eventTitle}」，点击查看详情`,
+      title: t('notifications.eventCreatedTitle'),
+      message: t('notifications.eventCreatedMessage', { creatorName, eventTitle }),
       relatedId: eventId,
       relatedType: 'event',
       metadata: { eventTitle, creatorName, action: 'created' }
@@ -781,8 +782,8 @@ export async function notifyEventUpdated(
     await createBatchFamilyNotifications({
       familyId,
       type: 'event_updated',
-      title: '✏️ 日程更新通知',
-      message: `${updaterName} 修改了日程「${eventTitle}」，点击查看最新内容`,
+      title: t('notifications.eventUpdatedTitle'),
+      message: t('notifications.eventUpdatedMessage', { updaterName, eventTitle }),
       relatedId: eventId,
       relatedType: 'event',
       metadata: { eventTitle, updaterName, action: 'updated' }
@@ -843,8 +844,8 @@ export async function notifyEventDeleted(
     await createBatchFamilyNotifications({
       familyId,
       type: 'event_deleted',
-      title: '🗑️ 日程删除通知',
-      message: `${deleterName} 删除了日程「${eventTitle}」`,
+      title: t('notifications.eventDeletedTitle'),
+      message: t('notifications.eventDeletedMessage', { deleterName, eventTitle }),
       relatedType: 'event',
       metadata: { eventTitle, deleterName, action: 'deleted' }
     }, recipients);
