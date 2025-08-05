@@ -11,6 +11,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
+import { getCurrentLocale, t } from '../../lib/i18n';
 import { getNotificationEventTitle } from '../../lib/notificationNavigation';
 import { NotificationWithSender } from '../../lib/notificationService';
 
@@ -53,11 +54,11 @@ export default function NotificationList({
     if (unreadCount === 0) return;
     
     Alert.alert(
-      '标记全部已读',
-      `确定要将所有 ${unreadCount} 条未读通知标记为已读吗？`,
+      t('notifications.markAllAsReadConfirm'),
+      t('notifications.markAllAsReadMessage', { count: unreadCount }),
       [
-        { text: '取消', style: 'cancel' },
-        { text: '确定', onPress: onMarkAllAsRead },
+        { text: t('notifications.cancel'), style: 'cancel' },
+        { text: t('notifications.confirm'), onPress: onMarkAllAsRead },
       ]
     );
   }, [unreadCount, onMarkAllAsRead]);
@@ -109,17 +110,76 @@ export default function NotificationList({
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     
-    if (minutes < 1) return '刚刚';
-    if (minutes < 60) return `${minutes}分钟前`;
-    if (hours < 24) return `${hours}小时前`;
-    if (days < 7) return `${days}天前`;
+    if (minutes < 1) return t('notifications.justNow');
+    if (minutes < 60) return t('notifications.minutesAgo', { minutes });
+    if (hours < 24) return t('notifications.hoursAgo', { hours });
+    if (days < 7) return t('notifications.daysAgo', { days });
     
-    return date.toLocaleDateString('zh-CN', {
+    // 使用當前語言的本地化日期格式
+    const locale = getCurrentLocale();
+    return date.toLocaleDateString(locale, {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
     });
+  };
+
+  // 動態翻譯舊通知的標題
+  const getTranslatedTitle = (notification: NotificationWithSender): string => {
+    const { type, title } = notification;
+    
+    // 如果標題已經是翻譯鍵的結果（不包含中文硬編碼），直接返回
+    if (!title.includes('日程通知') && !title.includes('通知')) {
+      return title;
+    }
+    
+    // 根據通知類型返回對應的翻譯
+    switch (type) {
+      case 'event_created':
+        return t('notifications.eventCreatedTitle');
+      case 'event_updated':
+        return t('notifications.eventUpdatedTitle');
+      case 'event_deleted':
+        return t('notifications.eventDeletedTitle');
+      case 'event_reminder':
+        return t('notificationSettings.eventReminderTitle');
+      case 'family_invite':
+        return t('notificationSettings.familyInviteTitle');
+      default:
+        return title; // 如果無法識別類型，返回原標題
+    }
+  };
+
+  // 動態翻譯舊通知的消息內容
+  const getTranslatedMessage = (notification: NotificationWithSender): string => {
+    const { type, message, metadata } = notification;
+    
+    // 如果消息不包含中文硬編碼，直接返回
+    if (!message.includes('新建了日程') && !message.includes('修改了日程') && !message.includes('删除了日程')) {
+      return message;
+    }
+    
+    // 安全地檢查 metadata 並提取信息
+    const metadataObj = metadata && typeof metadata === 'object' ? metadata : {};
+    const creatorName = (metadataObj as any)?.creatorName || 
+                       (metadataObj as any)?.updaterName || 
+                       (metadataObj as any)?.deleterName || 
+                       message.match(/^(\S+)\s/)?.[1] || 'Unknown';
+    const eventTitle = (metadataObj as any)?.eventTitle || 
+                      message.match(/「([^」]+)」/)?.[1] || 'Unknown Event';
+    
+    // 根據通知類型返回對應的翻譯
+    switch (type) {
+      case 'event_created':
+        return t('notifications.eventCreatedMessage', { creatorName, eventTitle });
+      case 'event_updated':
+        return t('notifications.eventUpdatedMessage', { updaterName: creatorName, eventTitle });
+      case 'event_deleted':
+        return t('notifications.eventDeletedMessage', { deleterName: creatorName, eventTitle });
+      default:
+        return message; // 如果無法識別類型，返回原消息
+    }
   };
 
   // 將通知分組為已讀和未讀
@@ -130,7 +190,7 @@ export default function NotificationList({
   
   if (unreadNotifications.length > 0) {
     sections.push({
-      title: '未讀通知',
+      title: t('notifications.unreadNotifications'),
       data: unreadNotifications,
       isUnread: true,
     });
@@ -138,7 +198,7 @@ export default function NotificationList({
   
   if (readNotifications.length > 0) {
     sections.push({
-      title: '已讀通知',
+      title: t('notifications.readNotifications'),
       data: readNotifications,
       isUnread: false,
     });
@@ -180,7 +240,7 @@ export default function NotificationList({
                 styles.notificationTitle,
                 !notification.is_read && styles.unreadTitle
               ]}>
-                {notification.title}
+                {getTranslatedTitle(notification)}
               </Text>
               {!notification.is_read && (
                 <View style={styles.unreadDot} />
@@ -188,7 +248,7 @@ export default function NotificationList({
             </View>
             
             <Text style={styles.notificationMessage} numberOfLines={2}>
-              {notification.message}
+              {getTranslatedMessage(notification)}
               {/* 如果是事件通知，顯示事件標題 */}
               {getNotificationEventTitle(notification) && (
                 <Text style={styles.eventTitle}>
@@ -210,7 +270,7 @@ export default function NotificationList({
                   </View>
                 )}
                 <Text style={styles.senderName}>
-                  {notification.sender?.display_name || '系统'}
+                  {notification.sender?.display_name || t('notifications.system')}
                 </Text>
               </View>
               
@@ -251,7 +311,7 @@ export default function NotificationList({
           style={styles.markAllButton}
           onPress={handleMarkAllAsRead}
         >
-          <Text style={styles.markAllButtonText}>全部已读</Text>
+          <Text style={styles.markAllButtonText}>{t('notifications.markAllAsRead')}</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -268,7 +328,7 @@ export default function NotificationList({
     return (
       <View style={styles.footer}>
         <ActivityIndicator size="small" color="#007AFF" />
-        <Text style={styles.footerText}>加载更多...</Text>
+        <Text style={styles.footerText}>{t('notifications.loadingMore')}</Text>
       </View>
     );
   };
@@ -278,7 +338,7 @@ export default function NotificationList({
       return (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={styles.loadingText}>加载中...</Text>
+          <Text style={styles.loadingText}>{t('notifications.loading')}</Text>
         </View>
       );
     }
@@ -286,8 +346,8 @@ export default function NotificationList({
     return (
       <View style={styles.emptyContainer}>
         <Ionicons name="notifications-outline" size={60} color="#C7C7CD" />
-        <Text style={styles.emptyTitle}>暂无通知</Text>
-        <Text style={styles.emptyMessage}>当有新的家庭活动时，会在这里显示通知</Text>
+        <Text style={styles.emptyTitle}>{t('notifications.noNotifications')}</Text>
+        <Text style={styles.emptyMessage}>{t('notifications.noNotificationsMessage')}</Text>
       </View>
     );
   };

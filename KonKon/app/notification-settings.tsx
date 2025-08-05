@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFamily } from '../contexts/FamilyContext';
 import { useNotifications } from '../hooks/useNotifications';
+import { t } from '../lib/i18n';
 
 interface NotificationSetting {
   key: string;
@@ -26,38 +27,41 @@ export default function NotificationSettingsScreen() {
   const { activeFamily } = useFamily();
   const { notificationPreferences, updatePreferences } = useNotifications();
   
-  const [settings, setSettings] = useState<NotificationSetting[]>([
+  // 動態獲取設置列表以支持多語言
+  const getSettingsList = (): NotificationSetting[] => [
     {
       key: 'event_created_enabled',
-      title: '新建日程通知',
-      description: '当家庭成员创建新日程时通知我',
+      title: t('notificationSettings.eventCreatedTitle'),
+      description: t('notificationSettings.eventCreatedDescription'),
       enabled: true,
     },
     {
       key: 'event_updated_enabled',
-      title: '更新日程通知',
-      description: '当家庭成员更新日程时通知我',
+      title: t('notificationSettings.eventUpdatedTitle'),
+      description: t('notificationSettings.eventUpdatedDescription'),
       enabled: true,
     },
     {
       key: 'event_deleted_enabled',
-      title: '删除日程通知',
-      description: '当家庭成员删除日程时通知我',
+      title: t('notificationSettings.eventDeletedTitle'),
+      description: t('notificationSettings.eventDeletedDescription'),
       enabled: true,
     },
     {
       key: 'event_reminder_enabled',
-      title: '日程提醒通知',
-      description: '接收即将到来的日程提醒',
+      title: t('notificationSettings.eventReminderTitle'),
+      description: t('notificationSettings.eventReminderDescription'),
       enabled: true,
     },
     {
       key: 'family_invite_enabled',
-      title: '家庭邀请通知',
-      description: '接收家庭邀请和成员变更通知',
+      title: t('notificationSettings.familyInviteTitle'),
+      description: t('notificationSettings.familyInviteDescription'),
       enabled: true,
     },
-  ]);
+  ];
+  
+  const [settings, setSettings] = useState<NotificationSetting[]>([]);
 
   const [pushEnabled, setPushEnabled] = useState(true);
   const [quietHoursEnabled, setQuietHoursEnabled] = useState(true);
@@ -66,18 +70,23 @@ export default function NotificationSettingsScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // 加载现有设置
+  // 初始化設置並加載現有設置
   useEffect(() => {
+    const initialSettings = getSettingsList();
+    
     if (notificationPreferences) {
-      setSettings(prev => prev.map(setting => ({
+      const updatedSettings = initialSettings.map(setting => ({
         ...setting,
         enabled: notificationPreferences[setting.key] ?? setting.enabled,
-      })));
+      }));
+      setSettings(updatedSettings);
 
       setPushEnabled(notificationPreferences.push_enabled ?? true);
       setQuietHoursEnabled(notificationPreferences.quiet_hours_enabled ?? true);
       setQuietStart(notificationPreferences.quiet_hours_start || '22:00');
       setQuietEnd(notificationPreferences.quiet_hours_end || '08:00');
+    } else {
+      setSettings(initialSettings);
     }
   }, [notificationPreferences]);
 
@@ -149,13 +158,13 @@ export default function NotificationSettingsScreen() {
           >
             <Ionicons name="chevron-back" size={24} color="#007AFF" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>通知设置</Text>
+          <Text style={styles.headerTitle}>{t('notificationSettings.title')}</Text>
           <View style={styles.placeholder} />
         </View>
 
         <View style={styles.emptyContainer}>
           <Ionicons name="people-outline" size={60} color="#C7C7CD" />
-          <Text style={styles.emptyText}>请先加入或创建家庭群组</Text>
+          <Text style={styles.emptyText}>{t('notificationSettings.joinFamilyPrompt')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -170,7 +179,7 @@ export default function NotificationSettingsScreen() {
         >
           <Ionicons name="chevron-back" size={24} color="#007AFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>通知设置</Text>
+        <Text style={styles.headerTitle}>{t('notificationSettings.title')}</Text>
         <TouchableOpacity
           style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
           onPress={handleSave}
@@ -179,7 +188,7 @@ export default function NotificationSettingsScreen() {
           {isSaving ? (
             <ActivityIndicator size="small" color="#007AFF" />
           ) : (
-            <Text style={styles.saveButtonText}>保存</Text>
+            <Text style={styles.saveButtonText}>{t('notificationSettings.save')}</Text>
           )}
         </TouchableOpacity>
       </View>
@@ -187,12 +196,12 @@ export default function NotificationSettingsScreen() {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* 推送通知总开关 */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>推送通知</Text>
+          <Text style={styles.sectionTitle}>{t('notificationSettings.pushNotifications')}</Text>
           <View style={styles.settingItem}>
             <View style={styles.settingContent}>
-              <Text style={styles.settingTitle}>启用推送通知</Text>
+              <Text style={styles.settingTitle}>{t('notificationSettings.enablePushNotifications')}</Text>
               <Text style={styles.settingDescription}>
-                允许应用发送推送通知到您的设备
+                {t('notificationSettings.pushNotificationsDescription')}
               </Text>
             </View>
             <Switch
@@ -206,18 +215,18 @@ export default function NotificationSettingsScreen() {
 
         {/* 通知类型设置 */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>通知类型</Text>
+          <Text style={styles.sectionTitle}>{t('notificationSettings.notificationTypes')}</Text>
           {settings.map(renderSettingItem)}
         </View>
 
         {/* 静默时间设置 */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>静默时间</Text>
+          <Text style={styles.sectionTitle}>{t('notificationSettings.quietHours')}</Text>
           <View style={styles.settingItem}>
             <View style={styles.settingContent}>
-              <Text style={styles.settingTitle}>启用静默时间</Text>
+              <Text style={styles.settingTitle}>{t('notificationSettings.enableQuietHours')}</Text>
               <Text style={styles.settingDescription}>
-                在指定时间段内不发送推送通知
+                {t('notificationSettings.quietHoursDescription')}
               </Text>
             </View>
             <Switch
@@ -231,13 +240,13 @@ export default function NotificationSettingsScreen() {
           {quietHoursEnabled && (
             <View style={styles.timeRangeContainer}>
               <View style={styles.timeItem}>
-                <Text style={styles.timeLabel}>开始时间</Text>
+                <Text style={styles.timeLabel}>{t('notificationSettings.quietHoursStart')}</Text>
                 <TouchableOpacity style={styles.timeButton}>
                   <Text style={styles.timeText}>{quietStart}</Text>
                 </TouchableOpacity>
               </View>
               <View style={styles.timeItem}>
-                <Text style={styles.timeLabel}>结束时间</Text>
+                <Text style={styles.timeLabel}>{t('notificationSettings.quietHoursEnd')}</Text>
                 <TouchableOpacity style={styles.timeButton}>
                   <Text style={styles.timeText}>{quietEnd}</Text>
                 </TouchableOpacity>
@@ -249,9 +258,9 @@ export default function NotificationSettingsScreen() {
         {/* 说明文字 */}
         <View style={styles.section}>
           <Text style={styles.noteText}>
-            • 即使关闭了推送通知，您仍然可以在应用内查看所有通知{'\n'}
-            • 重要的紧急通知可能会忽略静默时间设置{'\n'}
-            • 您可以随时更改这些设置
+            {t('notificationSettings.note1')}{'\n'}
+            {t('notificationSettings.note2')}{'\n'}
+            {t('notificationSettings.note3')}
           </Text>
         </View>
       </ScrollView>

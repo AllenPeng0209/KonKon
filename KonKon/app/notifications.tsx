@@ -2,10 +2,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import {
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import NotificationList from '../components/common/NotificationList';
@@ -13,6 +13,7 @@ import EventPreviewModal from '../components/event/EventPreviewModal';
 import { useAuth } from '../contexts/AuthContext';
 import { useFamily } from '../contexts/FamilyContext';
 import { useNotifications } from '../hooks/useNotifications';
+import { t } from '../lib/i18n';
 import { handleNotificationNavigation } from '../lib/notificationNavigation';
 import { NotificationWithSender } from '../lib/notificationService';
 import { supabase } from '../lib/supabase';
@@ -29,12 +30,12 @@ export default function NotificationsScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.centered}>
-          <Text style={styles.message}>请先登录以查看通知</Text>
+          <Text style={styles.message}>{t('notifications.loginRequired')}</Text>
           <TouchableOpacity 
             style={styles.loginButton}
             onPress={() => router.push('/login')}
           >
-            <Text style={styles.loginButtonText}>前往登录</Text>
+            <Text style={styles.loginButtonText}>{t('notifications.goToLogin')}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -135,7 +136,7 @@ export default function NotificationsScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.emptyContainer}>
           <Ionicons name="people-outline" size={60} color="#C7C7CD" />
-          <Text style={styles.emptyText}>请先加入或创建家庭群组</Text>
+          <Text style={styles.emptyText}>{t('notifications.familyRequired')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -150,6 +151,8 @@ export default function NotificationsScreen() {
         >
           <Ionicons name="chevron-back" size={24} color="#007AFF" />
         </TouchableOpacity>
+        
+        <Text style={styles.headerTitle}>{t('notifications.title')}</Text>
         
         <TouchableOpacity
           style={styles.settingsButton}
@@ -235,5 +238,12 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '500',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    flex: 1,
+    textAlign: 'center',
+    color: '#000',
   },
 }); 

@@ -1,7 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Animated, Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { CalendarViewProps } from './CalendarViewTypes';
 import { useFamily } from '../../contexts/FamilyContext';
+import { t } from '../../lib/i18n';
+import { CalendarViewProps } from './CalendarViewTypes';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -268,12 +269,12 @@ export default function FamilyPuzzleView({
             {memberEvents.length > 0 && (
               <View style={styles.eventIndicator}>
                 <Text style={styles.eventCount}>{memberEvents.length}</Text>
-                <Text style={styles.eventLabel}>个日程</Text>
+                <Text style={styles.eventLabel}>{t('calendarCard.eventsCount', { count: memberEvents.length })}</Text>
               </View>
             )}
 
             {memberEvents.length === 0 && (
-              <Text style={styles.noEventsText}>今日无安排</Text>
+              <Text style={styles.noEventsText}>{t('calendar.noEvents')}</Text>
             )}
           </View>
 

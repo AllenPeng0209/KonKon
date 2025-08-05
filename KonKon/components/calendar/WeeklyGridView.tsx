@@ -1,5 +1,5 @@
-import React from 'react';
 import { Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { t } from '../../lib/i18n';
 import { CalendarViewProps } from './CalendarViewTypes';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -11,6 +11,19 @@ export default function WeeklyGridView({
   onDatePress,
   onEventPress,
 }: CalendarViewProps) {
+  // 獲取本地化的星期名稱
+  const getLocalizedWeekdays = () => {
+    return [
+      t('calendarCard.weekdays.monday'),
+      t('calendarCard.weekdays.tuesday'),
+      t('calendarCard.weekdays.wednesday'),
+      t('calendarCard.weekdays.thursday'),
+      t('calendarCard.weekdays.friday'),
+      t('calendarCard.weekdays.saturday'),
+      t('calendarCard.weekdays.sunday'),
+    ];
+  };
+
   // 获取当前周的日期
   const getWeekDates = (date: Date) => {
     const startOfWeek = new Date(date);
@@ -51,6 +64,7 @@ export default function WeeklyGridView({
   const weekDates = getWeekDates(selectedDate);
   const timeSlots = generateTimeSlots();
   const today = new Date().toISOString().split('T')[0];
+  const weekdays = getLocalizedWeekdays();
 
   const formatTimeSlot = (hour: number) => {
     return `${hour.toString().padStart(2, '0')}:00`;
@@ -90,7 +104,7 @@ export default function WeeklyGridView({
 
   return (
     <View style={styles.container}>
-      {/* 周视图头部 */}
+      {/* 周視圖頭部 */}
       <View style={styles.weekHeader}>
         <View style={styles.timeColumn} />
         {weekDates.map((date, index) => (
@@ -106,7 +120,7 @@ export default function WeeklyGridView({
               styles.dayHeaderText,
               isToday(date) && styles.todayHeaderText,
             ]}>
-              {['周一', '周二', '周三', '周四', '周五', '周六', '周日'][index]}
+              {weekdays[index]}
             </Text>
             <Text style={[
               styles.dateText,
@@ -118,19 +132,19 @@ export default function WeeklyGridView({
         ))}
       </View>
 
-      {/* 滚动区域 */}
+      {/* 滾動區域 */}
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.timeGrid}>
           {timeSlots.map((hour) => (
             <View key={hour} style={styles.timeRow}>
-              {/* 时间标签 */}
+              {/* 時間標籤 */}
               <View style={styles.timeLabel}>
                 <Text style={styles.timeLabelText}>
                   {formatTimeSlot(hour)}
                 </Text>
               </View>
               
-              {/* 一周的时间槽 */}
+              {/* 一週的時間槽 */}
               {weekDates.map((date, index) => {
                 const dayEvents = getEventsForDate(date);
                 const hourEvents = dayEvents.filter(event => {

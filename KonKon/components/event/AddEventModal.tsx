@@ -5,20 +5,20 @@ import { BlurView } from 'expo-blur';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useEffect, useState } from 'react';
 import {
-  ActionSheetIOS,
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  Image,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    ActionSheetIOS,
+    ActivityIndicator,
+    Alert,
+    FlatList,
+    Image,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useFamily } from '../../contexts/FamilyContext';
@@ -282,8 +282,12 @@ export default function AddEventModal({
             // 檢查是否為有效的 UUID，如果不是則跳過查詢
             const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
             if (!eventIdToQuery || !UUID_REGEX.test(eventIdToQuery)) {
-              // 如果不是有效的 UUID（例如臨時ID），設置為私人事件
-              setSelectedFamilies([]);
+              // 🔧 如果不是有效的 UUID（例如臨時ID），設置為當前激活的家庭群組
+              if (activeFamily && activeFamily.tag !== 'personal') {
+                setSelectedFamilies([activeFamily.id]);
+              } else {
+                setSelectedFamilies([]);
+              }
               return;
             }
 
@@ -303,13 +307,21 @@ export default function AddEventModal({
               // 找到分享的家庭
               setSelectedFamilies(uniqueFamilyIds);
             } else {
-              // 沒有找到分享信息，設置為私人事件
-              // 重置為空，表示私人事件
-              setSelectedFamilies([]);
+              // 🔧 沒有找到分享信息時，設置為當前激活的家庭群組
+              if (activeFamily && activeFamily.tag !== 'personal') {
+                setSelectedFamilies([activeFamily.id]);
+              } else {
+                setSelectedFamilies([]);
+              }
             }
           } catch (error) {
             console.error('Failed to get event sharing info - exception:', error);
-            setSelectedFamilies([]);
+            // 🔧 異常情況下，設置為當前激活的家庭群組
+            if (activeFamily && activeFamily.tag !== 'personal') {
+              setSelectedFamilies([activeFamily.id]);
+            } else {
+              setSelectedFamilies([]);
+            }
           }
         };
 
@@ -619,6 +631,22 @@ export default function AddEventModal({
       const currentUserName = user?.user_metadata?.display_name || user?.email || t('common.unknownUser');
       
       if (editingEvent && onUpdate) {
+        // 🔧 检查是否是临时AI事件（需要创建而不是更新）
+        const isTemporaryAIEvent = editingEvent.id === 'temp-ai-event' || editingEvent.id.startsWith('temp-');
+        
+        if (isTemporaryAIEvent) {
+          // 对于临时AI事件，应该创建新事件而不是更新
+          onClose();
+          resetForm();
+          
+          // 调用创建事件的逻辑
+          onSave(eventData).catch((error) => {
+            console.error('AI event creation failed:', error);
+          });
+          
+          return;
+        }
+        
         // 检查是否是重复事件的实例
         let eventIdToUpdate = editingEvent.id;
         

@@ -1,6 +1,50 @@
 import { StyleSheet, View } from 'react-native';
-import { Calendar, DateData } from 'react-native-calendars';
+import { Calendar, DateData, LocaleConfig } from 'react-native-calendars';
+import { getCurrentLocale } from '../../lib/i18n';
 import { CalendarViewProps } from './CalendarViewTypes';
+
+// 配置多語言
+const configureCalendarLocale = () => {
+  const currentLocale = getCurrentLocale();
+  
+  if (currentLocale === 'zh-CN') {
+    LocaleConfig.locales['zh-CN'] = {
+      monthNames: ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月'],
+      monthNamesShort: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
+      dayNames: ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'],
+      dayNamesShort: ['日', '一', '二', '三', '四', '五', '六'],
+      today: '今天'
+    };
+    LocaleConfig.defaultLocale = 'zh-CN';
+  } else if (currentLocale === 'zh-TW') {
+    LocaleConfig.locales['zh-TW'] = {
+      monthNames: ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月'],
+      monthNamesShort: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
+      dayNames: ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'],
+      dayNamesShort: ['日', '一', '二', '三', '四', '五', '六'],
+      today: '今天'
+    };
+    LocaleConfig.defaultLocale = 'zh-TW';
+  } else if (currentLocale === 'ja-JP') {
+    LocaleConfig.locales['ja-JP'] = {
+      monthNames: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
+      monthNamesShort: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
+      dayNames: ['日曜日', '月曜日', '火曜日', '水曜日', '木曜日', '金曜日', '土曜日'],
+      dayNamesShort: ['日', '月', '火', '水', '木', '金', '土'],
+      today: '今日'
+    };
+    LocaleConfig.defaultLocale = 'ja-JP';
+  } else {
+    LocaleConfig.locales['en'] = {
+      monthNames: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+      monthNamesShort: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+      dayNames: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+      dayNamesShort: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+      today: 'Today'
+    };
+    LocaleConfig.defaultLocale = 'en';
+  }
+};
 
 export default function GridMonthView({
   events,
@@ -10,7 +54,10 @@ export default function GridMonthView({
   onEventPress,
   onMonthChange,
 }: CalendarViewProps) {
-  // 获取本地日期字符串（避免时区问题）
+  // 配置語言
+  configureCalendarLocale();
+  
+  // 獲取本地日期字符串（避免時區問題）
   const getLocalDateString = (date: Date) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -18,28 +65,28 @@ export default function GridMonthView({
     return `${year}-${month}-${day}`;
   };
 
-  // 生成日历标记数据
+  // 生成日曆標記數據
   const getCalendarMarkedDates = () => {
     const markedDates: { [key: string]: any } = {};
     const today = getLocalDateString(new Date());
     const selectedDateString = getLocalDateString(selectedDate);
     
-    // 标记选中的日期（蓝色光标）
+    // 標記選中的日期（藍色光標）
     markedDates[selectedDateString] = {
       selected: true,
       selectedColor: '#3b82f6',
       selectedTextColor: '#ffffff',
     };
     
-    // 如果今天不是选中日期，为今天设置特殊的文字颜色
+    // 如果今天不是選中日期，為今天設置特殊的文字顏色
     if (today !== selectedDateString) {
       markedDates[today] = {
         selected: false,
-        // todayTextColor 在 theme 中定义
+        // todayTextColor 在 theme 中定義
       };
     }
     
-    // 标记有事件的日期
+    // 標記有事件的日期
     events.forEach((event) => {
       const eventDate = getLocalDateString(new Date(event.start_ts * 1000));
       
