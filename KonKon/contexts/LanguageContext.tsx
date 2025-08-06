@@ -1,12 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Localization from 'expo-localization';
 import { useRouter } from 'expo-router';
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
-import { setLocale as setI18nLocale, getDeviceLocale } from '../lib/i18n';
+import { getDeviceLocale, setLocale as setI18nLocale, t } from '../lib/i18n';
 
 interface LanguageContextType {
   locale: string;
   setLocale: (locale: string) => void;
+  t: (scope: string, options?: any) => string;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -22,9 +22,9 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
         setLocaleState(savedLocale);
         setI18nLocale(savedLocale);
       } else {
-        const systemLocale = getDeviceLocale();
-        setLocaleState(systemLocale);
-        setI18nLocale(systemLocale);
+        // 日本市場優先，默認為日語
+        setLocaleState('ja');
+        setI18nLocale('ja');
       }
     };
     loadLocale();
@@ -38,7 +38,7 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <LanguageContext.Provider value={{ locale, setLocale }}>
+    <LanguageContext.Provider value={{ locale, setLocale, t }}>
       {children}
     </LanguageContext.Provider>
   );

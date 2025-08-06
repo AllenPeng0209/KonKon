@@ -9,6 +9,53 @@
     }
   },
   "calendar": {
+    "months": {
+      "january": "一月",
+      "february": "二月",
+      "march": "三月",
+      "april": "四月",
+      "may": "五月",
+      "june": "六月",
+      "july": "七月",
+      "august": "八月",
+      "september": "九月",
+      "october": "十月",
+      "november": "十一月",
+      "december": "十二月"
+    },
+    "monthsShort": {
+      "jan": "一月",
+      "feb": "二月",
+      "mar": "三月",
+      "apr": "四月",
+      "may": "五月",
+      "jun": "六月",
+      "jul": "七月",
+      "aug": "八月",
+      "sep": "九月",
+      "oct": "十月",
+      "nov": "十一月",
+      "dec": "十二月"
+    },
+    "days": {
+      "sunday": "星期日",
+      "monday": "星期一",
+      "tuesday": "星期二",
+      "wednesday": "星期三",
+      "thursday": "星期四",
+      "friday": "星期五",
+      "saturday": "星期六"
+    },
+    "daysShort": {
+      "sun": "日",
+      "mon": "一",
+      "tue": "二",
+      "wed": "三",
+      "thu": "四",
+      "fri": "五",
+      "sat": "六"
+    },
+    "today": "今天",
     "jan": "1月",
     "feb": "2月",
     "mar": "3月",
@@ -255,8 +302,8 @@
     "eventCreationFailed": "建立日程時發生錯誤，請重試",
     "eventUpdateSuccess": "成功",
     "eventUpdateFailed": "更新事件失敗",
-    "noEventThisDay": "這天沒有事件",
-    "addEventPrompt": "是否要為這天新增事件？",
+    "noEventThisDay": "這一天很清閒哦",
+    "addEventPrompt": "可以添加新的日程安排",
     "addEvent": "新增事件",
     "loadingData": "載入中...",
     "recordTab": "記錄",
@@ -395,20 +442,6 @@
   "voice": {
     "longPressSmartSelect": "🎤 長按說話, 智能選擇功能",
     "pressSpeakQuickCreate": "🎤 按說話, 快速創建"
-  },
-  "calendar": {
-    "jan": "1月",
-    "feb": "2月",
-    "mar": "3月",
-    "apr": "4月",
-    "may": "5月",
-    "jun": "6月",
-    "jul": "7月",
-    "aug": "8月",
-    "sep": "9月",
-    "oct": "10月",
-    "nov": "11月",
-    "dec": "12月"
   },
   "drawer": {
     "viewProfile": "查看個人資料",

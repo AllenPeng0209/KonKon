@@ -9,6 +9,53 @@
     }
   },
   "calendar": {
+    "months": {
+      "january": "January",
+      "february": "February",
+      "march": "March",
+      "april": "April",
+      "may": "May",
+      "june": "June",
+      "july": "July",
+      "august": "August",
+      "september": "September",
+      "october": "October",
+      "november": "November",
+      "december": "December"
+    },
+    "monthsShort": {
+      "jan": "Jan",
+      "feb": "Feb",
+      "mar": "Mar",
+      "apr": "Apr",
+      "may": "May",
+      "jun": "Jun",
+      "jul": "Jul",
+      "aug": "Aug",
+      "sep": "Sep",
+      "oct": "Oct",
+      "nov": "Nov",
+      "dec": "Dec"
+    },
+    "days": {
+      "sunday": "Sunday",
+      "monday": "Monday",
+      "tuesday": "Tuesday",
+      "wednesday": "Wednesday",
+      "thursday": "Thursday",
+      "friday": "Friday",
+      "saturday": "Saturday"
+    },
+    "daysShort": {
+      "sun": "Sun",
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat"
+    },
+    "today": "Today",
     "jan": "Jan",
     "feb": "Feb",
     "mar": "Mar",
@@ -246,8 +293,8 @@
     "eventCreationFailed": "Failed to create event, please check network connection and permissions",
     "eventUpdateSuccess": "Event updated successfully",
     "eventUpdateFailed": "Failed to update event, please check network connection and permissions",
-    "noEventThisDay": "No event on this day",
-    "addEventPrompt": "Do you want to add a new event for this day?",
+    "noEventThisDay": "This day is free",
+    "addEventPrompt": "You can add a new event",
     "addEvent": "Add Event",
     "loadingData": "Loading...",
     "recordTab": "Record",
@@ -1199,20 +1246,6 @@
     "longPressSmartSelect": "🎤 Hold to speak, smart feature selection",
     "pressSpeakQuickCreate": "🎤 Press to speak, quick create"
   },
-  "calendar": {
-    "jan": "Jan",
-    "feb": "Feb",
-    "mar": "Mar",
-    "apr": "Apr",
-    "may": "May",
-    "jun": "Jun",
-    "jul": "Jul",
-    "aug": "Aug",
-    "sep": "Sep",
-    "oct": "Oct",
-    "nov": "Nov",
-    "dec": "Dec"
-  },
   "drawer": {
     "viewProfile": "View Profile",
     "newSpace": "New Space",
@@ -1404,7 +1437,9 @@
       "web": {
         "question": "Can I upload files using the web version?",
         "answer": "Currently, file upload is limited to mobile apps, but you can view uploaded files on the web version."
-      }
+      },
+      "questionPrefix": "Q ",
+      "answerPrefix": "A "
     },
     "featureComparison": {
       "function": "Feature",
@@ -1427,6 +1462,13 @@
     "legal": {
       "privacy": "Privacy Policy",
       "terms": "Premium Service Terms"
+    },
+    "errors": {
+      "unavailable": "Subscription feature is currently unavailable",
+      "failed": "Subscription failed, please try again later"
+    },
+    "success": {
+      "activated": "Subscription activated"
     }
   }
 }

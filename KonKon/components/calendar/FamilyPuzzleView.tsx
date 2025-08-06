@@ -62,7 +62,7 @@ export default function FamilyPuzzleView({
       
       return {
         id: member.user_id,
-        name: member.user?.display_name || member.user?.email || '未知用户',
+        name: member.user?.display_name || member.user?.email || t('common.unknownUser'),
         color: puzzleColors[index % puzzleColors.length],
         position: {
           x: col * pieceWidth + 20,
@@ -138,7 +138,7 @@ export default function FamilyPuzzleView({
     const selectedDateStr = selectedDate.toISOString().split('T')[0];
     
     if (selectedDateStr === today) {
-      return '今天';
+      return t('home.today');
     } else {
       return selectedDate.toLocaleDateString('zh-CN', {
         month: 'long',
@@ -341,7 +341,7 @@ export default function FamilyPuzzleView({
             {displayEvents.length === 0 ? (
               <View style={styles.emptyDetails}>
                 <Text style={styles.emptyIcon}>🌟</Text>
-                <Text style={styles.emptyText}>今天没有安排</Text>
+                <Text style={styles.emptyText}>{t('home.noEventsToday')}</Text>
                 <Text style={styles.emptySubtext}>享受自由时光</Text>
               </View>
             ) : (

@@ -2249,9 +2249,9 @@ export default function HomeScreen() {
                       </View>
                       <View style={styles.aiContent}>
                         <Text style={styles.aiGreeting}>
-                          {selectedDate ? '这一天很清闲哦' : '今天没有安排'}
+                          {selectedDate ? t('home.noEventThisDay') : t('home.noEventsToday')}
                         </Text>
-                        <Text style={styles.aiSuggestion}>可以添加新的日程安排</Text>
+                        <Text style={styles.aiSuggestion}>{t('home.addEventPrompt')}</Text>
                       </View>
                     </View>
                   );

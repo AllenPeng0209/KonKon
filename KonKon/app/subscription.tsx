@@ -11,7 +11,9 @@ import {
   Alert,
   Dimensions,
   Platform,
+  SafeAreaView,
   ScrollView,
+  StyleSheet,
   Text,
   TouchableOpacity,
   View
@@ -59,8 +61,8 @@ export default function SubscriptionScreen() {
   const handleSubscribe = async () => {
     if (!isSubscriptionAvailable) {
       Alert.alert(
-        '錯誤',
-        '訂閱功能暫時不可用'
+        t('common.error'),
+        t('subscription.errors.unavailable')
       );
       return;
     }
@@ -69,15 +71,15 @@ export default function SubscriptionScreen() {
       const success = await subscription.startSubscription(selectedPlan);
       if (success) {
         Alert.alert(
-          '成功',
-          '訂閱已激活'
+          t('common.success'),
+          t('subscription.success.activated')
         );
       }
     } catch (error) {
       console.error('訂閱失敗:', error);
       Alert.alert(
-        '錯誤',
-        '訂閱失敗，請稍後重試'
+        t('common.error'),
+        t('subscription.errors.failed')
       );
     }
   };
@@ -307,10 +309,10 @@ export default function SubscriptionScreen() {
             </View>
           </View>
 
-          {/* 定價標題 */}
-          <Text style={styles.pricingTitle}>升級AI Premium，讓智能成為生活常態</Text>
+          {/* 定价标题 */}
+          <Text style={styles.pricingTitle}>{t('subscription.pricing.title')}</Text>
 
-          {/* 定價方案 */}
+          {/* 定价方案 */}
           <View style={styles.pricingSection}>
             {/* 月付方案 */}
             <TouchableOpacity
@@ -319,9 +321,9 @@ export default function SubscriptionScreen() {
             >
               <View style={styles.pricingOption}>
                 <View style={[styles.radioButton, selectedPlan === 'monthly' && styles.radioButtonSelected]} />
-                <Text style={styles.pricingPeriod}>月付</Text>
+                <Text style={styles.pricingPeriod}>{t('subscription.pricing.monthly')}</Text>
               </View>
-              <Text style={styles.pricingPrice}>¥19.00/月</Text>
+              <Text style={styles.pricingPrice}>{t('subscription.pricing.monthlyPrice')}</Text>
             </TouchableOpacity>
 
             {/* 年付方案 */}
@@ -330,46 +332,46 @@ export default function SubscriptionScreen() {
               onPress={() => setSelectedPlan('yearly')}
             >
               <View style={styles.recommendedBadge}>
-                <Text style={styles.recommendedText}>省下約 2 個月！</Text>
+                <Text style={styles.recommendedText}>{t('subscription.pricing.saveText')}</Text>
               </View>
               <View style={styles.pricingOption}>
                 <View style={[styles.radioButton, selectedPlan === 'yearly' && styles.radioButtonSelected]} />
                 <View>
-                  <Text style={styles.pricingPeriod}>年付</Text>
-                  <Text style={styles.pricingSubtext}>年度一次性付款</Text>
+                  <Text style={styles.pricingPeriod}>{t('subscription.pricing.yearly')}</Text>
+                  <Text style={styles.pricingSubtext}>{t('subscription.pricing.yearlyDescription')}</Text>
                 </View>
               </View>
               <View style={styles.pricingPriceContainer}>
-                <Text style={styles.pricingPriceMonthly}>*¥15.66/月</Text>
-                <Text style={styles.pricingPriceYearly}>¥188.00</Text>
+                <Text style={styles.pricingPriceMonthly}>{t('subscription.pricing.yearlyPriceMonthly')}</Text>
+                <Text style={styles.pricingPriceYearly}>{t('subscription.pricing.yearlyPrice')}</Text>
               </View>
             </TouchableOpacity>
           </View>
 
-          {/* 訂閱按鈕 */}
+          {/* 订阅按钮 */}
           <TouchableOpacity style={styles.subscribeButton} onPress={handleSubscribe}>
-            <Text style={styles.subscribeButtonText}>開始 1 月試用</Text>
-            <Text style={styles.subscribeSubtext}>隨時可以取消訂閱</Text>
+            <Text style={styles.subscribeButtonText}>{t('subscription.cta.startTrial')}</Text>
+            <Text style={styles.subscribeSubtext}>{t('subscription.cta.cancelAnytime')}</Text>
           </TouchableOpacity>
 
-          {/* 試用說明 */}
+          {/* 试用说明 */}
           <Text style={styles.trialNotice}>
-            1月試用期結束後，每年將向您收取 ¥188.00 費用
+            {t('subscription.trial.notice')}
           </Text>
 
-          {/* 服務連結 */}
+          {/* 服务连结 */}
           <View style={styles.serviceLinks}>
             <TouchableOpacity>
-              <Text style={styles.serviceLink}>隱私權政策</Text>
+              <Text style={styles.serviceLink}>{t('subscription.legal.privacy')}</Text>
             </TouchableOpacity>
             <TouchableOpacity>
-              <Text style={styles.serviceLink}>Premium 服務條款</Text>
+              <Text style={styles.serviceLink}>{t('subscription.legal.terms')}</Text>
             </TouchableOpacity>
           </View>
 
-          {/* FAQ 區域 */}
+          {/* FAQ 区域 */}
           <View style={styles.faqSection}>
-            <Text style={styles.faqTitle}>Q&A</Text>
+            <Text style={styles.faqTitle}>{t('subscription.faq.title')}</Text>
             {faqItems.map((item) => (
               <View key={item.id} style={styles.faqItem}>
                 <TouchableOpacity
@@ -377,7 +379,7 @@ export default function SubscriptionScreen() {
                   onPress={() => toggleFAQ(item.id)}
                 >
                   <View style={styles.faqQuestionContainer}>
-                    <Text style={styles.faqQuestionPrefix}>Q </Text>
+                    <Text style={styles.faqQuestionPrefix}>{t('subscription.faq.questionPrefix')}</Text>
                     <Text style={styles.faqQuestionContent}>{item.question}</Text>
                   </View>
                   <Ionicons
@@ -389,7 +391,7 @@ export default function SubscriptionScreen() {
                 {expandedFAQ === item.id && (
                   <View style={styles.faqAnswer}>
                     <View style={styles.faqAnswerContainer}>
-                      <Text style={styles.faqAnswerPrefix}>A </Text>
+                      <Text style={styles.faqAnswerPrefix}>{t('subscription.faq.answerPrefix')}</Text>
                       <Text style={styles.faqAnswerContent}>{item.answer}</Text>
                     </View>
                   </View>
@@ -398,7 +400,7 @@ export default function SubscriptionScreen() {
             ))}
           </View>
 
-          {/* 注意事項 */}
+          {/* 注意事项 */}
           <View style={styles.noticeSection}>
             <Text style={styles.noticeTitle}>{t('subscription.terms.title')}</Text>
             <Text style={styles.noticeText}>{t('subscription.terms.trialOnce')}</Text>
@@ -1101,5 +1103,5 @@ const getStyles = (colorScheme: 'light' | 'dark' | null | undefined) => {
       justifyContent: 'center',
       alignItems: 'center',
     },
-  });
+  } as any);
 }; 

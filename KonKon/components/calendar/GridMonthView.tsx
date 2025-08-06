@@ -1,49 +1,62 @@
 import { StyleSheet, View } from 'react-native';
 import { Calendar, DateData, LocaleConfig } from 'react-native-calendars';
-import { getCurrentLocale } from '../../lib/i18n';
+import { getCurrentLocale, t } from '../../lib/i18n';
 import { CalendarViewProps } from './CalendarViewTypes';
 
 // 配置多語言
 const configureCalendarLocale = () => {
   const currentLocale = getCurrentLocale();
-  
-  if (currentLocale === 'zh-CN') {
-    LocaleConfig.locales['zh-CN'] = {
-      monthNames: ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月'],
-      monthNamesShort: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
-      dayNames: ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'],
-      dayNamesShort: ['日', '一', '二', '三', '四', '五', '六'],
-      today: '今天'
-    };
-    LocaleConfig.defaultLocale = 'zh-CN';
-  } else if (currentLocale === 'zh-TW') {
-    LocaleConfig.locales['zh-TW'] = {
-      monthNames: ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月'],
-      monthNamesShort: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
-      dayNames: ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'],
-      dayNamesShort: ['日', '一', '二', '三', '四', '五', '六'],
-      today: '今天'
-    };
-    LocaleConfig.defaultLocale = 'zh-TW';
-  } else if (currentLocale === 'ja-JP') {
-    LocaleConfig.locales['ja-JP'] = {
-      monthNames: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
-      monthNamesShort: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
-      dayNames: ['日曜日', '月曜日', '火曜日', '水曜日', '木曜日', '金曜日', '土曜日'],
-      dayNamesShort: ['日', '月', '火', '水', '木', '金', '土'],
-      today: '今日'
-    };
-    LocaleConfig.defaultLocale = 'ja-JP';
-  } else {
-    LocaleConfig.locales['en'] = {
-      monthNames: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
-      monthNamesShort: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-      dayNames: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
-      dayNamesShort: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
-      today: 'Today'
-    };
-    LocaleConfig.defaultLocale = 'en';
-  }
+
+  LocaleConfig.locales[currentLocale] = {
+    monthNames: [
+      t('calendar.months.january'),
+      t('calendar.months.february'),
+      t('calendar.months.march'),
+      t('calendar.months.april'),
+      t('calendar.months.may'),
+      t('calendar.months.june'),
+      t('calendar.months.july'),
+      t('calendar.months.august'),
+      t('calendar.months.september'),
+      t('calendar.months.october'),
+      t('calendar.months.november'),
+      t('calendar.months.december'),
+    ],
+    monthNamesShort: [
+      t('calendar.monthsShort.jan'),
+      t('calendar.monthsShort.feb'),
+      t('calendar.monthsShort.mar'),
+      t('calendar.monthsShort.apr'),
+      t('calendar.monthsShort.may'),
+      t('calendar.monthsShort.jun'),
+      t('calendar.monthsShort.jul'),
+      t('calendar.monthsShort.aug'),
+      t('calendar.monthsShort.sep'),
+      t('calendar.monthsShort.oct'),
+      t('calendar.monthsShort.nov'),
+      t('calendar.monthsShort.dec'),
+    ],
+    dayNames: [
+      t('calendar.days.sunday'),
+      t('calendar.days.monday'),
+      t('calendar.days.tuesday'),
+      t('calendar.days.wednesday'),
+      t('calendar.days.thursday'),
+      t('calendar.days.friday'),
+      t('calendar.days.saturday'),
+    ],
+    dayNamesShort: [
+      t('calendar.daysShort.sun'),
+      t('calendar.daysShort.mon'),
+      t('calendar.daysShort.tue'),
+      t('calendar.daysShort.wed'),
+      t('calendar.daysShort.thu'),
+      t('calendar.daysShort.fri'),
+      t('calendar.daysShort.sat'),
+    ],
+    today: t('calendar.today'),
+  };
+  LocaleConfig.defaultLocale = currentLocale;
 };
 
 export default function GridMonthView({
