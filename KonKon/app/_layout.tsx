@@ -12,9 +12,8 @@ import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from 'expo-status-bar';
-import { requestTrackingPermissionsAsync } from 'expo-tracking-transparency';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Dimensions, StyleSheet, TouchableWithoutFeedback, View } from 'react-native';
+import { ActivityIndicator, Dimensions, Platform, StyleSheet, TouchableWithoutFeedback, View } from 'react-native';
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 import { useSharedValue, withTiming } from 'react-native-reanimated';
@@ -197,8 +196,14 @@ export default function RootLayout() {
   useEffect(() => {
     const requestTrackingPermission = async () => {
       try {
-        const { status } = await requestTrackingPermissionsAsync();
-        console.log('App Tracking Transparency permission status:', status);
+        // 只在 iOS 平台上請求 ATT 權限
+        if (Platform.OS === 'ios') {
+          const { requestTrackingPermissionsAsync } = await import('expo-tracking-transparency');
+          const { status } = await requestTrackingPermissionsAsync();
+          console.log('App Tracking Transparency permission status:', status);
+        } else {
+          console.log('App Tracking Transparency is iOS-only');
+        }
         setTrackingPermissionRequested(true);
       } catch (error) {
         console.error('Error requesting tracking permission:', error);

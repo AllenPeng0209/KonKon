@@ -187,14 +187,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signInWithApple = async () => {
     try {
+      console.log('[AuthContext] Starting signInWithApple');
       // Check if Apple Authentication is available
       const isAvailable = await AppleAuthentication.isAvailableAsync();
+      console.log(`[AuthContext] Apple Authentication available: ${isAvailable}`);
       if (!isAvailable) {
         throw new Error('Apple Authentication is not available on this device');
       }
 
       // Request Apple authentication
       const nonce = Math.random().toString(36).substring(2, 15);
+      console.log(`[AuthContext] Generated nonce: ${nonce}`);
+      
       const credential = await AppleAuthentication.signInAsync({
         requestedScopes: [
           AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
@@ -215,6 +219,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         throw new Error('No identity token received from Apple');
       }
       
+      console.log('[AuthContext] Calling Supabase signInWithIdToken...');
       const { data, error } = await supabase.auth.signInWithIdToken({
         provider: 'apple',
         token: credential.identityToken,
@@ -229,8 +234,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('[Auth] Apple SignIn Success:', data);
       return { data, error: null };
 
-    } catch (error) {
-      console.error('[Auth] Apple SignIn Error:', error);
+    } catch (error: any) {
+      console.error('[Auth] Apple SignIn Error catch block:', error);
+      // Check if the error is due to user cancellation
+      if (error.code === 'ERR_CANCELED') {
+        console.log('[AuthContext] Apple Sign-In was cancelled by the user.');
+        return { data: null, error: { message: 'User cancelled Apple Sign-In', name: 'Cancellation' } };
+      }
       return { data: null, error };
     }
   };

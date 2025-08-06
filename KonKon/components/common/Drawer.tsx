@@ -6,18 +6,18 @@ import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Dimensions, Image, Modal, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import {
-  LongPressGestureHandler,
-  LongPressGestureHandlerGestureEvent,
-  PanGestureHandler,
-  PanGestureHandlerGestureEvent,
-  State,
+    LongPressGestureHandler,
+    LongPressGestureHandlerGestureEvent,
+    PanGestureHandler,
+    PanGestureHandlerGestureEvent,
+    State,
 } from 'react-native-gesture-handler';
 import Animated, {
-  runOnJS,
-  SharedValue,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring
+    runOnJS,
+    SharedValue,
+    useAnimatedStyle,
+    useSharedValue,
+    withSpring
 } from 'react-native-reanimated';
 import { Colors } from '../../constants/Colors';
 import { useAuth } from '../../contexts/AuthContext';
@@ -401,6 +401,24 @@ const Drawer: React.FC<DrawerProps> = ({ onClose, translateX }) => {
             </View>
           </View>
 
+          {/* 訂閱推廣 Banner */}
+          <TouchableOpacity 
+            style={styles.subscriptionBanner} 
+            onPress={() => {
+              router.push('/subscription');
+              onClose();
+            }}
+            activeOpacity={0.8}
+          >
+            <View style={styles.subscriptionContent}>
+              <View style={styles.subscriptionIcon}>
+                <Ionicons name="diamond" size={16} color="#fff" />
+              </View>
+              <Text style={styles.subscriptionText}>{t('subscription.bannerText')}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color="#fff" />
+          </TouchableOpacity>
+
           <View style={styles.separator} />
 
           <ScrollView 
@@ -702,6 +720,43 @@ const getStyles = (colorScheme: 'light' | 'dark' | null | undefined) => {
     personalSpaceName: {
       color: '#6366f1',
       fontWeight: '700',
+    },
+    // 訂閱 Banner 樣式
+    subscriptionBanner: {
+      backgroundColor: '#4CAF50',
+      marginHorizontal: 16,
+      marginTop: 16,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      borderRadius: 12,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      elevation: 2,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+    },
+    subscriptionContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+    },
+    subscriptionIcon: {
+      width: 24,
+      height: 24,
+      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+      borderRadius: 12,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: 12,
+    },
+    subscriptionText: {
+      color: '#fff',
+      fontSize: 14,
+      fontWeight: '600',
+      flex: 1,
     },
   });
 }

@@ -1,4 +1,5 @@
 import { t } from '@/lib/i18n'
+import * as AppleAuthentication from 'expo-apple-authentication'
 import { useRouter } from 'expo-router'
 import { useState } from 'react'
 import {
@@ -13,7 +14,6 @@ import {
     View,
 } from 'react-native'
 import { useAuth } from '../contexts/AuthContext'
-import * as AppleAuthentication from 'expo-apple-authentication'
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('')
@@ -44,16 +44,20 @@ export default function LoginScreen() {
   }
 
   const handleAppleLogin = async () => {
+    console.log('[LoginScreen] Apple Login button pressed');
     setLoading(true)
     try {
+      console.log('[LoginScreen] Calling signInWithApple...');
       const { error } = await signInWithApple()
+      console.log('[LoginScreen] signInWithApple finished. Error:', error);
       if (error) {
         Alert.alert('登录失败', error.message || '使用Apple登录失败')
       } else {
         router.replace('/(tabs)')
       }
-    } catch (error) {
-      Alert.alert('登录失败', '使用Apple登录时发生未知错误')
+    } catch (error: any) {
+      console.error('[LoginScreen] Apple Login catch block error:', error);
+      Alert.alert('登录失败', error.message || '使用Apple登录时发生未知错误')
     } finally {
       setLoading(false)
     }

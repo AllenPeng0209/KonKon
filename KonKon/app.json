@@ -18,7 +18,7 @@
       "usesAppleSignIn": true,
       "supportsTablet": true,
       "bundleIdentifier": "com.agenthub.konkon",
-      "buildNumber": "31",
+      "buildNumber": "32",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "CFBundleAllowMixedLocalizations": true,
@@ -31,7 +31,10 @@
         "NSRemindersUsageDescription": "KonKon needs access to your reminders to create reminder notifications."
       },
       "entitlements": {
-        "com.apple.developer.applesignin": ["Default"]
+        "com.apple.developer.applesignin": [
+          "Default"
+        ],
+        "aps-environment": "development"
       }
     },
     "android": {
@@ -74,7 +77,15 @@
       "expo-audio",
       "expo-image-picker",
       "expo-apple-authentication",
-      "expo-tracking-transparency"
+      "expo-tracking-transparency",
+      "expo-localization",
+      [
+        "react-native-iap",
+        {
+          "clearTransactionsOnAppUpdate": false,
+          "clearProductsOnAppUpdate": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

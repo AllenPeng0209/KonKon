@@ -1369,5 +1369,98 @@
       "name": "主動提醒",
       "description": "允許智能體主動發送提醒和建議"
     }
+  },
+  "subscription": {
+    "bannerText": "開始月付NT$82，完整解鎖AI全功能！",
+    "title": "KonKon AI訂閱會員",
+    "painPoints": {
+      "title": "您有這樣的煩惱嗎？",
+      "items": [
+        "每天花30分鐘整理家人行程，還經常衝突？",
+        "語音、照片轉行程太慢，AI理解不準確？",
+        "重要提醒總是錯過，沒有智能預警？",
+        "想要個人AI助手，幫你預測和安排生活？"
+      ]
+    },
+    "features": {
+      "title": "使用 KonKon 高級版可做到的事",
+      "aiVoiceAssistant": "智能語音助手",
+      "aiConflictDetection": "AI衝突檢測與建議",
+      "personalizedRecommendations": "個性化AI行程推薦",
+      "multimodalAI": "高精度多模態AI輸入",
+      "predictiveReminders": "AI預測性智能提醒",
+      "familyTimeCoordination": "智能家庭時間協調",
+      "lifestyleAnalysis": "AI生活模式分析",
+      "adFree": "無廣告純淨體驗",
+      "premiumSupport": "AI專家優先客服",
+      "aiAssistantTitle": "AI智能助手功能",
+      "aiAssistantDesc": "AI理解你的語音和圖片，自動生成精確的行程安排。",
+      "aiAssistantSubtext": "讓AI成為你的專屬時間管理師，解放你的雙手和大腦。"
+    },
+    "pricing": {
+      "title": "升級AI Premium，讓智能成為生活常態",
+      "monthly": "月付",
+      "yearly": "年付",
+      "monthlyPrice": "¥19.00/月",
+      "yearlyPrice": "¥188.00",
+      "yearlyPriceMonthly": "*¥15.66/月",
+      "yearlyDescription": "年度一次性付款",
+      "saveText": "省下約 2 個月！",
+      "trialText": "包含 1 個月免費AI體驗"
+    },
+    "cta": {
+      "solve": "AI高級版解決一切煩惱",
+      "startTrial": "開始 1 月試用",
+      "cancelAnytime": "隨時可以取消訂閱",
+      "userQuote": "希望AI幫我自動安排一切"
+    },
+    "trial": {
+      "notice": "1月試用期結束後，每年將向您收取 ¥188.00 費用"
+    },
+    "faq": {
+      "title": "Q&A",
+      "trial": {
+        "question": "在月中開始訂閱會無法用滿一個月嗎？",
+        "answer": "不會的，訂閱從您購買的當天開始計算，會給您完整的訂閱期限。"
+      },
+      "devices": {
+        "question": "可以在多個裝置上使用 KonKon Premium 嗎？",
+        "answer": "可以的，只要使用同一個帳號登入，就可以在所有裝置上享受 Premium 功能。"
+      },
+      "receipt": {
+        "question": "可以開立收據嗎？",
+        "answer": "可以的，訂閱後您可以在設定中申請收據，我們會透過電子郵件發送給您。"
+      },
+      "sharing": {
+        "question": "Premium 使用者上傳的檔案，非 Premium 使用者也可以存取嗎？",
+        "answer": "可以的，Premium 使用者上傳的檔案，所有家庭成員都可以查看和下載。"
+      },
+      "web": {
+        "question": "使用網頁版也可以上傳檔案嗎？",
+        "answer": "目前檔案上傳功能僅限於行動版應用程式，網頁版可以查看已上傳的檔案。"
+      }
+    },
+    "featureComparison": {
+      "function": "功能",
+      "freeVersion": "免費版",
+      "aiPremium": "AI Premium",
+      "dailyLimit": "每日3次",
+      "unlimited": "無限使用",
+      "basicVersion": "基礎版",
+      "professionalVersion": "專業版"
+    },
+    "terms": {
+      "title": "注意事項",
+      "trialOnce": "• 試用僅提供一次",
+      "noRefund": "• 我們不對由不同平台或帳號的重複訂閱提供退款。",
+      "cancel24h": "• 在您的方案結束前 24 小時之內您都可以停止訂閱（停止自動付款）。",
+      "autoRenew": "• 若您不在方案結束前 24 小時之內停止訂閱，方案將自動更新並繼續扣款。",
+      "appleId": "• 將由 Apple ID 收取您的訂閱額。",
+      "deleteApp": "• 請注意，刪除 KonKon 將不會停止訂閱。"
+    },
+    "legal": {
+      "privacy": "隱私權政策",
+      "terms": "Premium 服務條款"
+    }
   }
 }
