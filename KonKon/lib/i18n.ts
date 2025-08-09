@@ -734,6 +734,15 @@ type TranslationKeys =
   | 'notificationSettings.note1'
   | 'notificationSettings.note2'
   | 'notificationSettings.note3'
+  // iOS Permission Usage Descriptions
+  | 'NSCameraUsageDescription'
+  | 'NSPhotoLibraryUsageDescription'
+  | 'NSPhotoLibraryAddUsageDescription'
+  | 'NSMicrophoneUsageDescription'
+  | 'NSLocationWhenInUseUsageDescription'
+  | 'NSCalendarsUsageDescription'
+  | 'NSRemindersUsageDescription'
+  | 'NSUserTrackingUsageDescription'
   ;
 
 export const t = (key: string, options?: any) => i18n.t(key, options);

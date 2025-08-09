@@ -21,7 +21,8 @@
     "claude:help": "node ./scripts/claude-helper.js --help",
     "clean": "npx expo start --clear && rm -rf .expo/cache",
     "clean:full": "rm -rf node_modules .expo && npm install",
-    "dev": "npm run clean && npm run start"
+    "dev": "npm run clean && npm run start",
+    "generate:infoplist": "node ./scripts/generate-infoplist-strings.js"
   },
   "dependencies": {
     "@expo/config-plugins": "^10.1.2",

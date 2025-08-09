@@ -1,0 +1,18 @@
+/* 
+  InfoPlist.strings
+  KonKon
+
+  Created by KonKon Team
+  
+  This file provides localized permission descriptions for iOS.
+  These strings will override the ones defined in app.json's infoPlist section.
+*/
+
+"NSCameraUsageDescription" = "KonKon needs access to your camera to take photos and convert them into calendar events.";
+"NSPhotoLibraryUsageDescription" = "KonKon needs access to your photo library to select pictures and convert them into calendar events.";
+"NSPhotoLibraryAddUsageDescription" = "KonKon needs permission to save images to your photo library.";
+"NSMicrophoneUsageDescription" = "Your microphone is needed to transcribe your voice in real-time and generate chat content. Recordings are processed locally in real-time and are not uploaded or saved.";
+"NSLocationWhenInUseUsageDescription" = "KonKon needs your location to provide localized event recommendations and services.";
+"NSCalendarsUsageDescription" = "KonKon needs access to your calendar to sync and manage events.";
+"NSRemindersUsageDescription" = "KonKon needs access to your reminders to create reminder notifications.";
+"NSUserTrackingUsageDescription" = "Your data will be used to improve personalized experiences and ad effectiveness. We are committed to protecting your privacy and will never misuse your data."; 

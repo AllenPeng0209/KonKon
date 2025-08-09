@@ -1,0 +1,12 @@
+/* 
+  InfoPlist.strings (Traditional Chinese)
+  KonKon
+*/
+"NSCameraUsageDescription" = "KonKon 需要存取您的相機，用於拍攝照片並轉換為行事曆事件。";
+"NSPhotoLibraryUsageDescription" = "KonKon 需要存取您的照片圖庫，用於選擇圖片並轉換為行事曆事件。";
+"NSPhotoLibraryAddUsageDescription" = "KonKon 需要寫入照片圖庫權限，用於將圖片儲存到相簿。";
+"NSMicrophoneUsageDescription" = "KonKon 需要存取您的麥克風，用於即時轉寫語音並生成聊天內容。錄音僅在本機即時處理，不會上傳或儲存。";
+"NSLocationWhenInUseUsageDescription" = "KonKon 需要存取您的位置，用於提供在地化的事件建議與服務。";
+"NSCalendarsUsageDescription" = "KonKon 需要存取您的行事曆，用於同步與管理事件。";
+"NSRemindersUsageDescription" = "KonKon 需要存取您的提醒事項，用於建立提醒通知。";
+"NSUserTrackingUsageDescription" = "您的資料將用於改善個人化體驗與廣告成效。我們重視您的隱私，絕不濫用資料。"; 

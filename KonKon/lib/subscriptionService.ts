@@ -1,19 +1,19 @@
 import { Alert, Platform } from 'react-native';
 import {
-  clearProductsIOS,
-  clearTransactionIOS,
-  endConnection,
-  finishTransaction,
-  getAvailablePurchases,
-  getSubscriptions,
-  initConnection,
-  Purchase,
-  PurchaseError,
-  purchaseErrorListener,
-  purchaseUpdatedListener,
-  requestSubscription,
-  Subscription,
-  validateReceiptIos
+    clearProductsIOS,
+    clearTransactionIOS,
+    endConnection,
+    finishTransaction,
+    getAvailablePurchases,
+    getSubscriptions,
+    initConnection,
+    Purchase,
+    PurchaseError,
+    purchaseErrorListener,
+    purchaseUpdatedListener,
+    requestSubscription,
+    Subscription,
+    validateReceiptIos
 } from 'react-native-iap';
 import { supabase } from './supabase';
 
@@ -360,11 +360,21 @@ class SubscriptionService {
         return false;
       }
 
-      // 檢查產品是否可用
+      // 檢查產品是否可用；若為空則嘗試重新載入
       if (this.availableProducts.length === 0) {
+        try {
+          await this.loadAvailableProducts();
+        } catch (_) {
+          // 忽略，後續以條件分支處理
+        }
+      }
+
+      // 僅當找到對應的 productId 才能繼續
+      const matchedProduct = this.availableProducts.find(p => p.productId === plan.productId);
+      if (!matchedProduct) {
         Alert.alert(
-          '訂閱功能暫不可用', 
-          '目前在 Expo Go 環境中無法測試真實的應用內購買功能。\n\n要測試完整的訂閱功能，請：\n1. 創建開發版本 (Development Build)\n2. 或在生產環境中測試\n\n了解更多：expo.fyi/dev-client'
+          '購買目前不可用',
+          `App 內購買暫不可用。請確認：\n\n1. App Store Connect 已接受付費應用協議（Agreements, Tax, and Banking）\n2. 訂閱產品（${plan.productId}）已建立且處於可銷售狀態，並與此版本同時提交\n3. 在真機上使用正確的測試/審核 Apple ID\n4. 若為生產簽名但沙盒收據，系統會自動回退至沙盒驗證`
         );
         return false;
       }
