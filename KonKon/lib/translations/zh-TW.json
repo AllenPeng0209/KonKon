@@ -970,7 +970,10 @@
     "deleteAccountDesc": "刪除帳號後將移除您的個人資料，此操作不可恢復。",
     "deleteAccountNow": "立即刪除帳號",
     "accountDeleted": "帳號已刪除",
-    "accountDeletedDesc": "您的帳號與相關資料已被移除。"
+    "accountDeletedDesc": "您的帳號與相關資料已被移除。",
+    "confirmDeleteAccountTitle": "確認刪除帳號",
+    "confirmDeleteAccountMessage": "刪除帳號將移除所有個人資料，此操作不可恢復。是否繼續？",
+    "delete": "刪除"
   },
   "userAgreement": {
     "title": "使用者協議",
@@ -1496,6 +1499,19 @@
     "legal": {
       "privacy": "隱私權政策",
       "terms": "Premium 服務條款"
+    },
+    "errors": {
+      "unavailable": "訂閱功能暫時不可用",
+      "failed": "訂閱失敗，請稍後重試",
+      "unavailableDetail": "App 內購買暫不可用。請確認：\n\n1. App Store Connect 已接受付費應用協議（Agreements, Tax, and Banking）\n2. 訂閱產品（%{productId}）已建立且處於可銷售狀態，並與此版本同時提交\n3. 在真機上使用正確的測試/審核 Apple ID\n4. 請確保非 Expo Go，需使用 TestFlight/商店版或 EAS 開發版",
+      "iapNotAvailable": "此環境缺少 IAP 原生模組，請使用 TestFlight/商店版或使用 EAS 開發版（dev build）測試，Expo Go 無法使用 IAP。"
+    },
+    "success": {
+      "activated": "訂閱已啟用"
+    },
+    "globalTrial": {
+      "title": "試用已啟用",
+      "message": "您已享有三個月免費試用，AI 功能已全部開放。"
     }
   }
 }

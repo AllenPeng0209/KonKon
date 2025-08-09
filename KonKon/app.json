@@ -18,10 +18,12 @@
       "usesAppleSignIn": true,
       "supportsTablet": true,
       "bundleIdentifier": "com.agenthub.konkon",
-      "buildNumber": "34",
+      "buildNumber": "35",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "CFBundleAllowMixedLocalizations": true,
+        "CFBundleDevelopmentRegion": "ja",
+        "CFBundleLocalizations": ["ja", "en", "zh-Hans", "zh-Hant"],
         "NSLocationWhenInUseUsageDescription": "KonKon needs your location to provide localized event recommendations and services.",
         "NSCameraUsageDescription": "KonKon needs access to your camera to take photos and convert them into calendar events.",
         "NSPhotoLibraryUsageDescription": "KonKon needs access to your photo library to select pictures and convert them into calendar events.",

@@ -20,7 +20,7 @@ export function isAssistantMessage(userId: string): boolean {
 
 // 獲取AI助手顯示名稱
 export function getAssistantDisplayName(): string {
-  return '喵萌助手';
+  return 'KonKon';
 }
 
 export interface UIFamilyChatMessage {

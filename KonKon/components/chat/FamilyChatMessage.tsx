@@ -89,7 +89,7 @@ export function FamilyChatMessage({ message }: FamilyChatMessageProps) {
           
           <View style={styles.messageColumn}>
             <Text style={styles.senderName}>
-              {isAssistant ? '喵萌助手' : message.user_name || '未知用户'}
+              {isAssistant ? 'KonKon' : message.user_name || '未知用户'}
             </Text>
             
             <View style={styles.otherMessageBubble}>

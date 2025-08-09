@@ -7,7 +7,7 @@ import { t } from '../lib/i18n';
 
 export default function DeleteAccountScreen() {
   const router = useRouter();
-  const { session } = useAuth();
+  const { session, signOut } = useAuth();
   const [submitting, setSubmitting] = useState(false);
 
   const handleBack = () => {
@@ -37,7 +37,8 @@ export default function DeleteAccountScreen() {
       }
 
       Alert.alert(t('settings.accountDeleted') || '帳號已刪除', t('settings.accountDeletedDesc') || '我們已刪除您的帳號與相關資料');
-      // 讓 _layout.tsx 的 Auth 流程自動處理登出後跳轉
+      // 先清除本機登入狀態，避免保護路由將已登入使用者導回首頁
+      try { await signOut(); } catch {}
       router.replace('/login');
     } catch (e: any) {
       Alert.alert(t('common.error') || '錯誤', e?.message || '刪除失敗');

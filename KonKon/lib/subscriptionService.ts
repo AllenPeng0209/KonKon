@@ -1,19 +1,20 @@
 import { Alert, NativeModules, Platform } from 'react-native';
 import {
-    clearProductsIOS,
-    clearTransactionIOS,
-    endConnection,
-    finishTransaction,
-    getAvailablePurchases,
-    getSubscriptions,
-    initConnection,
-    Purchase,
-    PurchaseError,
-    purchaseErrorListener,
-    purchaseUpdatedListener,
-    requestSubscription,
-    Subscription
+  clearProductsIOS,
+  clearTransactionIOS,
+  endConnection,
+  finishTransaction,
+  getAvailablePurchases,
+  getSubscriptions,
+  initConnection,
+  Purchase,
+  PurchaseError,
+  purchaseErrorListener,
+  purchaseUpdatedListener,
+  requestSubscription,
+  Subscription
 } from 'react-native-iap';
+import { t } from './i18n';
 import { supabase } from './supabase';
 
 // 訂閱方案類型
@@ -244,6 +245,9 @@ class SubscriptionService {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // 全員三個月試用：若未啟用或已過期，為當前用戶自動開啟
+      await this.ensureGlobalTrialActive(user.id);
+
       // 檢查活躍購買
       const availablePurchases = await getAvailablePurchases();
       
@@ -260,6 +264,56 @@ class SubscriptionService {
       this.notifyStatusChange();
     } catch (error) {
       console.error('載入訂閱狀態失敗:', error);
+    }
+  }
+
+  /**
+   * 全員三個月試用自動激活
+   */
+  private async ensureGlobalTrialActive(userId: string): Promise<void> {
+    try {
+      // 允許通過環境變量配置天數，默認 90 天
+      const trialDaysRaw = (process.env.EXPO_PUBLIC_GLOBAL_TRIAL_DAYS as unknown as string) ?? '';
+      const GLOBAL_TRIAL_DAYS = Number(trialDaysRaw) > 0 ? Number(trialDaysRaw) : 90;
+
+      // 查詢當前狀態
+      const { data, error } = await (supabase as any)
+        .from('users')
+        .select('is_trial_active, trial_end_date')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        console.warn('讀取試用狀態失敗（忽略，將繼續）:', error);
+        return;
+      }
+
+      const now = new Date();
+      const endDate = new Date(now.getTime() + GLOBAL_TRIAL_DAYS * 24 * 60 * 60 * 1000);
+
+      const isActive: boolean = !!data?.is_trial_active;
+      const trialEnd = data?.trial_end_date ? new Date(data.trial_end_date) : null;
+
+      // 未啟用或已過期 -> 啟用/續期試用
+      if (!isActive || (trialEnd && trialEnd <= now)) {
+        const { error: updateError } = await (supabase as any)
+          .from('users')
+          .update({
+            is_trial_active: true,
+            trial_end_date: endDate.toISOString(),
+            updated_at: now.toISOString(),
+          })
+          .eq('id', userId);
+
+        if (updateError) {
+          console.warn('開啟全員試用失敗（忽略，應用繼續）:', updateError);
+        } else {
+          this.currentStatus.isTrialActive = true;
+          this.currentStatus.trialEndDate = endDate;
+        }
+      }
+    } catch (e) {
+      console.warn('ensureGlobalTrialActive 例外（忽略）:', e);
     }
   }
 
@@ -367,18 +421,21 @@ class SubscriptionService {
     try {
       const plan = SUBSCRIPTION_PLANS.find(p => p.id === planId);
       if (!plan) {
-        throw new Error('找不到指定的訂閱方案');
+        throw new Error(t('subscription.errors.failed'));
       }
 
       if (Platform.OS !== 'ios') {
-        Alert.alert('暫不支持', '目前僅支持 iOS 平台訂閱');
+        Alert.alert(
+          t('subscription.errors.unavailable'),
+          t('subscription.errors.unavailableDetail', { productId: plan?.productId ?? '' })
+        );
         return false;
       }
 
       if (!this.isIapNativeAvailable()) {
         Alert.alert(
-          '購買目前不可用',
-          '此環境缺少 IAP 原生模組，請使用 TestFlight/商店版或使用 EAS 開發版（dev build）測試，Expo Go 無法使用 IAP。'
+          t('subscription.errors.unavailable'),
+          t('subscription.errors.iapNotAvailable')
         );
         return false;
       }
@@ -396,8 +453,8 @@ class SubscriptionService {
       const matchedProduct = this.availableProducts.find(p => p.productId === plan.productId);
       if (!matchedProduct) {
         Alert.alert(
-          '購買目前不可用',
-          `App 內購買暫不可用。請確認：\n\n1. App Store Connect 已接受付費應用協議（Agreements, Tax, and Banking）\n2. 訂閱產品（${plan.productId}）已建立且處於可銷售狀態，並與此版本同時提交\n3. 在真機上使用正確的測試/審核 Apple ID\n4. 請確保非 Expo Go，需使用 TestFlight/商店版或 EAS 開發版`
+          t('subscription.errors.unavailable'),
+          t('subscription.errors.unavailableDetail', { productId: plan.productId })
         );
         return false;
       }
@@ -412,17 +469,7 @@ class SubscriptionService {
       return true;
     } catch (error) {
       console.error('訂閱失敗:', error);
-      
-      let errorMessage = '未知錯誤';
-      if (error instanceof Error) {
-        if (error.message.includes('E_IAP_NOT_AVAILABLE')) {
-          errorMessage = '應用內購買服務不可用。請確保：\n1. 使用真機測試（模擬器不支持）\n2. 已在 App Store Connect 中創建產品\n3. 設備已登錄 Apple ID';
-        } else {
-          errorMessage = error.message;
-        }
-      }
-      
-      Alert.alert('訂閱失敗', errorMessage);
+      Alert.alert(t('subscription.errors.failed'), error instanceof Error ? error.message : '');
       return false;
     }
   }
@@ -440,8 +487,8 @@ class SubscriptionService {
       await finishTransaction({ purchase, isConsumable: false });
       
       Alert.alert(
-        '訂閱成功！',
-        '您已成功訂閱，現在可以享受完整的 AI 功能。'
+        t('common.success'),
+        t('subscription.success.activated')
       );
       
       this.notifyStatusChange();

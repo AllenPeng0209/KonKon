@@ -804,6 +804,9 @@
     "deleteAccountNow": "立即删除账号",
     "accountDeleted": "账号已删除",
     "accountDeletedDesc": "您的账号与相关数据已被移除。",
+    "confirmDeleteAccountTitle": "确认删除账号",
+    "confirmDeleteAccountMessage": "删除账号将移除所有个人数据，此操作不可恢复。是否继续？",
+    "delete": "删除",
     "accountSecurity": "账号与安全"
   },
   "userAgreement": {
@@ -1456,10 +1459,16 @@
     },
     "errors": {
       "unavailable": "订阅功能暂时不可用",
-      "failed": "订阅失败，请稍后重试"
+      "failed": "订阅失败，请稍后重试",
+      "unavailableDetail": "App 内购买暂不可用。请确认：\n\n1. App Store Connect 已接受付费应用协议（Agreements, Tax, and Banking）\n2. 订阅产品（%{productId}）已建立且处于可销售状态，并与此版本同时提交\n3. 在真机上使用正确的测试/审核 Apple ID\n4. 请确保非 Expo Go，需使用 TestFlight/商店版或 EAS 开发版",
+      "iapNotAvailable": "此环境缺少 IAP 原生模块，请使用 TestFlight/商店版或使用 EAS 开发版（dev build）测试，Expo Go 无法使用 IAP。"
     },
     "success": {
       "activated": "订阅已激活"
+    },
+    "globalTrial": {
+      "title": "试用已激活",
+      "message": "您已享有三个月免费试用，AI 功能已全部开放。"
     }
   }
 }

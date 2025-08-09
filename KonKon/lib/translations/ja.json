@@ -832,7 +832,10 @@
     "deleteAccountDesc": "アカウントを削除すると、個人データが削除されます。この操作は取り消せません。",
     "deleteAccountNow": "今すぐアカウントを削除",
     "accountDeleted": "アカウントを削除しました",
-    "accountDeletedDesc": "アカウントと関連データは削除されました。"
+    "accountDeletedDesc": "アカウントと関連データは削除されました。",
+    "confirmDeleteAccountTitle": "アカウント削除の確認",
+    "confirmDeleteAccountMessage": "アカウントを削除すると、すべての個人データが削除され、元に戻すことはできません。本当に続行しますか？",
+    "delete": "削除"
   },
   "userAgreement": {
     "title": "ユーザー契約",
@@ -1483,10 +1486,16 @@
     },
     "errors": {
       "unavailable": "サブスクリプション機能は現在利用できません",
-      "failed": "サブスクリプションに失敗しました。後でもう一度お試しください"
+      "failed": "サブスクリプションに失敗しました。後でもう一度お試しください",
+      "unavailableDetail": "アプリ内購入は現在ご利用いただけません。ご確認ください：\n\n1. App Store Connect で有料アプリ契約（Agreements, Tax, and Banking）を受諾済み\n2. サブスクリプション商品（%{productId}）が作成され、販売可能状態で、このバージョンと一緒に提出されている\n3. 実機で正しいテスト/審査用 Apple ID を使用\n4. Expo Go ではなく、TestFlight/ストア版または EAS Dev ビルドを使用",
+      "iapNotAvailable": "この環境には IAP ネイティブモジュールがありません。TestFlight/ストア版、または EAS 開発版（dev build）でお試しください。Expo Go では IAP は使用できません。"
     },
     "success": {
       "activated": "サブスクリプションが有効になりました"
+    },
+    "globalTrial": {
+      "title": "トライアル有効",
+      "message": "すべてのユーザーに 3 か月の無料トライアルを提供しています。AI 機能はすべて解放されています。"
     }
   }
 }

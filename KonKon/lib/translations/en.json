@@ -823,7 +823,10 @@
     "deleteAccountDesc": "Deleting your account will remove your personal data. This action cannot be undone.",
     "deleteAccountNow": "Delete Account Now",
     "accountDeleted": "Account Deleted",
-    "accountDeletedDesc": "Your account and related data have been removed."
+    "accountDeletedDesc": "Your account and related data have been removed.",
+    "confirmDeleteAccountTitle": "Confirm Delete Account",
+    "confirmDeleteAccountMessage": "Deleting your account will remove all personal data and cannot be undone. Do you want to continue?",
+    "delete": "Delete"
   },
   "userAgreement": {
     "title": "User Agreement",
@@ -1472,11 +1475,17 @@
       "terms": "Premium Service Terms"
     },
     "errors": {
-      "unavailable": "Subscription feature is currently unavailable",
-      "failed": "Subscription failed, please try again later"
+      "unavailable": "Subscription is temporarily unavailable",
+      "failed": "Subscription failed. Please try again later.",
+      "unavailableDetail": "In‑app purchases are currently unavailable. Please confirm:\n\n1. The Paid Apps Agreement (Agreements, Tax, and Banking) is accepted in App Store Connect\n2. The product (%{productId}) exists, is cleared for sale, and is submitted with this build\n3. A valid test/review Apple ID is used on a physical device\n4. Not running in Expo Go; use TestFlight/App Store build or an EAS dev build",
+      "iapNotAvailable": "IAP native module is missing in this environment. Use TestFlight/App Store build or an EAS dev build. Expo Go does not support IAP."
     },
     "success": {
       "activated": "Subscription activated"
+    },
+    "globalTrial": {
+      "title": "Trial Activated",
+      "message": "You now have a 3‑month free trial. All AI features are fully enabled."
     }
   }
 }
