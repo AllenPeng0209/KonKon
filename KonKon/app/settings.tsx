@@ -80,14 +80,9 @@ export default function SettingsScreen() {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={styles.sectionHeader}>{t('settings.account')}</Text>
         <View style={styles.settingsGroup}>
-          <TouchableOpacity style={styles.settingItem} onPress={() => router.push('/edit-profile')}>
+          <TouchableOpacity style={styles.settingItem} onPress={() => router.push('/account-security')}>
             <Ionicons name="person-circle-outline" size={24} color="#333" style={styles.icon} />
-            <Text style={styles.settingText}>{t('settings.editProfile')}</Text>
-            <Ionicons name="chevron-forward" size={20} color="#c7c7cc" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.settingItem} onPress={() => router.push('/change-password')}>
-            <Ionicons name="lock-closed-outline" size={24} color="#333" style={styles.icon} />
-            <Text style={styles.settingText}>{t('settings.changePassword')}</Text>
+            <Text style={styles.settingText}>{t('settings.accountSecurity') || '帳號與安全'}</Text>
             <Ionicons name="chevron-forward" size={20} color="#c7c7cc" />
           </TouchableOpacity>
         </View>
@@ -119,7 +114,7 @@ export default function SettingsScreen() {
             <Ionicons name="chevron-forward" size={20} color="#c7c7cc" />
           </TouchableOpacity>
         </View>
-        
+
         <Text style={styles.sectionHeader}>{t('settings.storage')}</Text>
         <View style={styles.settingsGroup}>
            <TouchableOpacity style={styles.settingItem} onPress={handleClearCache}>
@@ -137,6 +132,7 @@ export default function SettingsScreen() {
             <Text style={styles.logoutButtonText}>{t('settings.logout')}</Text>
           </TouchableOpacity>
         </View>
+
       </ScrollView>
     </SafeAreaView>
   );

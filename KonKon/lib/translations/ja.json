@@ -645,12 +645,6 @@
     "loginFailedTitle": "ログインに失敗しました",
     "unknownError": "不明なエラーが発生しました"
   },
-  "notificationSettings": {
-    "title": "通知設定",
-    "eventReminders": "イベントのリマインダー",
-    "choreAssignments": "家事分担のリマインダー",
-    "appNews": "アプリニュース"
-  },
   "privacyPolicy": {
     "title": "プライバシーポリシー",
     "lastUpdated": "最終更新日：2024年7月25日",
@@ -831,7 +825,14 @@
     "cacheCleared": "キャッシュがクリアされました",
     "cacheClearedMessage": "チャットメッセージキャッシュを含むすべてのキャッシュがクリアされました。",
     "clearCacheFailed": "クリアに失敗しました",
-    "clearCacheFailedMessage": "一部のキャッシュのクリアに失敗しました。後でもう一度お試しください。"
+    "clearCacheFailedMessage": "一部のキャッシュのクリアに失敗しました。後でもう一度お試しください。",
+    "accountSecurity": "アカウントとセキュリティ",
+    "privacy": "プライバシーとセキュリティ",
+    "deleteAccount": "アカウント削除",
+    "deleteAccountDesc": "アカウントを削除すると、個人データが削除されます。この操作は取り消せません。",
+    "deleteAccountNow": "今すぐアカウントを削除",
+    "accountDeleted": "アカウントを削除しました",
+    "accountDeletedDesc": "アカウントと関連データは削除されました。"
   },
   "userAgreement": {
     "title": "ユーザー契約",

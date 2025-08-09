@@ -783,12 +783,6 @@
     "loginFailedTitle": "登入失敗",
     "unknownError": "發生未知錯誤"
   },
-  "notificationSettings": {
-    "title": "通知設定",
-    "eventReminders": "日程提醒",
-    "choreAssignments": "家務分配提醒",
-    "appNews": "應用資訊"
-  },
   "privacyPolicy": {
     "title": "隱私權政策",
     "lastUpdated": "最後更新日期：2024年7月25日",
@@ -969,7 +963,14 @@
     "cacheCleared": "快取已清除",
     "cacheClearedMessage": "包括聊天消息快取在內的所有快取已清除完成。",
     "clearCacheFailed": "清除失敗",
-    "clearCacheFailedMessage": "部分快取清除失敗，請稍後重試。"
+    "clearCacheFailedMessage": "部分快取清除失敗，請稍後重試。",
+    "accountSecurity": "帳號與安全",
+    "privacy": "隱私與安全",
+    "deleteAccount": "刪除帳號",
+    "deleteAccountDesc": "刪除帳號後將移除您的個人資料，此操作不可恢復。",
+    "deleteAccountNow": "立即刪除帳號",
+    "accountDeleted": "帳號已刪除",
+    "accountDeletedDesc": "您的帳號與相關資料已被移除。"
   },
   "userAgreement": {
     "title": "使用者協議",

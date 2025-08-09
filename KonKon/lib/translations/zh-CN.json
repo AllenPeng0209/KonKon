@@ -237,7 +237,7 @@
     "connectedToSystemCalendar": "已连接系统日历",
     "today": "今天",
     "noEventsToday": "今天还没有安排事件",
-    "manualAddPrompt": "点击下方“手动添加”来创建新事件",
+    "manualAddPrompt": "点击下方\"手动添加\"来创建新事件",
     "smartReminder": "智能提醒安排 点我设置",
     "longPressToTalk": "长按说话，快速记录",
     "photo": "拍照",
@@ -617,12 +617,6 @@
     "loginFailedTitle": "登录失败",
     "unknownError": "发生未知错误"
   },
-  "notificationSettings": {
-    "title": "通知设置",
-    "eventReminders": "日程提醒",
-    "choreAssignments": "家务分配提醒",
-    "appNews": "应用资讯"
-  },
   "privacyPolicy": {
     "title": "隐私政策",
     "lastUpdated": "最后更新日期：2024年7月25日",
@@ -803,7 +797,14 @@
     "cacheCleared": "缓存已清除",
     "cacheClearedMessage": "包括聊天消息緩存在內的所有緩存已清除完成。",
     "clearCacheFailed": "清除失败",
-    "clearCacheFailedMessage": "部分緩存清除失敗，請稍後重試。"
+    "clearCacheFailedMessage": "部分緩存清除失敗，請稍後重試。",
+    "privacy": "隐私与安全",
+    "deleteAccount": "删除账号",
+    "deleteAccountDesc": "删除账号将移除您的个人数据，此操作不可恢复。",
+    "deleteAccountNow": "立即删除账号",
+    "accountDeleted": "账号已删除",
+    "accountDeletedDesc": "您的账号与相关数据已被移除。",
+    "accountSecurity": "账号与安全"
   },
   "userAgreement": {
     "title": "用户协议",

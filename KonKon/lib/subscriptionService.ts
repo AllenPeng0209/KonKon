@@ -1,4 +1,4 @@
-import { Alert, Platform } from 'react-native';
+import { Alert, NativeModules, Platform } from 'react-native';
 import {
     clearProductsIOS,
     clearTransactionIOS,
@@ -12,8 +12,7 @@ import {
     purchaseErrorListener,
     purchaseUpdatedListener,
     requestSubscription,
-    Subscription,
-    validateReceiptIos
+    Subscription
 } from 'react-native-iap';
 import { supabase } from './supabase';
 
@@ -86,6 +85,14 @@ class SubscriptionService {
   private isInitializing = false;
 
   /**
+   * 檢查 IAP 原生模組是否可用（Expo Go/缺少原生模組時返回 false）
+   */
+  private isIapNativeAvailable(): boolean {
+    const natives: any = NativeModules as any;
+    return !!(natives?.RNIapIos || natives?.RNIapModule);
+  }
+
+  /**
    * 初始化訂閱服務
    */
   async initialize(): Promise<void> {
@@ -99,6 +106,12 @@ class SubscriptionService {
 
     try {
       if (Platform.OS === 'ios') {
+        // 若 IAP 原生模組不可用（多發生於 Expo Go），直接跳過
+        if (!this.isIapNativeAvailable()) {
+          console.warn('⚠️ IAP 原生模組不可用（可能在 Expo Go 或未包含原生依賴），跳過初始化');
+          this.isInitializing = false;
+          return;
+        }
         console.log('🚀 開始 iOS StoreKit 初始化...');
         
         // 檢查是否在 Expo Go 或開發環境
@@ -257,15 +270,11 @@ class SubscriptionService {
     try {
       if (Platform.OS === 'ios' && purchase.transactionReceipt) {
         const receiptBody = {
-          'receipt-data': purchase.transactionReceipt,
-          'password': process.env.EXPO_PUBLIC_APP_STORE_SHARED_SECRET || '',
+          'receipt-data': purchase.transactionReceipt
         };
 
-        // 先嘗試生產環境驗證，失敗則嘗試沙盒環境
-        let isValid = await this.validateReceipt(receiptBody, false);
-        if (!isValid) {
-          isValid = await this.validateReceipt(receiptBody, true);
-        }
+        // 單次驗證：服務端自動處理生產->沙盒回退
+        const isValid = await this.validateReceipt(receiptBody, false);
 
         if (isValid) {
           const plan = SUBSCRIPTION_PLANS.find(p => p.productId === purchase.productId);
@@ -305,11 +314,17 @@ class SubscriptionService {
    */
   private async validateReceipt(receiptBody: any, isSandbox: boolean): Promise<boolean> {
     try {
-      const result = await validateReceiptIos({
-        receiptBody,
-        isTest: isSandbox
+      const { data, error } = await supabase.functions.invoke('iap-verify-receipt', {
+        body: { receiptData: receiptBody['receipt-data'] }
       });
-      return result && result.status === 0;
+
+      if (error) {
+        console.error('服務端收據驗證錯誤:', error);
+        return false;
+      }
+
+      // Apple 返回 status === 0 表示驗證成功
+      return !!data && data.status === 0;
     } catch (error) {
       console.error('收據驗證失敗:', error);
       return false;
@@ -360,6 +375,14 @@ class SubscriptionService {
         return false;
       }
 
+      if (!this.isIapNativeAvailable()) {
+        Alert.alert(
+          '購買目前不可用',
+          '此環境缺少 IAP 原生模組，請使用 TestFlight/商店版或使用 EAS 開發版（dev build）測試，Expo Go 無法使用 IAP。'
+        );
+        return false;
+      }
+
       // 檢查產品是否可用；若為空則嘗試重新載入
       if (this.availableProducts.length === 0) {
         try {
@@ -374,7 +397,7 @@ class SubscriptionService {
       if (!matchedProduct) {
         Alert.alert(
           '購買目前不可用',
-          `App 內購買暫不可用。請確認：\n\n1. App Store Connect 已接受付費應用協議（Agreements, Tax, and Banking）\n2. 訂閱產品（${plan.productId}）已建立且處於可銷售狀態，並與此版本同時提交\n3. 在真機上使用正確的測試/審核 Apple ID\n4. 若為生產簽名但沙盒收據，系統會自動回退至沙盒驗證`
+          `App 內購買暫不可用。請確認：\n\n1. App Store Connect 已接受付費應用協議（Agreements, Tax, and Banking）\n2. 訂閱產品（${plan.productId}）已建立且處於可銷售狀態，並與此版本同時提交\n3. 在真機上使用正確的測試/審核 Apple ID\n4. 請確保非 Expo Go，需使用 TestFlight/商店版或 EAS 開發版`
         );
         return false;
       }

@@ -816,7 +816,14 @@
     "clearCacheFailed": "Clear failed",
     "clearCacheFailedMessage": "Some cache failed to clear, please try again later.",
     "language": "Language",
-    "logoutSuccess": "Logged out successfully"
+    "logoutSuccess": "Logged out successfully",
+    "accountSecurity": "Account & Security",
+    "privacy": "Privacy & Security",
+    "deleteAccount": "Delete Account",
+    "deleteAccountDesc": "Deleting your account will remove your personal data. This action cannot be undone.",
+    "deleteAccountNow": "Delete Account Now",
+    "accountDeleted": "Account Deleted",
+    "accountDeletedDesc": "Your account and related data have been removed."
   },
   "userAgreement": {
     "title": "User Agreement",

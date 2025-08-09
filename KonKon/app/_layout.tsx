@@ -158,6 +158,8 @@ function ProtectedLayout() {
                   <Stack.Screen name="about" options={{ headerShown: false }} />
                   <Stack.Screen name="edit-profile" options={{ headerShown: false }} />
                   <Stack.Screen name="change-password" options={{ headerShown: false }} />
+                  <Stack.Screen name="account-security" options={{ headerShown: false }} />
+                  <Stack.Screen name="delete-account" options={{ headerShown: false }} />
                   <Stack.Screen name="notification-settings" options={{ headerShown: false }} />
                   <Stack.Screen name="language-selection" options={{ headerShown: false }} />
                   <Stack.Screen name="calendar-settings" options={{ headerShown: false }} />
